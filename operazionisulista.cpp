@@ -66,7 +66,7 @@ template <class T> T &  OperazioniSuLista<T>::operator -= (const T & destra) {
 
 template <class T> T &  OperazioniSuLista<T>::operator *= (const T & destra) {
     if (destra.lunghezza()== lunghezza_lista) {
-#ifdef DEBUG
+#ifdef DEBUG2
         std::cerr << "chiamato OperazioniSuLista<T>::operator *= " __FILE__ ":"<<__LINE__<<"\n";
         std::cerr << "lista = "<<lista<<", destra.lista = " << destra.lista << "\n";
 #endif
@@ -161,17 +161,17 @@ template <class T> const T  OperazioniSuLista<T>::operator / (const double & des
 
 
 template <class T> OperazioniSuLista<T> & OperazioniSuLista<T>::operator =(const OperazioniSuLista<T> &destra) {
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cerr << "chiamato OperazioniSuLista<T>::operator = " __FILE__ ":"<<__LINE__<<"\n";
 #endif
     if (lunghezza_lista!=destra.lunghezza_lista) { //rialloca la memoria
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cerr << "delete [] "<<lista<<"\n";
 #endif
         delete  [] lista;
         lunghezza_lista=destra.lunghezza_lista;
         lista = new double[lunghezza_lista];
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cerr << "new double [] "<<lista<<"\n";
 #endif
     }
@@ -196,7 +196,7 @@ template <class T> OperazioniSuLista<T>::OperazioniSuLista(const OperazioniSuLis
 }
 
 template <class T> OperazioniSuLista<T>::~OperazioniSuLista() {
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cerr << "chiamato OperazioniSuLista<T>::~OperazioniSuLista " __FILE__ ":"<<__LINE__<<"\n";
     std::cerr << "delete [] "<<lista<<"\n";
 #endif

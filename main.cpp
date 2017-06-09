@@ -101,22 +101,24 @@ int main(int argc, char ** argv)
 #endif
 
         if (heat_coeff) {
+            std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
             MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int> greenK(&test,blocknumber,log_input,cariche,skip);
             greenK.calcola();
 
-            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda; ciascuno seguito dalla sua varianza\n";
-            for (unsigned int i=0;i<greenK.media()->lunghezza()/7;i++) {
-                for (unsigned int j=0;j<7;j++) {
-                    std::cout << greenK.media()->elemento(i*7+j) << " "
-                              << greenK.varianza()->elemento(i*7+j) << " ";
+            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze; ciascuno seguito dalla sua varianza\n";
+            for (unsigned int i=0;i<greenK.media()->lunghezza()/9;i++) {
+                for (unsigned int j=0;j<9;j++) {
+                    std::cout << greenK.media()->elemento(i*9+j) << " "
+                              << greenK.varianza()->elemento(i*9+j) << " ";
                 }
                 std::cout << "\n";
             }
 
         }else if (velocity_h) {
+            std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";
             Traiettoria test(input);
             MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber,nbins,vmax_h);
             istogramma_vel.calcola();
@@ -132,6 +134,7 @@ int main(int argc, char ** argv)
             }
 
         } else if (fononefile != "") {
+            std::cerr << "Inizio analisi dei modi normale di vibrazione del cristallo...\n";
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
@@ -141,6 +144,7 @@ int main(int argc, char ** argv)
 
             return 1;
         } else if (spettro_vibraz) {
+            std::cerr << "Inizio del calcolo dello spettro vibrazionale...\n";
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
@@ -158,7 +162,7 @@ int main(int argc, char ** argv)
             }
 
         } else {
-
+            std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un fluido a una componente...\n";
             Analisi traiettoria(input,log_input,numero_frame);
             //traiettoria.traiettoria.allocate_J();
             traiettoria.traiettoria.calc_J_autocorrelation(blocksize,elast);
