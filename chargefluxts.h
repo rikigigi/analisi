@@ -26,7 +26,8 @@ public:
 private:
     Traiettoria * traiettoria;
     double *J;
-    unsigned int ntimesteps,primo;
+    unsigned int timestep_finestra,timestep_corrente;
+    bool calcolato;
 };
 
 #endif // CHARGEFLUXTS_H

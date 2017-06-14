@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <iostream>
 #include "config.h"
+#include "cronometro.h"
 
 template <class T, typename ... Args > class MediaBlocchi
 {
@@ -65,27 +66,29 @@ public:
         tmp->reset(s);
         traiettoria->imposta_dimensione_finestra_accesso(s+Tmedio->numeroTimestepsOltreFineBlocco(n_b));
         for (unsigned int iblock=0;iblock<n_b;iblock++) {
-            calcolo->reset(s);
-            traiettoria->imposta_inizio_accesso(iblock*s);
 #ifdef DEBUG
             std::cerr << "calcolo->calcola(iblock*s);\n";
 #endif
+            cronometro cron;
+            cron.start();
+            calcolo->reset(s);
+            traiettoria->imposta_inizio_accesso(iblock*s);
             calcolo->calcola(iblock*s);
-#ifdef DEBUG
+#ifdef DEBUG2
             std::cerr << "*delta = *calcolo - *Tmedio;\n";
 #endif
             //algoritmo media e varianza online
             *delta = *calcolo;
             *delta -= *Tmedio;
             //*delta = *calcolo - *Tmedio
-#ifdef DEBUG
+#ifdef DEBUG2
             std::cerr << "*delta = *calcolo - *Tmedio;\n";
 #endif
             *tmp = *delta;
             *tmp /= (iblock+1);
             *Tmedio += *tmp;
             //*Tmedio += (*delta)/(iblock+1); // calcolo / double , calcolo+=calcolo
-#ifdef DEBUG
+#ifdef DEBUG2
             std::cerr << "*Tvar += (*delta)*(*calcolo-*Tmedio);\n";
 #endif
             *tmp = *calcolo;
@@ -93,8 +96,13 @@ public:
             *tmp *= *delta;
             *Tvar += *tmp;
             //*Tvar += (*delta)*(*calcolo-*Tmedio); // calcolo * calcolo
+            cron.stop();
+#ifdef DEBUG
+            std::cerr << "Tempo cpu per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time()<<"s.\n";
+#endif
         }
         *Tvar/=((n_b-1)*n_b);
+
 
     }
 

@@ -42,10 +42,10 @@ check_include_file_CXX ("Eigen/Dense" HAVEEigenDense)
 
 
 
-#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fopenmp -march=native  -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-#set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fopenmp -march=native -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fopenmp -march=native ")
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fopenmp -march=native")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fopenmp -march=native  -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fopenmp -march=native -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fopenmp -march=native ")
+#set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fopenmp -march=native")
 #if (C_COMPILER_SUPPORTS_LTO AND CXX_COMPILER_SUPPORTS_LTO)
 #    message(STATUS "Enabled -flto link time optimization option.")
 #    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")

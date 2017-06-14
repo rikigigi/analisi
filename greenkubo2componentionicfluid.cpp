@@ -16,7 +16,7 @@
 #include <string>
 
 GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(Traiettoria *t, std::string log, double * cariche, unsigned int skip) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
-    traiettoria (t), log(log), ntimesteps(0), skip(skip)
+    traiettoria (t), log(log), ntimesteps(0), skip(skip),je(0),jz(0)
 {
 // ricordarsi di impostare le cariche delgli atomi!
     traiettoria->set_charge(0,cariche[0]);
@@ -28,6 +28,9 @@ GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(Traiettoria *t, std
 }
 
 GreenKubo2ComponentIonicFluid::~GreenKubo2ComponentIonicFluid(){
+#ifdef DEBUG
+    std::cerr << "Called delete GreenKubo2ComponentIonicFluid\n";
+#endif
     delete je;
     delete jz;
 }

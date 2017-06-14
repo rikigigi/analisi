@@ -15,6 +15,7 @@
 
 
 
+
 #include "traiettoria.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -27,6 +28,7 @@
 #include <math.h>
 #include <cerrno>
 #include <fftw3.h>
+#include "cronometro.h"
 
 
 
@@ -379,6 +381,10 @@ void Traiettoria::index_all() {
 }
 
 Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
+
+    cronometro cron;
+    cron.start();
+
     if (!ok) {
         std::cerr << "mmap non inizializzata correttamente!\n";
         return non_inizializzato;
@@ -457,8 +463,53 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
     //adesso indicizza e carica nel buffer i dati richiesti
 
+    /*
+     * carico solo i timesteps che non sono per caso già in memoria:
+     * quando la finestra avanza spesso la parte finale della vecchia
+     * finestra e la parte iniziale di quella nuova si sovrappongono
+    */
 
-    for (int i=timestep;i<timestep+timestep_finestra;i++){
+    // trova l'intersezione con i timestep già caricati.
+    // dati_caricati è vero se ho dei dati in memoria con la stessa dimensione della finestra
+
+    int     timestep_copy_tstart=0,timestep_copy_tend=0,
+            timestep_read_start=timestep, timestep_read_end=timestep+timestep_finestra,
+            finestra_differenza=timestep_corrente-timestep;
+    if (dati_caricati) {
+        if (abs(finestra_differenza)<timestep_finestra) { // si sovrappongono
+            if (finestra_differenza>0){
+                timestep_copy_tstart=0;
+                timestep_copy_tend=timestep_finestra-finestra_differenza;
+
+                timestep_read_end=timestep_corrente;
+                timestep_read_start=timestep;
+            } else {
+                timestep_copy_tstart=-finestra_differenza;
+                timestep_copy_tend=timestep_finestra;
+
+                timestep_read_start=timestep_corrente+timestep_finestra;
+                timestep_read_end=timestep+timestep_finestra;
+            }
+#ifdef DEBUG
+            std::cerr << "Ricopio i dati già letti da "<<timestep_corrente+timestep_copy_tstart << " a "
+                      << timestep_corrente+timestep_copy_tend << ".\n";
+#endif
+        }
+
+    }
+    //copia i dati già letti
+    for (int i=timestep_copy_tstart;i<timestep_copy_tend;i++) {
+        for (int idata=0;idata<3*natoms;idata++) {
+            buffer_velocita[(finestra_differenza+i)*3*natoms+idata] =
+                    buffer_velocita[i*3*natoms + idata];
+            buffer_posizioni[(finestra_differenza+i)*3*natoms+idata]=
+                    buffer_posizioni[i*3*natoms + idata];
+        }
+    }
+
+    //leggi quelli che non sono già in memoria (tutti se necessario)
+
+    for (int i=timestep_read_start;i<timestep_read_end;i++){
         int t=i-timestep;
         Intestazione_timestep * intestazione=0;
         Chunk * pezzi=0;
@@ -496,6 +547,11 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     timestep_corrente=timestep;
 
 
+    cron.stop();
+
+#ifdef DEBUG
+    std::cerr << "Tempo cpu per la lettura: "<< cron.time()<<"s.\n";
+#endif
 
     return Ok;
 }
