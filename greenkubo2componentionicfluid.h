@@ -28,6 +28,7 @@ public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
     void reset(unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
+    GreenKubo2ComponentIonicFluid & operator =(const GreenKubo2ComponentIonicFluid &);
 private:
     HeatFluxTs * je;
     ChargeFluxTs * jz;

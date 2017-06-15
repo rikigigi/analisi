@@ -20,6 +20,10 @@ ChargeFluxTs::ChargeFluxTs(Traiettoria *t) :
 
 }
 
+ChargeFluxTs::~ChargeFluxTs() {
+    delete [] J;
+}
+
 void ChargeFluxTs::reset(unsigned int numeroTimestepPerBlocco) {
     if (timestep_finestra!=numeroTimestepPerBlocco) {
         delete [] J;

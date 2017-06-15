@@ -50,10 +50,14 @@ public:
     }
 
     ~MediaBlocchi() {
+#ifdef DEBUG
+        std::cerr << "~MediaBlocchi(): Tmedio="<<Tmedio<<", Tvar="<<Tvar<< ", delta="<<delta<<", tmp="<<tmp<<".\n";
+#endif
         delete Tmedio;
         delete Tvar;
         delete delta;
         delete tmp;
+        delete calcolo;
     }
 
     void calcola() {

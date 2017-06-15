@@ -20,6 +20,7 @@ class ChargeFluxTs
 {
 public:
     ChargeFluxTs(Traiettoria * t);
+    ~ChargeFluxTs();
     double *J_z(const unsigned int & timestep);
     void calcola(unsigned int primo);
     void reset(unsigned int numeroTimestepPerBlocco);
