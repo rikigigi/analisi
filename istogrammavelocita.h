@@ -25,6 +25,7 @@ public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
+    IstogrammaVelocita & operator =(const IstogrammaVelocita & destra);
 private:
     Traiettoria *traiettoria;
     unsigned int ntimestep,bins;

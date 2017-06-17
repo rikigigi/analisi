@@ -120,6 +120,8 @@ int main(int argc, char ** argv)
         }else if (velocity_h) {
             std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";
             Traiettoria test(input);
+            test.imposta_dimensione_finestra_accesso(1);
+            test.imposta_inizio_accesso(0);
             MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber,nbins,vmax_h);
             istogramma_vel.calcola();
 

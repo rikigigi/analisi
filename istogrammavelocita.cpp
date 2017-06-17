@@ -46,6 +46,11 @@ unsigned int IstogrammaVelocita::numeroTimestepsOltreFineBlocco(unsigned int n_b
     return 0;
 }
 
+IstogrammaVelocita & IstogrammaVelocita::operator = (const IstogrammaVelocita & destra) {
+    OperazioniSuLista<IstogrammaVelocita>::operator =(destra);
+    return *this;
+}
+
 void IstogrammaVelocita::reset(const unsigned int numeroTimestepsPerBlocco) {
 
     for (unsigned int i=0;i<lunghezza_lista;i++)
@@ -66,5 +71,8 @@ void IstogrammaVelocita::calcola(unsigned int primo) {
 
 
 }
+
+
+
 
 template class MediaBlocchi<IstogrammaVelocita,unsigned int,double>;
