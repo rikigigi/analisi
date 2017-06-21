@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Opzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
     int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1;
-    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false;
+    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false;
     double vmax_h=0,cariche[2];
     options.add_options()
 #if BOOST_VERSION >= 105600
@@ -60,6 +60,9 @@ int main(int argc, char ** argv)
             ("heat-transport-skip,s",boost::program_options::value<int>(&skip)->default_value(1),"incremento minimo di timesteps da usare nel calcolo delle funzioni di correlazione")
             ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"carica in unità elementari del tipo 1")
             ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"carica in unità elementari del tipo 2")
+#ifdef DEBUG
+            ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
+#endif
             ;
 
 //            ("nc,non-copressed-input",boost::program_options::bool_switch(&ncompress)->default_value(false),"legge il file di input come file non compresso con gz");
@@ -97,6 +100,10 @@ int main(int argc, char ** argv)
         fftw_plan_with_nthreads(numero_thread);
 #ifdef DEBUG
         std::cerr << "fftw_plan_with_nthreads("<<numero_thread<<")\n";
+        if (debug) {
+            TestTraiettoria ttest(input);
+            return 0;
+        }
 #endif
 #endif
 

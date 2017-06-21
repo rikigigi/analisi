@@ -78,7 +78,7 @@ void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'iniz
 
     if (fplan_natoms!=traiettoria->get_natoms() || fplan_size != size || trasformata_size!=size) {
         fftw_free(trasformata);
-        trasformata = (fftw_complex *) fftw_malloc(sizeof(fftw_complex)*(size/2+2)*3*traiettoria->get_natoms());
+        trasformata = (fftw_complex *) fftw_malloc(sizeof(fftw_complex)*(size/2+1)*3*traiettoria->get_natoms());
         trasformata_size=size;
     fftw3 = fftw_plan_many_dft_r2c(1, // rango della trasformata (1D)
                                    (int*)&size, // lunghezza di ciascuna trasformata

@@ -19,7 +19,7 @@ TestTraiettoria::TestTraiettoria(std::string filename) : Traiettoria(filename)
 
     imposta_dimensione_finestra_accesso(1000);
     imposta_inizio_accesso(0);
-    std::cout << "#---167-\n";
+    std::cout << "#---0-\n";
     for (int i=0;i<get_natoms();i++) {
         std::cout << posizioni(167,i)[0] << " " << posizioni(167,i)[1] << " " <<  posizioni(167,i)[2] << " " <<
         velocita(167,i)[0] << " " <<velocita(167,i)[1] << " " <<velocita(167,i)[2] << "\n";

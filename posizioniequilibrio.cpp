@@ -174,7 +174,7 @@ void PosizioniEquilibrio::reticolo_inizializza(double *base_r, double *base,unsi
 void PosizioniEquilibrio::get_brillouin_limit(double *kmax, double *kmin){
     int idx[3];
     for (unsigned int i=0;i<3;i++) {
-        kmax[i]=std::numeric_limits<double>::lowest();
+        kmax[i]=-std::numeric_limits<double>::max();
         kmin[i]=std::numeric_limits<double>::max();
     }
     for (idx[0]=-1;idx[0]<=1;idx[0]++)
@@ -377,7 +377,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
 
     //stima molto rozza dei limiti degli indici che coprono completamente la cella di simulazione
     double coord[]={max[0]-origin[0],max[1]-origin[1],max[2]-origin[2]},
-            uvw_max[]={std::numeric_limits<double>::lowest(),std::numeric_limits<double>::lowest(),std::numeric_limits<double>::lowest()},
+            uvw_max[]={-std::numeric_limits<double>::max(),-std::numeric_limits<double>::max(),-std::numeric_limits<double>::max()},
             uvw_min[]={std::numeric_limits<double>::max(),std::numeric_limits<double>::max(),std::numeric_limits<double>::max()};
     coord_reticolo(coord,uvw_min,uvw_max); // m,m,m
     coord[0]=min[0]-origin[0];
@@ -423,7 +423,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
                         xyz(2)>=min[2] && xyz(2)<=max[2]) {
                         //aggiungi l'atomo
                         reticolo_xyz.insert(std::pair<std::array<int,4>,std::pair<Eigen::Vector3d,unsigned int>>
-                                            ( std::array<int,4>{{u,v,w,i}},std::pair <Eigen::Vector3d,unsigned int> (xyz,traiettoria->get_natoms()) )
+                                            ( std::array<int,4>{{u,v,w,(int)i}},std::pair <Eigen::Vector3d,unsigned int> (xyz,traiettoria->get_natoms()) )
                                             );
                     }
                 }

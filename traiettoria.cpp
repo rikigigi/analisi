@@ -541,7 +541,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
         delete [] pezzi;
 
-        if(i+1<timestep+timestep_finestra) timesteps[i+1]=timesteps[i]+offset;
+        if(i+1<n_timesteps) timesteps[i+1]=timesteps[i]+offset;
         if(i+1>timestep_indicizzato) timestep_indicizzato=i+1;
     }
 
