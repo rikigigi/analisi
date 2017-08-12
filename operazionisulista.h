@@ -57,6 +57,7 @@ public:
     const T operator/ (const double&) const ;
     unsigned int lunghezza() const;
     double elemento(unsigned int i)const;
+    double * accesso_lista(){return lista;}
     void azzera();
 protected:
     OperazioniSuLista<T> (const OperazioniSuLista<T> & other);

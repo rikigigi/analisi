@@ -23,6 +23,8 @@
 #include "config.h"
 #include "istogrammavelocita.h"
 #include "greenkubo2componentionicfluid.h"
+#include "convolution.h"
+#include <functional>
 #include <fftw3.h>
 
 
@@ -30,7 +32,7 @@ int main(int argc, char ** argv)
 {
     boost::program_options::options_description options("Opzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
-    int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1;
+    int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20;
     bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false;
     double vmax_h=0,cariche[2];
     options.add_options()
@@ -60,6 +62,7 @@ int main(int argc, char ** argv)
             ("heat-transport-skip,s",boost::program_options::value<int>(&skip)->default_value(1),"incremento minimo di timesteps da usare nel calcolo delle funzioni di correlazione")
             ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"carica in unità elementari del tipo 1")
             ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"carica in unità elementari del tipo 2")
+            ("conv_n,C",boost::program_options::value<int>(&conv_n)->default_value(20),"sigma della gaussiana con cui viene fatta la convoluzione del coefficiente di trasporto termico al variare del tempo di integrazione (in numero di frame)")
 #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
 #endif
@@ -115,13 +118,24 @@ int main(int argc, char ** argv)
             MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int> greenK(&test,blocknumber,log_input,cariche,skip);
             greenK.calcola();
 
-            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze; ciascuno seguito dalla sua varianza\n";
+            double *lambda_conv=new double[greenK.media()->lunghezza()/9];
+            double *lambda_conv_var=new double[greenK.media()->lunghezza()/9];
+
+
+            Convolution<double> convoluzione( std::function<double (const double  &)> ([&conv_n](const double & x)->double{
+                return exp(-x*x/(2*conv_n*conv_n));
+            }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
+            convoluzione.calcola(&greenK.media()->accesso_lista()[6],lambda_conv,greenK.media()->lunghezza()/9,9);
+            convoluzione.calcola(&greenK.varianza()->accesso_lista()[6],lambda_conv,greenK.media()->lunghezza()/9,9);
+
+            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv; ciascuno seguito dalla sua varianza\n";
             for (unsigned int i=0;i<greenK.media()->lunghezza()/9;i++) {
                 for (unsigned int j=0;j<9;j++) {
                     std::cout << greenK.media()->elemento(i*9+j) << " "
                               << greenK.varianza()->elemento(i*9+j) << " ";
                 }
-                std::cout << "\n";
+
+                std::cout << lambda_conv[i]<< " "<<lambda_conv_var[i]<< "\n";
             }
 
         }else if (velocity_h) {
