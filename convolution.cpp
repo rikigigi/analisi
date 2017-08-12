@@ -7,6 +7,7 @@ template <typename T> Convolution<T>::Convolution(std::function<T (const T  &)> 
         std::cerr<< "Errore: richiesta una lunghezza "<<n<<" ed un centro "<<center<<" per la convoluzione!\n";
         abort();
     }
+    centro=center;
     double norm=0;
     n_fc=n;
     fc=new T[n];
@@ -17,7 +18,11 @@ template <typename T> Convolution<T>::Convolution(std::function<T (const T  &)> 
 
     for (int i=0;i<n;i++){
         fc[i]/=norm;
+#ifdef DEBUG
+    std::cerr << fc[i]<<"\n";
+#endif
     }
+
 }
 
 template <typename T> void Convolution<T>::calcola(T *in, T*out, int n, int skip) {
