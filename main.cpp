@@ -139,8 +139,20 @@ int main(int argc, char ** argv)
             }
             var_=var_/(cont*(cont-1));
 
-
-
+            double factor_conv=1.6022*1.6022 / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-5*media_*media_);
+            double factor_conv2=1.6022*1.6022 / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-5*media_);
+            double factor_intToCorr=1.0/(1e-15*10);  //0.01 ps è l'intervallo di integrazione
+            double factors[9]={
+                factor_conv*factor_intToCorr, //Jee
+                factor_conv2*factor_intToCorr, //Jzz
+                factor_conv*factor_intToCorr, //Jez
+                factor_conv, //intee
+                factor_conv2, //intzz
+                factor_conv, //intez
+                factor_conv, //lambda
+                factor_conv*factor_intToCorr, //Jze
+                factor_conv //intze
+            };
             double *lambda_conv=new double[greenK.media()->lunghezza()/9];
             double *lambda_conv_var=new double[greenK.media()->lunghezza()/9];
 
@@ -152,19 +164,20 @@ int main(int argc, char ** argv)
             }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
             convoluzione.calcola(&greenK.media()->accesso_lista()[6],lambda_conv,greenK.media()->lunghezza()/9,9);
             convoluzione.calcola(&greenK.varianza()->accesso_lista()[6],lambda_conv_var,greenK.media()->lunghezza()/9,9);
-            std::cout << "# T T1sigma  atomi/volume\n#"
+            std::cout << "# T T1sigma  atomi/volume densitNaCL\n#"
                       <<media_ << " " << sqrt(var_) << " "
-                      << test.get_natoms()/pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3)<<"\n"
-                      <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final] << " "<< sqrt(lambda_conv_var[final])<<"\n";
+                      << test.get_natoms()/pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3)<< " "<<
+                         test.get_natoms()/pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3)*(22.990+35.453)/2.0*1.66054<<"\n"
+                      <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
             std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv; ciascuno seguito dalla sua varianza\n";
             for (unsigned int i=0;i<greenK.media()->lunghezza()/9;i++) {
                 for (unsigned int j=0;j<9;j++) {
-                    std::cout << greenK.media()->elemento(i*9+j) << " "
-                              << greenK.varianza()->elemento(i*9+j) << " ";
+                    std::cout << greenK.media()->elemento(i*9+j)*factors[j] << " "
+                              << greenK.varianza()->elemento(i*9+j)*factors[j]*factors[j] << " ";
                 }
 
-                std::cout << lambda_conv[i]<< " "<<lambda_conv_var[i]<< "\n";
+                std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<< "\n";
             }
 
         }else if (velocity_h) {
