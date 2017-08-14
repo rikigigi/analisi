@@ -8,7 +8,8 @@ HeatFluxTs::HeatFluxTs(std::string filename, Traiettoria *t,unsigned int skip)
     : traiettoria(t),heatflux(0),skip(skip)
 {
 
-    heatflux = new double [traiettoria->get_ntimesteps()*3];
+    heatflux = new double [traiettoria->get_ntimesteps()*3/skip];
+    T = new double [traiettoria->get_ntimesteps()];
     size=traiettoria->get_ntimesteps();
 
     std::ifstream log(filename);
@@ -31,15 +32,15 @@ HeatFluxTs::HeatFluxTs(std::string filename, Traiettoria *t,unsigned int skip)
 
     unsigned int cur_ts=0;
 
-    while (log.good() && cur_ts < traiettoria->get_ntimesteps()) {
+    while (log.good() && cur_ts*skip < traiettoria->get_ntimesteps()) {
         int64_t step;
         double time=.0, poteng=.0,toteng=.0,lx=.0,press=.0,temp=.0, j[3]={0.0,0.0,0.0};
         log >> step >> time >> poteng >> toteng >> lx >> press >> temp >>
                 j[0] >> j[1] >> j[2];
 
-        if (traiettoria->get_timestep_lammps(cur_ts)>step){
+        if (traiettoria->get_timestep_lammps(cur_ts*skip)>step){
             continue;
-        } else if (traiettoria->get_timestep_lammps(cur_ts)<step) {
+        } else if (traiettoria->get_timestep_lammps(cur_ts*skip)<step) {
             std::cerr << "Errore: i frame dei file non corrispondono! (forse il file di log ha una risoluzione temporale minore della traiettoria?)\n";
             abort();
             break;
@@ -48,7 +49,9 @@ HeatFluxTs::HeatFluxTs(std::string filename, Traiettoria *t,unsigned int skip)
 
         for (unsigned int i=0;i<3;i++)
             heatflux[cur_ts*3+i]=j[i];
-        cur_ts+=skip;
+        T[cur_ts]=temp;
+        L=lx;
+        cur_ts++;
     }
 }
 
@@ -59,7 +62,7 @@ double * HeatFluxTs::flux(unsigned int ts) {
     }
 
     if (ts<size)
-        return &heatflux[ts*3];
+        return &heatflux[ts*3/skip];
     else {
         std::cerr << "Errore: richiesto un flusso di calore fuori dai limiti caricati!\n";
         abort();
@@ -67,6 +70,21 @@ double * HeatFluxTs::flux(unsigned int ts) {
     }
 }
 
+double * HeatFluxTs::temp(unsigned int ts) {
+    if (ts%skip !=0){
+        std::cerr << "Errore: richiesto un timestep che non è stato letto (salto ogni "<<skip<<" timesteps)\n";
+        abort();
+    }
+
+    if (ts<size)
+        return &T[ts/skip];
+    else {
+        std::cerr << "Errore: richiesta una temperatura fuori dai limiti caricati!\n";
+        abort();
+        return 0;
+    }
+}
 HeatFluxTs::~HeatFluxTs() {
     delete [] heatflux;
+    delete [] T;
 }

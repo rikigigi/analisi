@@ -112,6 +112,7 @@ public:
 
     T * media() {return Tmedio;}
     T * varianza() {return Tvar;}
+    T * puntatoreCalcolo() {return calcolo;}
 
 private:
     unsigned int n_b,s; //numero di blocchi e dimensione
