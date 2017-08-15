@@ -1,5 +1,6 @@
 #include "heatfluxts.h"
 #include <fstream>
+#include <sstream>
 
 //TODO: anche questo dovrebbe leggere il file a blocchi!
 
@@ -35,13 +36,29 @@ HeatFluxTs::HeatFluxTs(std::string filename, Traiettoria *t,unsigned int skip)
     while (log.good() && cur_ts*skip < traiettoria->get_ntimesteps()) {
         int64_t step;
         double time=.0, poteng=.0,toteng=.0,lx=.0,press=.0,temp=.0, j[3]={0.0,0.0,0.0};
-        log >> step >> time >> poteng >> toteng >> lx >> press >> temp >>
+        std::getline(log,tmp);
+        if (tmp.find("Loop time")!=std::string::npos){
+            while (log.good()) {
+                std::getline(log,tmp);
+                if (tmp==head_heat)
+                    break;
+            }
+
+            if (!log.good()) {
+                std::cerr << "Errore: impossibile trovare nel file di log \""<<filename<<"\" l'intestazione \""<<head_heat<<"\"\n";
+                abort();
+            }
+            std::getline(log,tmp);
+        }
+        std::stringstream sstr(tmp);
+
+        sstr >> step >> time >> poteng >> toteng >> lx >> press >> temp >>
                 j[0] >> j[1] >> j[2];
 
         if (traiettoria->get_timestep_lammps(cur_ts*skip)>step){
             continue;
         } else if (traiettoria->get_timestep_lammps(cur_ts*skip)<step) {
-            std::cerr << "Errore: i frame dei file non corrispondono! (forse il file di log ha una risoluzione temporale minore della traiettoria?)\n";
+            std::cerr << "Errore: i frame dei file non corrispondono ( frame "<< cur_ts*skip<<", "<<traiettoria->get_timestep_lammps(cur_ts*skip) << " e "<<step <<")! (forse il file di log ha una risoluzione temporale minore della traiettoria?)\n";
             abort();
             break;
         }

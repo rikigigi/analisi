@@ -360,24 +360,46 @@ void Traiettoria::allunga_timesteps(unsigned int nuova_dimensione){
 }
 
 void Traiettoria::index_all() {
+
+    if (timestep_indicizzato>=n_timesteps-1)
+        return;
+
     int res=madvise(file,fsize,MADV_SEQUENTIAL);
     if ( res==-1) {
         std::cerr << "Errore in madvise MADV_SEQUENTIAL -- index_all(): "<< res<<"\n";
         perror(0);
     }
-    for (int itimestep=1;itimestep<n_timesteps;itimestep++){
+#ifdef DEBUG
+    std::cerr << "Inizio a indicizzare tutti i timesteps... (può richiedere del tempo) ";
+    std::cerr.flush();
+    cronometro cron;
+    cron.start();
+#endif
+    for (int itimestep=timestep_indicizzato+1;itimestep<n_timesteps;itimestep++){
         Intestazione_timestep * intestazione=0;
         size_t offset = leggi_pezzo_intestazione(timesteps[itimestep-1],intestazione);
         timesteps[itimestep]=timesteps[itimestep-1]+offset;
         timesteps_lammps[itimestep-1]=intestazione->timestep;
-        timestep_indicizzato=itimestep;
+        timestep_indicizzato=itimestep-1;
+    }
 
+    //anche l'ultimo:
+    if (timestep_indicizzato!=n_timesteps-1){
+        Intestazione_timestep * intestazione=0;
+        size_t offset = leggi_pezzo_intestazione(timesteps[n_timesteps-1],intestazione);
+        timesteps_lammps[n_timesteps-1]=intestazione->timestep;
+        timestep_indicizzato=n_timesteps-1;
     }
     res=madvise(file,fsize,MADV_NORMAL);
     if ( res==-1) {
         std::cerr << "Errore in madvise MADV_NORMAL -- index_all(): "<< res<<"\n";
         perror(0);
     }
+#ifdef DEBUG
+    cron.stop();
+    std::cerr << " OK, tempo cpu "<<cron.time()  << "s.\nIndicizzati tutti i timesteps fino a "<<timestep_indicizzato<<" compreso\n";
+    std::cerr.flush();
+#endif
 }
 
 Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
@@ -624,15 +646,15 @@ double * Traiettoria::velocita(const int &timestep, const int &atomo) {
 }
 
 int64_t Traiettoria::get_timestep_lammps(unsigned int timestep) {
-    if (timestep<timestep_indicizzato) {
+    if (timestep<=timestep_indicizzato) {
         return timesteps_lammps[timestep];
     } else if (timestep < n_timesteps) {
 #ifdef DEBUG
-        std::cerr << "Attenzione! Richiesto il numero di timestep LAMMPS di una zona del file non ancora letta!\n";
+        std::cerr << "Attenzione! Richiesto il numero di timestep LAMMPS di una zona del file non ancora letta! ("<<timestep<<", "<<timestep_indicizzato<<" ultimo letto)\n";
 #endif
         return timesteps_lammps[timestep];
     } else {
-        std::cerr << "Errore: richiesto il numero di timestep LAMMPS per un indice che probabilmente si trova oltre la fine del file!\n";
+        std::cerr << "Errore: richiesto il numero di timestep LAMMPS per un indice che probabilmente si trova oltre la fine del file! ("<<timestep<<", "<<n_timesteps<<" letti)\n";
         abort();
         return 0;
     }

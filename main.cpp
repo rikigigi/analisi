@@ -139,9 +139,9 @@ int main(int argc, char ** argv)
             }
             var_=var_/(cont*(cont-1));
 
-            double factor_conv=1.6022*1.6022 / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-5*media_*media_);
-            double factor_conv2=1.6022*1.6022 / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-5*media_);
-            double factor_intToCorr=1.0/(1e-15*10);  //0.01 ps è l'intervallo di integrazione
+            double factor_conv=1.6022*1.6022*5*skip / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-4*media_*media_);
+            double factor_conv2=1.6022*1.6022*5*skip / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-4*media_);
+            double factor_intToCorr=1.0/(1e-15*5*skip);  //0.01 ps è l'intervallo di integrazione
             double factors[9]={
                 factor_conv*factor_intToCorr, //Jee
                 factor_conv2*factor_intToCorr, //Jzz

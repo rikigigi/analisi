@@ -161,7 +161,7 @@ template <class T> const T  OperazioniSuLista<T>::operator / (const double & des
 
 
 template <class T> OperazioniSuLista<T> & OperazioniSuLista<T>::operator =(const OperazioniSuLista<T> &destra) {
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cerr << "chiamato OperazioniSuLista<T>::operator = " __FILE__ ":"<<__LINE__<<"\n";
 #endif
     if (lunghezza_lista!=destra.lunghezza_lista) { //rialloca la memoria
