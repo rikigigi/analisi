@@ -33,7 +33,7 @@ int main(int argc, char ** argv)
 {
     boost::program_options::options_description options("Opzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
-    int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60;
+    int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,dumpGK=false;
     double vmax_h=0,cariche[2];
     options.add_options()
@@ -66,6 +66,7 @@ int main(int argc, char ** argv)
             ("conv_n,C",boost::program_options::value<int>(&conv_n)->default_value(10),"sigma della gaussiana con cui viene fatta la convoluzione del coefficiente di trasporto termico al variare del tempo di integrazione (in numero di frame)")
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"numero di frame a cui estrarre il risultato finale")
             ("dump-block-H,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"scrive in dei file (aggiungendo ogni volta alla fine) i calcoli di ogni signolo blocco per il calcolo del coefficiente di trasporto termico in un sale fuso")
+            ("stop-acf,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali. Se posto a zero è pari alle dimensioni del blocco")
 #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
 #endif
@@ -84,7 +85,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (vm.count("help")||vm.count("input")==0 || vm.count("loginput")==0 || skip<=0){
+        if (vm.count("help")||vm.count("input")==0 || vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -118,7 +119,7 @@ int main(int argc, char ** argv)
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
-            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool> greenK(&test,blocknumber,log_input,cariche,skip,dumpGK);
+            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int> greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf);
             greenK.calcola();
             greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->temp(0);
             //calcola velocemente la media a blocchi per la temperatura
@@ -178,7 +179,9 @@ int main(int argc, char ** argv)
                               << greenK.varianza()->elemento(i*9+j)*factors[j]*factors[j] << " ";
                 }
 
-                std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<< "\n";
+                std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
+                          << factor_conv*(greenK.media()->elemento(i*9+3)-pow(greenK.media()->elemento(i*9+5),2)/greenK.media()->elemento(i*9+4)) << "\n";
+
             }
 
         }else if (velocity_h) {

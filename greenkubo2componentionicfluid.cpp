@@ -16,8 +16,8 @@
 #include <string>
 #include <fstream>
 
-GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(Traiettoria *t, std::string log, double * cariche, unsigned int skip, bool dump) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
-    traiettoria (t), log(log), ntimesteps(0), skip(skip),je(0),jz(0),scrivi_file(dump)
+GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(Traiettoria *t, std::string log, double * cariche, unsigned int skip, bool dump,unsigned int lunghezza_funzione_max) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
+    traiettoria (t), log(log), ntimesteps(0), skip(skip),je(0),jz(0),scrivi_file(dump),lmax(lunghezza_funzione_max)
 {
 // ricordarsi di impostare le cariche delgli atomi!
     traiettoria->set_charge(0,cariche[0]);
@@ -45,15 +45,16 @@ GreenKubo2ComponentIonicFluid & GreenKubo2ComponentIonicFluid::operator =(const 
 }
 
 unsigned int GreenKubo2ComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
-    return traiettoria->get_ntimesteps()/(n_b+1)+1;
+    return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
 
 void GreenKubo2ComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco) {
-    lunghezza_lista=(numeroTimestepsPerBlocco/skip+1)*9; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
+    leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
+    lunghezza_lista=(leff/skip+1)*9; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
-    jz->reset(numeroTimestepsPerBlocco*2);
+    jz->reset(numeroTimestepsPerBlocco+leff);
 }
 
 void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
@@ -67,7 +68,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
     double intez=0.0;
     double intze=0.0;
     double jeeo=0.0,jzzo=0.0,jezo=0.0,jzeo=0.0;
-    for (unsigned int itimestep=0;itimestep<ntimesteps;itimestep+=skip) {
+    for (unsigned int itimestep=0;itimestep<leff;itimestep+=skip) {
         //fa la media sulla traiettoria dei vari prodotti,
         //con una differenza di timesteps fissata "itimestep"
         double jee=0.0,jzz=0.0,jez=0.0,jze=0.0;
@@ -120,7 +121,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
 
     if (scrivi_file) {
         std::ofstream outfile(log+".greekdump",std::ios::app);
-        for (unsigned int itimestep=0;itimestep<ntimesteps;itimestep+=skip) {
+        for (unsigned int itimestep=0;itimestep<leff;itimestep+=skip) {
             for (unsigned int j=0;j<9;j++){
                 outfile << lista[(itimestep/skip)*9+j] << " ";
             }

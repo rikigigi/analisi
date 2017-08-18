@@ -23,7 +23,7 @@ class ChargeFluxTs;
 class GreenKubo2ComponentIonicFluid : public OperazioniSuLista<GreenKubo2ComponentIonicFluid>
 {
 public:
-    GreenKubo2ComponentIonicFluid(Traiettoria * t, std::string log, double *cariche,unsigned int skip=1,bool dump=false);
+    GreenKubo2ComponentIonicFluid(Traiettoria * t, std::string log, double *cariche,unsigned int skip=1,bool dump=false,unsigned int lunghezza_funzione_max=0);
     ~GreenKubo2ComponentIonicFluid();
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
     void reset(unsigned int numeroTimestepsPerBlocco);
@@ -36,7 +36,7 @@ private:
     ChargeFluxTs * jz;
     std::string log;
     Traiettoria *traiettoria;
-    unsigned int ntimesteps,skip;
+    unsigned int ntimesteps,skip,lmax,leff;
 };
 
 #endif // GREENKUBO2COMPONENTIONICFLUID_H
