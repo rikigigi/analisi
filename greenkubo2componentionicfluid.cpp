@@ -50,7 +50,7 @@ unsigned int GreenKubo2ComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsig
 
 void GreenKubo2ComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco) {
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
-    lunghezza_lista=(leff/skip+1)*9; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
+    lunghezza_lista=(leff/skip)*9; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
