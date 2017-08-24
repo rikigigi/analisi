@@ -25,6 +25,7 @@
 #include "greenkubo2componentionicfluid.h"
 #include "convolution.h"
 #include "heatfluxts.h"
+#include "msd.h"
 #include <functional>
 #include <fftw3.h>
 
@@ -34,7 +35,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Opzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
     int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,dumpGK=false;
+    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,dumpGK=false,msd=false;
     double vmax_h=0,cariche[2];
     options.add_options()
 #if BOOST_VERSION >= 105600
@@ -60,13 +61,14 @@ int main(int argc, char ** argv)
             ("bin-number,m",boost::program_options::value<int>(&nbins)->default_value(50),"numero di intervalli da usare nell'istogramma delle velocità")
             ("histogram-minmax,M",boost::program_options::value<double>(&vmax_h)->default_value(500),"l'istogramma viene calcolato nell'intervallo compreso fra -<valore> e +<valore>, dove <valore> è quello qui specificato")
             ("heat-transport-coefficient,H",boost::program_options::bool_switch(&heat_coeff)->default_value(false),"calcola il coefficiente di trasporto termico per sale fuso a due componenti")
-            ("heat-transport-skip,s",boost::program_options::value<int>(&skip)->default_value(1),"incremento minimo di timesteps da usare nel calcolo delle funzioni di correlazione")
+            ("skip,s",boost::program_options::value<int>(&skip)->default_value(1),"incremento minimo di timesteps da usare nel calcolo delle funzioni di correlazione o nello spostamento quadratico medio")
             ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"carica in unità elementari del tipo 1")
             ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"carica in unità elementari del tipo 2")
             ("conv_n,C",boost::program_options::value<int>(&conv_n)->default_value(10),"sigma della gaussiana con cui viene fatta la convoluzione del coefficiente di trasporto termico al variare del tempo di integrazione (in numero di frame)")
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"numero di frame a cui estrarre il risultato finale")
             ("dump-block-H,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"scrive in dei file (aggiungendo ogni volta alla fine) i calcoli di ogni signolo blocco per il calcolo del coefficiente di trasporto termico in un sale fuso")
-            ("stop-acf,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali. Se posto a zero è pari alle dimensioni del blocco")
+            ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali o dello spostamento quadratico medio. Se posto a zero è pari alle dimensioni del blocco")
+            ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
 #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
 #endif
@@ -119,7 +121,8 @@ int main(int argc, char ** argv)
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
-            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int> greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf);
+            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int>
+                    greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf);
             greenK.calcola();
             greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->temp(0);
             //calcola velocemente la media a blocchi per la temperatura
@@ -182,6 +185,22 @@ int main(int argc, char ** argv)
                 std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
                           << factor_conv*(greenK.media()->elemento(i*9+3)-pow(greenK.media()->elemento(i*9+5),2)/greenK.media()->elemento(i*9+4)) << "\n";
 
+            }
+
+        }else if (msd){
+
+            std::cerr << "Inizio del calcolo dello spostamento quadratico medio...\n";
+            Traiettoria test(input);
+            test.imposta_dimensione_finestra_accesso(1);
+            test.imposta_inizio_accesso(0);
+
+            MediaBlocchi<MSD,unsigned int,unsigned int> Msd(&test,blocknumber,skip,stop_acf);
+            Msd.calcola();
+            for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes();i++) {
+                for (unsigned int j=0;j<test.get_ntypes();j++)
+                    std::cout << Msd.media()->elemento(i*test.get_ntypes()+j) << " " <<
+                              Msd.varianza()->elemento(i*test.get_ntypes()+j) << " ";
+                std::cout << "\n";
             }
 
         }else if (velocity_h) {
