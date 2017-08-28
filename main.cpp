@@ -121,8 +121,8 @@ int main(int argc, char ** argv)
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
-            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int>
-                    greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf);
+            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
+                    greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
             greenK.calcola();
             greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->temp(0);
             //calcola velocemente la media a blocchi per la temperatura
@@ -146,7 +146,7 @@ int main(int argc, char ** argv)
 
             double factor_conv=1.6022*1.6022*5*skip / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-4*media_*media_);
             double factor_conv2=1.6022*1.6022*5*skip / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-4*media_);
-            double factor_intToCorr=1.0/(1e-15*5*skip);  //0.01 ps è l'intervallo di integrazione
+            double factor_intToCorr=1.0/(1e-15*5*skip);  //0.005 ps è l'intervallo di integrazione
             double factors[9]={
                 factor_conv*factor_intToCorr, //Jee
                 factor_conv2*factor_intToCorr, //Jzz
@@ -186,6 +186,8 @@ int main(int argc, char ** argv)
                           << factor_conv*(greenK.media()->elemento(i*9+3)-pow(greenK.media()->elemento(i*9+5),2)/greenK.media()->elemento(i*9+4)) << "\n";
 
             }
+            delete [] lambda_conv;
+            delete [] lambda_conv_var;
 
         }else if (msd){
 

@@ -28,7 +28,8 @@ public:
                                   double *cariche,
                                   unsigned int skip=1,
                                   bool dump=false,
-                                  unsigned int lunghezza_funzione_max=0
+                                  unsigned int lunghezza_funzione_max=0,
+                                  unsigned int nthreads=0
             );
     ~GreenKubo2ComponentIonicFluid();
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
@@ -42,7 +43,7 @@ private:
     ChargeFluxTs * jz;
     std::string log;
     Traiettoria *traiettoria;
-    unsigned int ntimesteps,skip,lmax,leff;
+    unsigned int ntimesteps,skip,lmax,leff,nthread;
 };
 
 #endif // GREENKUBO2COMPONENTIONICFLUID_H
