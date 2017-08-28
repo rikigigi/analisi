@@ -9,7 +9,8 @@ class MSD : public OperazioniSuLista<MSD>
 public:
     MSD(Traiettoria *t,
         unsigned int skip=1,
-        unsigned int tmax=0
+        unsigned int tmax=0,
+        unsigned int nthreads=0
             );
 
     void reset(const unsigned int numeroTimestepsPerBlocco);
@@ -18,7 +19,7 @@ public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
 private:
     Traiettoria * traiettoria;
-    unsigned int ntimesteps,skip,lmax,leff;
+    unsigned int ntimesteps,skip,lmax,leff,nthread;
 };
 
 #endif // MSD_H

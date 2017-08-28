@@ -196,7 +196,7 @@ int main(int argc, char ** argv)
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
 
-            MediaBlocchi<MSD,unsigned int,unsigned int> Msd(&test,blocknumber,skip,stop_acf);
+            MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int> Msd(&test,blocknumber,skip,stop_acf,numero_thread);
             Msd.calcola();
             for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes();i++) {
                 for (unsigned int j=0;j<test.get_ntypes();j++)
