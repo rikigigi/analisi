@@ -28,6 +28,9 @@
 #include "msd.h"
 #include <functional>
 #include <fftw3.h>
+#ifdef DEBUG
+#include "readlog.h"
+#endif
 
 
 int main(int argc, char ** argv)
@@ -35,7 +38,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Opzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
     int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,dumpGK=false,msd=false;
+    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
     double vmax_h=0,cariche[2];
     options.add_options()
 #if BOOST_VERSION >= 105600
@@ -71,6 +74,7 @@ int main(int argc, char ** argv)
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
 #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
+            ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
 #endif
             ;
 
@@ -115,8 +119,21 @@ int main(int argc, char ** argv)
         }
 #endif
 #endif
+#ifdef DEBUG
+        if (debug2){
 
-        if (heat_coeff) {
+            ReadLog test(log_input);
+            for (unsigned int i=0;i<test.n_timestep();i++){
+                std::cerr << i << " "<<test.timestep(i)<< " ";
+                for (unsigned int j=0;j<test.n_data();j++){
+                    std::cerr << test.line(i)[j] << " ";
+                }
+                std::cerr << "\n";
+            }
+
+        } else
+#endif // DEBUG
+            if (heat_coeff) {
             std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
