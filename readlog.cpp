@@ -5,6 +5,7 @@
 ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
     traiettoria(t),skip(skip),step_index(0)
 {
+    unsigned int lcont=0;
     std::string tmp,header;
     std::ifstream log(filename);
 
@@ -13,6 +14,7 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
     while (log.good()) {
         header=tmp;
         std::getline(log,tmp);
+        lcont++;
         if (if_only_numbers(tmp)&&tmp.length()>1)
             break;
     }
@@ -57,13 +59,20 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
                     sstr >> TS;
                 }
             }
-            data.push_back(std::pair<unsigned int ,double*>(TS,reads));
+            if (sstr.fail()){
+                std::cerr << "Ignoro la linea "<<lcont<<": '"<<tmp<<"'\n";
+                sstr.clear();
+                delete [] reads;
+            } else {
+                data.push_back(std::pair<unsigned int ,double*>(TS,reads));
+            }
         }
 
         std::getline(log,tmp);
+        lcont++;
     }
 #ifdef DEBUG
-    std::cerr << "Numero di linee lette dal file '"<<filename<<"': "<<data.size()<<"\n";
+    std::cerr << "Numero di dati letti dal file '"<<filename<<"': "<<data.size()<<"\n";
 #endif
 
 }

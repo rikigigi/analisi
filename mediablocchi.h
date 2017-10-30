@@ -21,11 +21,51 @@
 #include <iostream>
 #include "config.h"
 #include "cronometro.h"
+#include "readlog.h"
 
-template <class T, typename ... Args > class MediaBlocchi
+
+
+template <class TR> class TraiettoriaF {
+public:
+    static void imposta_dimensione_finestra_accesso(unsigned int s_,TR* traiettoria ){}
+    static void imposta_inizio_accesso(unsigned int s_,TR* traiettoria  ){}
+    static unsigned int get_ntimesteps(TR* traiettoria ){}
+};
+
+template <> class TraiettoriaF<Traiettoria> {
+public:
+static void imposta_dimensione_finestra_accesso(unsigned int s_,Traiettoria* traiettoria ){
+    traiettoria->imposta_dimensione_finestra_accesso(s_);
+}
+static void imposta_inizio_accesso(unsigned int s_,Traiettoria* traiettoria  ){
+    traiettoria->imposta_inizio_accesso(s_);
+}
+static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
+    return traiettoria->get_ntimesteps();
+}
+
+};
+
+
+template <> class TraiettoriaF<ReadLog> {
+public:
+static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog* traiettoria ){
+
+}
+static void imposta_inizio_accesso(unsigned int s_,ReadLog* traiettoria  ){
+
+}
+static unsigned int get_ntimesteps(ReadLog* traiettoria ){
+    return traiettoria->n_timestep();
+}
+
+};
+
+
+template <class TR,class T, typename ... Args > class MediaBlocchiG
 {
 public:
-    MediaBlocchi(Traiettoria * t,
+    MediaBlocchiG(TR * t,
                  const unsigned int & numero_blocchi,
                  Args ... arg
                  ) {
@@ -38,7 +78,7 @@ public:
         Tvar = new T(traiettoria,arg...);
         delta = new T(traiettoria,arg...);
         tmp=new T(traiettoria,arg...);
-        int timestepsPerBlocco=(t->get_ntimesteps()-Tmedio->numeroTimestepsOltreFineBlocco(n_b))/n_b;
+        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-Tmedio->numeroTimestepsOltreFineBlocco(n_b))/n_b;
         if(timestepsPerBlocco>0){
             s=timestepsPerBlocco;
             ok=true;
@@ -49,9 +89,9 @@ public:
         calcolo = new T (traiettoria,arg...);
     }
 
-    ~MediaBlocchi() {
+    ~MediaBlocchiG() {
 #ifdef DEBUG
-        std::cerr << "~MediaBlocchi(): Tmedio="<<Tmedio<<", Tvar="<<Tvar<< ", delta="<<delta<<", tmp="<<tmp<<".\n";
+        std::cerr << "~MediaBlocchiG(): Tmedio="<<Tmedio<<", Tvar="<<Tvar<< ", delta="<<delta<<", tmp="<<tmp<<".\n";
 #endif
         delete Tmedio;
         delete Tvar;
@@ -68,7 +108,7 @@ public:
         Tvar->azzera();
         delta->reset(s);
         tmp->reset(s);
-        traiettoria->imposta_dimensione_finestra_accesso(s+Tmedio->numeroTimestepsOltreFineBlocco(n_b));
+        TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+Tmedio->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
         for (unsigned int iblock=0;iblock<n_b;iblock++) {
 #ifdef DEBUG
             std::cerr << "calcolo->calcola(iblock*s);\n";
@@ -76,7 +116,7 @@ public:
             cronometro cron;
             cron.start();
             calcolo->reset(s);
-            traiettoria->imposta_inizio_accesso(iblock*s);
+            TraiettoriaF<TR>::imposta_inizio_accesso(iblock*s,traiettoria);
             calcolo->calcola(iblock*s);
 #ifdef DEBUG2
             std::cerr << "*delta = *calcolo - *Tmedio;\n";
@@ -117,9 +157,14 @@ public:
 private:
     unsigned int n_b,s; //numero di blocchi e dimensione
     T *Tmedio,*Tvar,*calcolo,*delta,*tmp;
-    Traiettoria * traiettoria;
+    TR * traiettoria;
     bool ok;
 
 };
+
+
+template<class T, typename ... Args> using MediaBlocchi = MediaBlocchiG<Traiettoria,T,Args...>;
+
+
 
 #endif // MEDIABLOCCHI_H

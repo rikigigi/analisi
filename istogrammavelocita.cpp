@@ -75,4 +75,4 @@ void IstogrammaVelocita::calcola(unsigned int primo) {
 
 
 
-template class MediaBlocchi<IstogrammaVelocita,unsigned int,double>;
+//template class MediaBlocchi<IstogrammaVelocita,unsigned int,double>;

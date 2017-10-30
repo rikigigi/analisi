@@ -51,6 +51,6 @@ private:
 };
 
 //per fare anche le varie medie a blocchi
-template class MediaBlocchi<SpettroVibrazionale>;
+//template class MediaBlocchi<SpettroVibrazionale>;
 
 #endif // SPETTROVIBRAZIONALE_H
