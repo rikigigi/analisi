@@ -14,12 +14,15 @@ public:
     unsigned int n_timestep(){return data.size();}
     unsigned int n_data(){return headers.size()-1;}
     unsigned int timestep(unsigned int index);
+    unsigned int get_natoms(){return 1728;}
+    std::pair<unsigned int,bool> get_index_of(std::string header);
 private:
     Traiettoria * traiettoria;
     std::vector<std::string> headers;
     std::vector<std::pair<unsigned int ,double*> > data;
     unsigned int skip,size,step_index;
     bool if_only_numbers(std::string str);
+    unsigned int natoms;
 
 };
 

@@ -19,24 +19,35 @@
 #include <vector>
 #include <mutex>
 
-GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(Traiettoria *t, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
-    traiettoria (t), log(log), ntimesteps(0), skip(skip),je(0),jz(0),scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads)
+GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
+    traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads)
 {
-// ricordarsi di impostare le cariche delgli atomi!
-    traiettoria->set_charge(0,cariche[0]);
-    traiettoria->set_charge(1,cariche[1]);
-    traiettoria->index_all();
-    je =new HeatFluxTs(log,traiettoria,skip);
-    jz = new ChargeFluxTs(traiettoria);
+    carica[0]=cariche[0];
+    carica[1]=cariche[1];
+
+    std::pair<unsigned int ,bool> res;
+    res=traiettoria->get_index_of("c_flusso[1]");
+    if(res.second)
+        idx_je=res.first;
+    else
+    {std::cerr << "Errore: header di una corrente non trovato!";assert(0);abort();}
+    res=traiettoria->get_index_of("c_vcm[1][1]");
+    if(res.second)
+        idx_j0=res.first;
+    else
+    {std::cerr << "Errore: header di una corrente non trovato!";assert(0);abort();}
+    res=traiettoria->get_index_of("c_vcm[2][1]");
+    if(res.second)
+        idx_j1=res.first;
+    else
+    {std::cerr << "Errore: header di una corrente non trovato!";assert(0);abort();}
 
 }
 
 GreenKubo2ComponentIonicFluid::~GreenKubo2ComponentIonicFluid(){
 #ifdef DEBUG2
-    std::cerr << "Called delete GreenKubo2ComponentIonicFluid, je="<<je<<", jz="<<jz<<"\n";
+//    std::cerr << "Called delete GreenKubo2ComponentIonicFluid, je="<<je<<", jz="<<jz<<"\n";
 #endif
-    delete je;
-    delete jz;
 }
 
 GreenKubo2ComponentIonicFluid & GreenKubo2ComponentIonicFluid::operator =(const GreenKubo2ComponentIonicFluid & destra) {
@@ -48,7 +59,7 @@ GreenKubo2ComponentIonicFluid & GreenKubo2ComponentIonicFluid::operator =(const 
 }
 
 unsigned int GreenKubo2ComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
-    return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
+    return (traiettoria->n_timestep()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->n_timestep()/(n_b+1)+1 : lmax;
 }
 
 void GreenKubo2ComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco) {
@@ -57,14 +68,26 @@ void GreenKubo2ComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco)
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
-    jz->reset(numeroTimestepsPerBlocco+leff);
+}
+
+std::array<double,3> GreenKubo2ComponentIonicFluid::jz(unsigned int ts){
+    double *j0=&traiettoria->line(ts)[idx_j0];
+    double *j1=&traiettoria->line(ts)[idx_j1];
+    return std::array<double,3> {{
+            j0[0]*carica[0]+j1[0]*carica[1],
+            j0[1]*carica[0]+j1[1]*carica[1],
+            j0[2]*carica[0]+j1[2]*carica[1],
+        }};
+}
+
+double* GreenKubo2ComponentIonicFluid::je(unsigned int ts){
+    return&traiettoria->line(ts)[idx_je];
 }
 
 void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
 
-    jz->calcola(primo);
 
-    unsigned int allinea=primo%skip;
+    unsigned int allinea=0;//primo%skip;
 
     double intzz=0.0;
     double intee=0.0;
@@ -74,28 +97,28 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
 
 
     if (nthread<1)
-    for (unsigned int itimestep=0;itimestep<leff;itimestep+=skip) {
+    for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
         //fa la media sulla traiettoria dei vari prodotti,
         //con una differenza di timesteps fissata "itimestep"
         double jee=0.0,jzz=0.0,jez=0.0,jze=0.0;
         unsigned int cont=0;
         for (unsigned int jmedia=allinea;jmedia<ntimesteps;jmedia+=skip) {
             //prodotto JzJz
-            double deltazz=(jz->J_z(primo+jmedia)[0]*jz->J_z(primo+jmedia+itimestep)[0]+
-                            jz->J_z(primo+jmedia)[1]*jz->J_z(primo+jmedia+itimestep)[1]+
-                            jz->J_z(primo+jmedia)[2]*jz->J_z(primo+jmedia+itimestep)[2])/3.0
+            double deltazz=(jz(primo+jmedia)[0]*jz(primo+jmedia+itimestep)[0]+
+                            jz(primo+jmedia)[1]*jz(primo+jmedia+itimestep)[1]+
+                            jz(primo+jmedia)[2]*jz(primo+jmedia+itimestep)[2])/3.0
                                 - jzz;
-            double deltaez=(je->flux(primo+jmedia)[0]*jz->J_z(primo+jmedia+itimestep)[0]+
-                            je->flux(primo+jmedia)[1]*jz->J_z(primo+jmedia+itimestep)[1]+
-                            je->flux(primo+jmedia)[2]*jz->J_z(primo+jmedia+itimestep)[2])/3.0
+            double deltaez=(je(primo+jmedia)[0]*jz(primo+jmedia+itimestep)[0]+
+                            je(primo+jmedia)[1]*jz(primo+jmedia+itimestep)[1]+
+                            je(primo+jmedia)[2]*jz(primo+jmedia+itimestep)[2])/3.0
                                 - jez;
-            double deltaze=(je->flux(primo+jmedia+itimestep)[0]*jz->J_z(primo+jmedia)[0]+
-                            je->flux(primo+jmedia+itimestep)[1]*jz->J_z(primo+jmedia)[1]+
-                            je->flux(primo+jmedia+itimestep)[2]*jz->J_z(primo+jmedia)[2])/3.0
+            double deltaze=(je(primo+jmedia+itimestep)[0]*jz(primo+jmedia)[0]+
+                            je(primo+jmedia+itimestep)[1]*jz(primo+jmedia)[1]+
+                            je(primo+jmedia+itimestep)[2]*jz(primo+jmedia)[2])/3.0
                                 - jze;
-            double deltaee=(je->flux(primo+jmedia)[0]*je->flux(primo+jmedia+itimestep)[0]+
-                            je->flux(primo+jmedia)[1]*je->flux(primo+jmedia+itimestep)[1]+
-                            je->flux(primo+jmedia)[2]*je->flux(primo+jmedia+itimestep)[2])/3.0
+            double deltaee=(je(primo+jmedia)[0]*je(primo+jmedia+itimestep)[0]+
+                            je(primo+jmedia)[1]*je(primo+jmedia+itimestep)[1]+
+                            je(primo+jmedia)[2]*je(primo+jmedia+itimestep)[2])/3.0
                                 - jee;
             jzz+=deltazz/(++cont);
             jee+=deltaee/(cont);
@@ -150,21 +173,21 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                     unsigned int cont=0;
                     for (unsigned int jmedia=allinea;jmedia<ntimesteps;jmedia+=skip) {
                         //prodotto JzJz
-                        double deltazz=(jz->J_z(primo+jmedia)[0]*jz->J_z(primo+jmedia+itimestep)[0]+
-                                        jz->J_z(primo+jmedia)[1]*jz->J_z(primo+jmedia+itimestep)[1]+
-                                        jz->J_z(primo+jmedia)[2]*jz->J_z(primo+jmedia+itimestep)[2])/3.0
+                        double deltazz=(jz(primo+jmedia)[0]*jz(primo+jmedia+itimestep)[0]+
+                                        jz(primo+jmedia)[1]*jz(primo+jmedia+itimestep)[1]+
+                                        jz(primo+jmedia)[2]*jz(primo+jmedia+itimestep)[2])/3.0
                                             - jzz;
-                        double deltaez=(je->flux(primo+jmedia)[0]*jz->J_z(primo+jmedia+itimestep)[0]+
-                                        je->flux(primo+jmedia)[1]*jz->J_z(primo+jmedia+itimestep)[1]+
-                                        je->flux(primo+jmedia)[2]*jz->J_z(primo+jmedia+itimestep)[2])/3.0
+                        double deltaez=(je(primo+jmedia)[0]*jz(primo+jmedia+itimestep)[0]+
+                                        je(primo+jmedia)[1]*jz(primo+jmedia+itimestep)[1]+
+                                        je(primo+jmedia)[2]*jz(primo+jmedia+itimestep)[2])/3.0
                                             - jez;
-                        double deltaze=(je->flux(primo+jmedia+itimestep)[0]*jz->J_z(primo+jmedia)[0]+
-                                        je->flux(primo+jmedia+itimestep)[1]*jz->J_z(primo+jmedia)[1]+
-                                        je->flux(primo+jmedia+itimestep)[2]*jz->J_z(primo+jmedia)[2])/3.0
+                        double deltaze=(je(primo+jmedia+itimestep)[0]*jz(primo+jmedia)[0]+
+                                        je(primo+jmedia+itimestep)[1]*jz(primo+jmedia)[1]+
+                                        je(primo+jmedia+itimestep)[2]*jz(primo+jmedia)[2])/3.0
                                             - jze;
-                        double deltaee=(je->flux(primo+jmedia)[0]*je->flux(primo+jmedia+itimestep)[0]+
-                                        je->flux(primo+jmedia)[1]*je->flux(primo+jmedia+itimestep)[1]+
-                                        je->flux(primo+jmedia)[2]*je->flux(primo+jmedia+itimestep)[2])/3.0
+                        double deltaee=(je(primo+jmedia)[0]*je(primo+jmedia+itimestep)[0]+
+                                        je(primo+jmedia)[1]*je(primo+jmedia+itimestep)[1]+
+                                        je(primo+jmedia)[2]*je(primo+jmedia+itimestep)[2])/3.0
                                             - jee;
                         jzz+=deltazz/(++cont);
                         jee+=deltaee/(cont);

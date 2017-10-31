@@ -13,20 +13,20 @@
 #ifndef GREENKUBO2COMPONENTIONICFLUID_H
 #define GREENKUBO2COMPONENTIONICFLUID_H
 
-#include "traiettoria.h"
+#include "readlog.h"
+
 #include "operazionisulista.h"
 #include "mediablocchi.h"
+#include <array>
 
-class HeatFluxTs;
-class ChargeFluxTs;
 
 class GreenKubo2ComponentIonicFluid : public OperazioniSuLista<GreenKubo2ComponentIonicFluid>
 {
 public:
-    GreenKubo2ComponentIonicFluid(Traiettoria * t,
+    GreenKubo2ComponentIonicFluid(ReadLog * traiettoria,
                                   std::string log,
                                   double *cariche,
-                                  unsigned int skip=1,
+                                  unsigned int skip,
                                   bool dump=false,
                                   unsigned int lunghezza_funzione_max=0,
                                   unsigned int nthreads=0
@@ -35,15 +35,16 @@ public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
     void reset(unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
-    HeatFluxTs * puntatoreHeatFluxTs(){return je;}
     GreenKubo2ComponentIonicFluid & operator =(const GreenKubo2ComponentIonicFluid &);
 private:
     bool scrivi_file;
-    HeatFluxTs * je;
-    ChargeFluxTs * jz;
+    unsigned int idx_je,idx_j0,idx_j1;
     std::string log;
-    Traiettoria *traiettoria;
-    unsigned int ntimesteps,skip,lmax,leff,nthread;
+    ReadLog *traiettoria;
+    unsigned int ntimesteps,lmax,leff,nthread,skip;
+    double carica[2];
+    std::array<double,3>  jz(unsigned int ts);
+    double* je(unsigned int ts);
 };
 
 #endif // GREENKUBO2COMPONENTIONICFLUID_H

@@ -77,6 +77,21 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
 
 }
 
+
+std::pair<unsigned int, bool> ReadLog::get_index_of(std::string header) {
+    unsigned int idx=0;
+    for (unsigned int i=0;i<headers.size();i++){
+        if (headers.at(i)!="Step"){
+            if (headers.at(i)==header){
+                return std::pair<unsigned int,bool>(idx,true);
+            } else {
+                idx++;
+            }
+        }
+    }
+    return std::pair<unsigned int ,bool>(idx,false);
+}
+
 unsigned int ReadLog::timestep(unsigned int index){
     return data.at(index).first;
 }

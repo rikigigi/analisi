@@ -135,24 +135,33 @@ int main(int argc, char ** argv)
 #endif // DEBUG
             if (heat_coeff) {
             std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
-            Traiettoria test(input);
-            test.imposta_dimensione_finestra_accesso(1);
-            test.imposta_inizio_accesso(0);
-            MediaBlocchi<GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
+            ReadLog test(log_input);
+            MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
                     greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
             greenK.calcola();
-            greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->temp(0);
             //calcola velocemente la media a blocchi per la temperatura
 
+            std::pair<unsigned int,bool> res=test.get_index_of("Temp");
+            if(!res.second){
+                std::cerr << "Non riesco a trovare la colonna 'Temp' nel file di log '"<<log_input<<"'\n";
+                abort();
+            }
+            unsigned int idx_T=res.first;
+            res=test.get_index_of("lx");
+            if(!res.second){
+                std::cerr << "Non riesco a trovare la colonna 'lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
+                abort();
+            }
+            unsigned int idx_lx=res.first;
             double media_=0.0;
             double var_=0.0;
             unsigned int cont=0;
-            unsigned int block_size=test.get_ntimesteps()/skip/blocknumber;
+            unsigned int block_size=test.n_timestep()/skip/blocknumber;
             for (unsigned int iblock=0;iblock<blocknumber;iblock++){
                 unsigned int cont2=0;
                 double media2_=0.0;
                 for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i++){ // media sul blocco
-                    double delta2= greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->temp(0)[i] - media2_;
+                    double delta2= test.line(i)[idx_T] - media2_;
                     media2_ = media2_ + delta2/(++cont2);
                 }
                 double delta=media2_-media_;
@@ -161,8 +170,8 @@ int main(int argc, char ** argv)
             }
             var_=var_/(cont*(cont-1));
 
-            double factor_conv=1.6022*1.6022*5*skip / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-4*media_*media_);
-            double factor_conv2=1.6022*1.6022*5*skip / ((pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3) )*1.38064852e-4*media_);
+            double factor_conv=1.6022*1.6022*5*skip / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_*media_);
+            double factor_conv2=1.6022*1.6022*5*skip / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_);
             double factor_intToCorr=1.0/(1e-15*5*skip);  //0.005 ps è l'intervallo di integrazione
             double factors[9]={
                 factor_conv*factor_intToCorr, //Jee
@@ -188,8 +197,8 @@ int main(int argc, char ** argv)
             convoluzione.calcola(&greenK.varianza()->accesso_lista()[6],lambda_conv_var,greenK.media()->lunghezza()/9,9);
             std::cout << "# T T1sigma  atomi/volume densitNaCL\n#"
                       <<media_ << " " << sqrt(var_) << " "
-                      << test.get_natoms()/pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3)<< " "<<
-                         test.get_natoms()/pow(greenK.puntatoreCalcolo()->puntatoreHeatFluxTs()->get_L(),3)*(22.990+35.453)/2.0*1.66054<<"\n"
+                      << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< " "<<
+                         test.get_natoms()/pow(test.line(0)[idx_lx] ,3)*(22.990+35.453)/2.0*1.66054<<"\n"
                       <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
             std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv; ciascuno seguito dalla sua varianza\n";
