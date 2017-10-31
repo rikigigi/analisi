@@ -137,8 +137,8 @@ int main(int argc, char ** argv)
             std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
             ReadLog test(log_input);
             MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
-                    greenK(&test,blocknumber,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
-            greenK.calcola();
+                    greenK(&test,blocknumber);
+            greenK.calcola(log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
             //calcola velocemente la media a blocchi per la temperatura
 
             std::pair<unsigned int,bool> res=test.get_index_of("Temp");
@@ -149,7 +149,7 @@ int main(int argc, char ** argv)
             unsigned int idx_T=res.first;
             res=test.get_index_of("Lx");
             if(!res.second){
-                std::cerr << "Non riesco a trovare la colonna 'lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
+                std::cerr << "Non riesco a trovare la colonna 'Lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
                 abort();
             }
             unsigned int idx_lx=res.first;
@@ -222,8 +222,8 @@ int main(int argc, char ** argv)
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
 
-            MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int> Msd(&test,blocknumber,skip,stop_acf,numero_thread);
-            Msd.calcola();
+            MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int> Msd(&test,blocknumber);
+            Msd.calcola(skip,stop_acf,numero_thread);
             for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes();i++) {
                 for (unsigned int j=0;j<test.get_ntypes();j++)
                     std::cout << Msd.media()->elemento(i*test.get_ntypes()+j) << " " <<
@@ -236,8 +236,8 @@ int main(int argc, char ** argv)
             Traiettoria test(input);
             test.imposta_dimensione_finestra_accesso(1);
             test.imposta_inizio_accesso(0);
-            MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber,nbins,vmax_h);
-            istogramma_vel.calcola();
+            MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
+            istogramma_vel.calcola(nbins,vmax_h);
 
             //stampa i risultati
             unsigned int lungh_sing_h=istogramma_vel.media()->lunghezza()/(3*test.get_ntypes());

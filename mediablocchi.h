@@ -22,6 +22,10 @@
 #include "config.h"
 #include "cronometro.h"
 #include "readlog.h"
+#include <vector>
+#include <functional>
+#include "calcoliblocchi.h"
+
 
 
 
@@ -66,27 +70,18 @@ template <class TR,class T, typename ... Args > class MediaBlocchiG
 {
 public:
     MediaBlocchiG(TR * t,
-                 const unsigned int & numero_blocchi,
-                 Args ... arg
+                 const unsigned int & numero_blocchi
                  ) {
 //        static_assert(std::is_base_of<Calcolo,T>::value,"T deve essere derivato da Calcolo!");
         traiettoria=t;
         n_b=numero_blocchi;
         ok=false;
+    Tmedio=0;
+    Tvar=0;
+    delta=0;
+    tmp=0;
+    calcolo=0;
 
-        Tmedio = new T(traiettoria, arg...);
-        Tvar = new T(traiettoria,arg...);
-        delta = new T(traiettoria,arg...);
-        tmp=new T(traiettoria,arg...);
-        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-Tmedio->numeroTimestepsOltreFineBlocco(n_b))/n_b;
-        if(timestepsPerBlocco>0){
-            s=timestepsPerBlocco;
-            ok=true;
-        } else {
-            std::cerr<< "Impossibile dividere la traiettoria in "<<n_b<<"blocchi!\n";
-        }
-
-        calcolo = new T (traiettoria,arg...);
     }
 
     ~MediaBlocchiG() {
@@ -99,8 +94,74 @@ public:
         delete tmp;
         delete calcolo;
     }
+    template<class Calcolo> void calcola_custom (Calcolo * calc,
+                                            Args ... arg) {
+        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-Tmedio->numeroTimestepsOltreFineBlocco(n_b))/n_b;
+        if(timestepsPerBlocco>0){
+            s=timestepsPerBlocco;
+            ok=true;
+        } else {
+            std::cerr<< "Impossibile dividere la traiettoria in "<<n_b<<"blocchi!\n";
+            abort();
+        }
 
-    void calcola() {
+        calcolo = new T (traiettoria,arg...);
+
+        calc->calcola_begin(s);
+
+        TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
+        for (unsigned int iblock=0;iblock<n_b;iblock++){
+
+#ifdef DEBUG
+            std::cerr << "calcolo->calcola(iblock*s);\n";
+#endif
+
+            cronometro cron;
+            cron.start();
+            calcolo->reset(s);
+            TraiettoriaF<TR>::imposta_inizio_accesso(iblock*s,traiettoria);
+            calcolo->calcola(iblock*s);
+
+            calc->calcola(calcolo);
+
+            cron.stop();
+#ifdef DEBUG
+            std::cerr << "Tempo cpu per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time()<<"s.\n";
+#endif
+        }
+        calc->calcola_end(n_b);
+    }
+
+
+
+    void calcola(Args ... arg) {
+        Tmedio = new T(traiettoria, arg...);
+        Tvar = new T(traiettoria,arg...);
+        delta = new T(traiettoria,arg...);
+        tmp=new T(traiettoria,arg...);
+
+        MediaVar<T> media_var(Tmedio,Tvar,delta,tmp);
+
+        calcola_custom<MediaVar<T> >(&media_var,arg...);
+
+    }
+
+/*
+    void calcola () {
+        Tmedio = new T(traiettoria, arg...);
+        Tvar = new T(traiettoria,arg...);
+        delta = new T(traiettoria,arg...);
+        tmp=new T(traiettoria,arg...);
+        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->numeroTimestepsOltreFineBlocco(n_b))/n_b;
+        if(timestepsPerBlocco>0){
+            s=timestepsPerBlocco;
+            ok=true;
+        } else {
+            std::cerr<< "Impossibile dividere la traiettoria in "<<n_b<<"blocchi!\n";
+            abort();
+        }
+
+        calcolo = new T (traiettoria,arg...);
         if (!ok) return;
         Tmedio->reset(s);
         Tmedio->azzera();
@@ -149,15 +210,17 @@ public:
 
 
     }
+    */
 
-    T * media() {return Tmedio;}
-    T * varianza() {return Tvar;}
-    T * puntatoreCalcolo() {return calcolo;}
+    T * media() {if (ok) return Tmedio; else abort();}
+    T * varianza() {if (ok) return Tvar; else abort();}
+    T * puntatoreCalcolo() {if (ok) return calcolo; else abort();}
 
 private:
     unsigned int n_b,s; //numero di blocchi e dimensione
     T *Tmedio,*Tvar,*calcolo,*delta,*tmp;
     TR * traiettoria;
+    std::tuple<Args...> arg;
     bool ok;
 
 };
