@@ -156,11 +156,11 @@ int main(int argc, char ** argv)
             double media_=0.0;
             double var_=0.0;
             unsigned int cont=0;
-            unsigned int block_size=test.n_timestep()/skip/blocknumber;
+            unsigned int block_size=test.n_timestep()/blocknumber;
             for (unsigned int iblock=0;iblock<blocknumber;iblock++){
                 unsigned int cont2=0;
                 double media2_=0.0;
-                for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i++){ // media sul blocco
+                for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i+=skip){ // media sul blocco
                     double delta2= test.line(i)[idx_T] - media2_;
                     media2_ = media2_ + delta2/(++cont2);
                 }
@@ -170,9 +170,9 @@ int main(int argc, char ** argv)
             }
             var_=var_/(cont*(cont-1));
 
-            double factor_conv=1.6022*1.6022*5*skip / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_*media_);
-            double factor_conv2=1.6022*1.6022*5*skip / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_);
-            double factor_intToCorr=1.0/(1e-15*5*skip);  //0.005 ps è l'intervallo di integrazione
+            double factor_conv=1.6022*1.6022*5 / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_*media_);
+            double factor_conv2=1.6022*1.6022*5  / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_);
+            double factor_intToCorr=1.0/(1e-15*5);  //0.005 ps è l'intervallo di integrazione
             double factors[9]={
                 factor_conv*factor_intToCorr, //Jee
                 factor_conv2*factor_intToCorr, //Jzz
