@@ -91,7 +91,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (vm.count("help")||vm.count("input")==0 || vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0){
+        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -147,7 +147,7 @@ int main(int argc, char ** argv)
                 abort();
             }
             unsigned int idx_T=res.first;
-            res=test.get_index_of("lx");
+            res=test.get_index_of("Lx");
             if(!res.second){
                 std::cerr << "Non riesco a trovare la colonna 'lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
                 abort();
