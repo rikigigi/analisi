@@ -96,7 +96,10 @@ public:
     }
     template<class Calcolo> void calcola_custom (Calcolo * calc,
                                             Args ... arg) {
-        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-Tmedio->numeroTimestepsOltreFineBlocco(n_b))/n_b;
+
+
+        calcolo = new T (traiettoria,arg...);
+        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->numeroTimestepsOltreFineBlocco(n_b))/n_b;
         if(timestepsPerBlocco>0){
             s=timestepsPerBlocco;
             ok=true;
@@ -104,10 +107,8 @@ public:
             std::cerr<< "Impossibile dividere la traiettoria in "<<n_b<<"blocchi!\n";
             abort();
         }
-
-        calcolo = new T (traiettoria,arg...);
-
-        calc->calcola_begin(s);
+        calcolo->reset(s);
+        calc->calcola_begin(s,calcolo);
 
         TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
         for (unsigned int iblock=0;iblock<n_b;iblock++){
@@ -146,71 +147,6 @@ public:
 
     }
 
-/*
-    void calcola () {
-        Tmedio = new T(traiettoria, arg...);
-        Tvar = new T(traiettoria,arg...);
-        delta = new T(traiettoria,arg...);
-        tmp=new T(traiettoria,arg...);
-        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->numeroTimestepsOltreFineBlocco(n_b))/n_b;
-        if(timestepsPerBlocco>0){
-            s=timestepsPerBlocco;
-            ok=true;
-        } else {
-            std::cerr<< "Impossibile dividere la traiettoria in "<<n_b<<"blocchi!\n";
-            abort();
-        }
-
-        calcolo = new T (traiettoria,arg...);
-        if (!ok) return;
-        Tmedio->reset(s);
-        Tmedio->azzera();
-        Tvar->reset(s);
-        Tvar->azzera();
-        delta->reset(s);
-        tmp->reset(s);
-        TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+Tmedio->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
-        for (unsigned int iblock=0;iblock<n_b;iblock++) {
-#ifdef DEBUG
-            std::cerr << "calcolo->calcola(iblock*s);\n";
-#endif
-            cronometro cron;
-            cron.start();
-            calcolo->reset(s);
-            TraiettoriaF<TR>::imposta_inizio_accesso(iblock*s,traiettoria);
-            calcolo->calcola(iblock*s);
-#ifdef DEBUG2
-            std::cerr << "*delta = *calcolo - *Tmedio;\n";
-#endif
-            //algoritmo media e varianza online
-            *delta = *calcolo;
-            *delta -= *Tmedio;
-            //*delta = *calcolo - *Tmedio
-#ifdef DEBUG2
-            std::cerr << "*delta = *calcolo - *Tmedio;\n";
-#endif
-            *tmp = *delta;
-            *tmp /= (iblock+1);
-            *Tmedio += *tmp;
-            //*Tmedio += (*delta)/(iblock+1); // calcolo / double , calcolo+=calcolo
-#ifdef DEBUG2
-            std::cerr << "*Tvar += (*delta)*(*calcolo-*Tmedio);\n";
-#endif
-            *tmp = *calcolo;
-            *tmp -= *Tmedio;
-            *tmp *= *delta;
-            *Tvar += *tmp;
-            //*Tvar += (*delta)*(*calcolo-*Tmedio); // calcolo * calcolo
-            cron.stop();
-#ifdef DEBUG
-            std::cerr << "Tempo cpu per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time()<<"s.\n";
-#endif
-        }
-        *Tvar/=((n_b-1)*n_b);
-
-
-    }
-    */
 
     T * media() {if (ok) return Tmedio; else abort();}
     T * varianza() {if (ok) return Tvar; else abort();}

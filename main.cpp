@@ -40,6 +40,8 @@ int main(int argc, char ** argv)
     int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
     double vmax_h=0,cariche[2];
+    std::vector<unsigned int > cvar_list;
+    std::vector< std::pair <unsigned int,unsigned int > > cvar;
     options.add_options()
 #if BOOST_VERSION >= 105600
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
@@ -71,6 +73,7 @@ int main(int argc, char ** argv)
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"numero di frame a cui estrarre il risultato finale")
             ("dump-block-H,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"scrive in dei file (aggiungendo ogni volta alla fine) i calcoli di ogni signolo blocco per il calcolo del coefficiente di trasporto termico in un sale fuso")
             ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali o dello spostamento quadratico medio. Se posto a zero è pari alle dimensioni del blocco")
+            ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
 #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
@@ -96,6 +99,18 @@ int main(int argc, char ** argv)
             std::cout << options << "\n";
             return 1;
         }
+
+        if (cvar_list.size()%2 != 0) {
+            std::cout << "Errore: la lista degli indici delle covarianze deve contenere un numero pari di numeri\n";
+            std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
+            std::cout << options << "\n";
+            return 1;
+        } else {
+            for (unsigned int i=0;i<cvar_list.size()/2;i++) {
+                cvar.push_back( std::pair<unsigned int, unsigned int> (cvar_list.at(i),cvar_list.at(i+1)));
+            }
+        }
+
     }
 
     catch (boost::program_options::error const &e) {
@@ -137,8 +152,11 @@ int main(int argc, char ** argv)
             std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
             ReadLog test(log_input);
             MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
-                    greenK(&test,blocknumber);
-            greenK.calcola(log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
+                    greenK_c(&test,blocknumber);
+
+            MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(9,cvar);
+
+            greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
             //calcola velocemente la media a blocchi per la temperatura
 
             std::pair<unsigned int,bool> res=test.get_index_of("Temp");
@@ -184,32 +202,36 @@ int main(int argc, char ** argv)
                 factor_conv*factor_intToCorr, //Jze
                 factor_conv //intze
             };
-            double *lambda_conv=new double[greenK.media()->lunghezza()/9];
-            double *lambda_conv_var=new double[greenK.media()->lunghezza()/9];
+            double *lambda_conv=new double[greenK.size()];
+            double *lambda_conv_var=new double[greenK.size()];
 
-            if (final>=greenK.media()->lunghezza()/9) final=greenK.media()->lunghezza()/9-1;
+            if (final>=greenK.size()) final=greenK.size()-1;
             if (final <0) final=0;
 
             Convolution<double> convoluzione( std::function<double (const double  &)> ([&conv_n](const double & x)->double{
                 return exp(-x*x/(2*conv_n*conv_n));
             }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
-            convoluzione.calcola(&greenK.media()->accesso_lista()[6],lambda_conv,greenK.media()->lunghezza()/9,9);
-            convoluzione.calcola(&greenK.varianza()->accesso_lista()[6],lambda_conv_var,greenK.media()->lunghezza()/9,9);
+            convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
+            convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
             std::cout << "# T T1sigma  atomi/volume densitNaCL\n#"
                       <<media_ << " " << sqrt(var_) << " "
                       << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< " "<<
                          test.get_natoms()/pow(test.line(0)[idx_lx] ,3)*(22.990+35.453)/2.0*1.66054<<"\n"
                       <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
-            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv; ciascuno seguito dalla sua varianza\n";
-            for (unsigned int i=0;i<greenK.media()->lunghezza()/9;i++) {
+            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
+            for (unsigned int i=0;i<greenK.size();i++) {
                 for (unsigned int j=0;j<9;j++) {
-                    std::cout << greenK.media()->elemento(i*9+j)*factors[j] << " "
-                              << greenK.varianza()->elemento(i*9+j)*factors[j]*factors[j] << " ";
+                    std::cout << greenK.media(j)[i]*factors[j] << " "
+                              << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
                 }
 
                 std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
-                          << factor_conv*(greenK.media()->elemento(i*9+3)-pow(greenK.media()->elemento(i*9+5),2)/greenK.media()->elemento(i*9+4)) << "\n";
+                          << factor_conv*(greenK.media(3)[i]-pow(greenK.media(5)[i],2)/greenK.media(4)[i])<<" ";
+                for (unsigned int j=0;j<greenK.n_cvar();j++){
+                    std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
+                }
+                std::cout  << "\n";
 
             }
             delete [] lambda_conv;
