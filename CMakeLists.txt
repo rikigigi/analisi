@@ -51,6 +51,6 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -fopenmp -march=native -fsanitize=ad
 #    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
 #    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
 #endif()
-set(CMAKE_CXX_FLAGS_DEBUG)
+#set(CMAKE_CXX_FLAGS_DEBUG)
 
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h )

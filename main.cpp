@@ -107,7 +107,7 @@ int main(int argc, char ** argv)
             return 1;
         } else {
             for (unsigned int i=0;i<cvar_list.size()/2;i++) {
-                cvar.push_back( std::pair<unsigned int, unsigned int> (cvar_list.at(i),cvar_list.at(i+1)));
+                cvar.push_back( std::pair<unsigned int, unsigned int> (cvar_list.at(i*2),cvar_list.at(i*2+1)));
             }
         }
 

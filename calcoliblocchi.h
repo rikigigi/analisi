@@ -68,6 +68,12 @@ public:
                 std::cerr << "Errore: indice della covarianza fuori dal range!\n";
                 abort();
             }
+#ifdef DEBUG
+            else {
+                std::cerr << "Cov("<<Cvar_list.at(i).first<<","<<Cvar_list.at(i).second<<") ";
+            }
+            std::cerr <<"\n";
+#endif
         }
 
     }
