@@ -48,7 +48,7 @@ public:
     unsigned int get_type(const unsigned int &atomo);
     int get_type_min() {return min_type;}
     int get_type_max() {return max_type;}
-    enum Errori {non_inizializzato,oltre_fine_file,Ok=1};
+    enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
     Traiettoria::Errori imposta_dimensione_finestra_accesso(const int & timesteps);
     Traiettoria::Errori imposta_inizio_accesso(const int & timesteps);
     int get_natoms(){return natoms;}
