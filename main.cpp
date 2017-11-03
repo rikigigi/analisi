@@ -15,7 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <boost/program_options.hpp>
-#include "interfaccia.h"
+//#include "interfaccia.h"
 #include "testtraiettoria.h"
 #include "spettrovibrazionale.h"
 #include "modivibrazionali.h"
@@ -299,35 +299,6 @@ int main(int argc, char ** argv)
                 std::cout << "\n";
             }
 
-        } else {
-            std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un fluido a una componente...\n";
-            Analisi traiettoria(input,log_input,numero_frame);
-            //traiettoria.traiettoria.allocate_J();
-            traiettoria.traiettoria.calc_J_autocorrelation(blocksize,elast);
-
-            if (corr_out!="") {
-                std::ofstream out;
-                out.open(corr_out.c_str(),std::ofstream::app);
-                if (out.is_open()) {
-                    out << "\n\n#block size "<< blocksize <<"\n";
-                    for (int i=0;i<traiettoria.traiettoria.get_n_J_autocorr();i++) {
-                        out<<traiettoria.time_history[i]-traiettoria.time_history[0]<< " " << traiettoria.traiettoria.J_correlation(i) << " "<< traiettoria.traiettoria.J_correlation_var(i)<< " "<<traiettoria.traiettoria.J_correlation_int(i) <<" " << traiettoria.traiettoria.J_correlation_int_var(i) <<"\n";
-                    }
-                    out.flush();
-                }
-            }
-            if (ris_append_out!="") {
-                std::ofstream out;
-                out.open(ris_append_out.c_str(),std::ofstream::app);
-                if (out.is_open()) {
-                    double T,T_var,P,P_var;
-                    traiettoria.T_history.media_var_calc_block(T,T_var,blocksize);
-                    traiettoria.pressure_history.media_var_calc_block(P,P_var,blocksize);
-                    out << "\n\n#block size "<< blocksize <<"\n";
-                    out << T << " " << T_var << " " << P << " " << P_var<< " ";
-                    out.flush();
-                }
-            }
         }
 
     }
