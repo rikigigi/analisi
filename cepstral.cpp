@@ -1,6 +1,7 @@
 #include "cepstral.h"
 #include "fftw3.h"
 #include "convolution.h"
+#include "complex"
 
 Cepstral::Cepstral(std::vector<Serie> in_) : correnti(in_),fplan(0),size_in(0)
 {
@@ -42,18 +43,24 @@ Cepstral::Cepstral(std::vector<Serie> in_) : correnti(in_),fplan(0),size_in(0)
 }
 
 
-void Cepstral::calcola(){
+void Cepstral::calcola(unsigned int conv_n){
 
-    //copia i dati in ingresso negli array e calcola le trasformate di fourier
+    //copia i dati in ingresso negli array e calcola le trasformate di fourier convolute
 
+    Convolution<std::complex> convoluzione(std::function<double (const double  &)> ([&conv_n](const double & x)->double{
+        return exp(-x*x/(2*conv_n*conv_n));
+    }), (conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
     for (unsigned int i=0;i<in_src.size();i++){
         for (unsigned int j=0;j<size_in;j++){
             in[j]=in_src[i][j];
         }
         fftw_execute_dft_r2c(fplan,in,fft.at(i));
         //fai la convoluzione
+        convoluzione.calcola(fft.at(i),fft_conv.at(i),size_in/2+1);
 
     }
+
+    // esegue il logaritmo complesso di J1^* J2
 
 
 

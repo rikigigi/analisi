@@ -39,6 +39,20 @@ template <typename T> void Convolution<T>::calcola(T *in, T*out, int n, int skip
     }
 }
 
+template <typename T> void Convolution<T>::calcola(T *in, T*out, int n) {
+    for (unsigned int in_index=0;in_index<n;in_index++) {
+        out[in_index]=0;
+        for (unsigned int i=0;i<n_fc;i++ ) {
+            int idx=in_index- centro+i;
+            if (idx <0)
+                idx=-idx;
+            if (idx>=n)
+                idx=n-2 - idx%n;
+            out[in_index]+=in[idx]*fc[i];
+        }
+    }
+}
+
 template <typename T> Convolution<T>::~Convolution(){
     delete [] fc;
 }
