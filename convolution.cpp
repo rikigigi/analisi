@@ -31,9 +31,9 @@ template <typename T> void Convolution<T>::calcola(T *in, T*out, int n, int skip
         for (unsigned int i=0;i<n_fc;i++ ) {
             int idx=in_index- centro+i;
             if (idx <0)
-                idx=0;
-            else if (idx>=n)
-                idx=n-1;
+                idx=-idx;
+            if (idx>=n)
+                idx=n-2 - idx%n;
             out[in_index]+=in[idx*skip]*fc[i];
         }
     }
