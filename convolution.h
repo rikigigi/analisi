@@ -5,7 +5,10 @@
 template < typename T >class Convolution
 {
 public:
-    Convolution(std::function<T (const T  &)> f, int n, T start, T stop, int center);
+    /**
+      * convoluzione della funzione f con un array di tipo T. Per il tipo T devono essere defiie le operazioni di moltiplicazione con il tipo double.
+    **/
+    Convolution(std::function<double(const double &)> f, int n, double start, double stop, int center);
     ~Convolution();
     void calcola(T* in , T *out,int n,int skip);
     void calcola(T* in , T *out,int n);

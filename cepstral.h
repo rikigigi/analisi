@@ -19,9 +19,10 @@ public:
       * nota: allocare gli array usati con fftw_alloc_real(N) o fftw_alloc_complex(N) per assicurare l'allineamnto necessario ad utilizzare le istruzioni SIMD, dove supportate.
     **/
     Cepstral(std::vector<Serie> in_);
-    void calcola(unsigned int conv_n);
+    void calcola(unsigned int conv_n, unsigned int cutoff, unsigned int resample);
 private:
     std::vector<Serie> correnti;
+    std::vector< std::complex<double> *> logS;
     double * in;
     std::vector<double *> in_src;
     unsigned int size_in;

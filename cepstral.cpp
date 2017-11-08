@@ -41,11 +41,16 @@ Cepstral::Cepstral(std::vector<Serie> in_) : correnti(in_),fplan(0),size_in(0)
 }
 
 
-void Cepstral::calcola(unsigned int conv_n){
+void Cepstral::calcola(unsigned int conv_n,unsigned int cutoff,unsigned int resample){
+
+    if(cutoff>=size_in/2+1){
+        std::cerr << "Errore: il cutoff richiesto è troppo grande ("<<cutoff<<" >= "<<size_in/2+1<<").\n";
+        abort();
+    }
 
     //copia i dati in ingresso negli array e calcola le trasformate di fourier convolute
 
-    Convolution<std::complex<double> > convoluzione(std::function< std::complex<double> (const std::complex<double>  &)> ([&conv_n](const std::complex<double> & x)->std::complex<double>{
+    Convolution<std::complex<double> > convoluzione(std::function< double (const double  &)> ([&conv_n](double & x)->double{
         return exp(-x*x/(2.0*conv_n*conv_n));
     }), (conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
     for (unsigned int i=0;i<in_src.size();i++){
@@ -55,10 +60,18 @@ void Cepstral::calcola(unsigned int conv_n){
         fftw_execute_dft_r2c(fplan,in,reinterpret_cast<fftw_complex*>(fft.at(i)));
         //fai la convoluzione
         convoluzione.calcola(fft.at(i),fft_conv.at(i),size_in/2+1);
-
     }
 
-    // esegue il logaritmo complesso di J1^* J2
+    // esegue il logaritmo complesso di J1^* J2, per ogni coppia di correnti considerate, e fa l'antitrasformata di Fourier
+
+    for (unsigned int i=0;i<correnti.size();i++){
+
+        logS.push_back( (std::complex<double> *)fftw_alloc_complex(cutoff/resample) );
+        for  (unsigned int j=0;j<cutoff/resample;j++){
+            logS.back()[j]=std::log(std::conj(fft_conv[ correnti[i].fft_idx[0] ][j*resample])*fft_conv[ correnti[i].fft_idx[1] ][j*resample]);
+        }
+
+    }
 
 
 

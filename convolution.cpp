@@ -1,7 +1,7 @@
 #include "convolution.h"
 #include <iostream>
 
-template <typename T> Convolution<T>::Convolution(std::function<T (const T  &)> f,int n,T start,T stop,int center)
+template <typename T> Convolution<T>::Convolution(std::function<double (const double  &)> f,int n,double start,double stop,int center)
 {
     if (n<=0 || center <0 || center >= n) {
         std::cerr<< "Errore: richiesta una lunghezza "<<n<<" ed un centro "<<center<<" per la convoluzione!\n";
