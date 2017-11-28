@@ -29,7 +29,8 @@ public:
                                   unsigned int skip,
                                   bool dump=false,
                                   unsigned int lunghezza_funzione_max=0,
-                                  unsigned int nthreads=0
+                                  unsigned int nthreads=0,
+				  unsigned int n_ris=100
             );
     ~GreenKubo2ComponentIonicFluid();
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
@@ -38,7 +39,7 @@ public:
     GreenKubo2ComponentIonicFluid & operator =(const GreenKubo2ComponentIonicFluid &);
 private:
     bool scrivi_file;
-    unsigned int idx_je,idx_j0,idx_j1;
+    unsigned int idx_je,idx_j0,idx_j1,n_ris;
     std::string log;
     ReadLog *traiettoria;
     unsigned int ntimesteps,lmax,leff,nthread,skip;

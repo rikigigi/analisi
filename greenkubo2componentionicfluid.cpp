@@ -19,8 +19,8 @@
 #include <vector>
 #include <mutex>
 
-GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
-    traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads)
+GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads,unsigned int n_ris) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
+    traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris)
 {
     carica[0]=cariche[0];
     carica[1]=cariche[1];
@@ -246,12 +246,20 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
 
     if (scrivi_file) {
         std::ofstream outfile(log+".greekdump",std::ios::app);
+        std::ofstream outfile_s11(log+".greekdump_s11",std::ios::app);
+        std::ofstream outfile_s12(log+".greekdump_s12",std::ios::app);
+        std::ofstream outfile_s21(log+".greekdump_s21",std::ios::app);
+        std::ofstream outfile_s22(log+".greekdump_s22",std::ios::app);
         for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
             for (unsigned int j=0;j<9;j++){
                 outfile << lista[(itimestep)*9+j] << " ";
             }
             outfile << "\n";
         }
+        outfile_s11 << " " << lista[n_ris*9+0];
+        outfile_s22 << " " << lista[n_ris*9+1];
+        outfile_s12 << " " << lista[n_ris*9+2];
+        outfile_s21 << " " << lista[n_ris*9+7];
         outfile << "\n\n";
     }
 
