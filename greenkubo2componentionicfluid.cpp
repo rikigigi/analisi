@@ -19,7 +19,7 @@
 #include <vector>
 #include <mutex>
 
-static const unsigned int GreenKubo2ComponentIonicFluid::narr=10;
+const unsigned int GreenKubo2ComponentIonicFluid::narr=10;
 
 GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads,unsigned int n_ris) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris)
@@ -215,7 +215,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                         lista[(itimestep)*narr+5]=intez+jez/2.0;
                         lista[(itimestep)*narr+6]=intee+jee/2.0-(intez+jez/2.0)*(intez+jez/2.0)/(intzz+jzz/2.0);
                         lista[(itimestep)*narr+8]=intze+jze/2.0;
-			lista[(itimestep)*narr+9]=ittest+jee*itimestep/2.0;
+			lista[(itimestep)*narr+9]=inttest+jee*itimestep/2.0;
 
                         jeeo=jee;
                         jezo=jez;
@@ -245,7 +245,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 lista[(itimestep)*narr+6]=intee+lista[(itimestep)*narr+0]/2.0
                         -(intez+lista[(itimestep)*narr+2]/2.0)*(intez+lista[(itimestep)*narr+2]/2.0)/(intzz+lista[(itimestep)*narr+1]/2.0);
                 lista[(itimestep)*narr+8]=intze+lista[(itimestep)*narr+7]/2.0;
-                lista[(itimestep)*narr+9]=ittest+lista[(itimestep)*narr+9]/2.0;
+                lista[(itimestep)*narr+9]=inttest+lista[(itimestep)*narr+9]/2.0;
 		
             }
         }
