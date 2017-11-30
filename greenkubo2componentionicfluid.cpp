@@ -201,6 +201,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                     lista[(itimestep)*narr+1]=jzz;
                     lista[(itimestep)*narr+2]=jez;
                     lista[(itimestep)*narr+7]=jze;
+		    
                     //integrale con il metodo dei trapezi, solo per il primo
 
                     if (ith==0){
@@ -237,7 +238,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 intzz+=lista[((itimestep-1))*narr+1];
                 intez+=lista[((itimestep-1))*narr+2];
                 intze+=lista[((itimestep-1))*narr+7];
-		inttest+=lista[((itimestep-1))*narr+9];
+		inttest+=lista[((itimestep-1))*narr+0]*itimestep;
 
                 lista[(itimestep)*narr+3]=intee+lista[(itimestep)*narr+0]/2.0;
                 lista[(itimestep)*narr+4]=intzz+lista[(itimestep)*narr+1]/2.0;
@@ -245,7 +246,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 lista[(itimestep)*narr+6]=intee+lista[(itimestep)*narr+0]/2.0
                         -(intez+lista[(itimestep)*narr+2]/2.0)*(intez+lista[(itimestep)*narr+2]/2.0)/(intzz+lista[(itimestep)*narr+1]/2.0);
                 lista[(itimestep)*narr+8]=intze+lista[(itimestep)*narr+7]/2.0;
-                lista[(itimestep)*narr+9]=inttest+lista[(itimestep)*narr+9]/2.0;
+                lista[(itimestep)*narr+9]=inttest+lista[(itimestep)*narr+0]*itimestep/2.0;
 		
             }
         }
