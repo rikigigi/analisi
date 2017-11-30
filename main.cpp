@@ -154,7 +154,7 @@ int main(int argc, char ** argv)
             MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
                     greenK_c(&test,blocknumber);
 
-            MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(9,cvar);
+            MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
 
             greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
             //calcola velocemente la media a blocchi per la temperatura
@@ -191,7 +191,7 @@ int main(int argc, char ** argv)
             double factor_conv=1.6022*1.6022*5 / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_*media_);
             double factor_conv2=1.6022*1.6022*5  / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_);
             double factor_intToCorr=1.0/(1e-15*5);  //0.005 ps è l'intervallo di integrazione
-            double factors[9]={
+            double factors[GreenKubo2ComponentIonicFluid::narr]={
                 factor_conv*factor_intToCorr, //Jee
                 factor_conv2*factor_intToCorr, //Jzz
                 factor_conv*factor_intToCorr, //Jez
@@ -200,7 +200,8 @@ int main(int argc, char ** argv)
                 factor_conv, //intez
                 factor_conv, //lambda
                 factor_conv*factor_intToCorr, //Jze
-                factor_conv //intze
+                factor_conv, //intze
+                factor_conv*5.0e-15 //inteetau
             };
             double *lambda_conv=new double[greenK.size()];
             double *lambda_conv_var=new double[greenK.size()];
@@ -221,7 +222,7 @@ int main(int argc, char ** argv)
 
             std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
             for (unsigned int i=0;i<greenK.size();i++) {
-                for (unsigned int j=0;j<9;j++) {
+                for (unsigned int j=0;j<GreenKubo2ComponentIonicFluid::narr;j++) {
                     std::cout << greenK.media(j)[i]*factors[j] << " "
                               << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
                 }

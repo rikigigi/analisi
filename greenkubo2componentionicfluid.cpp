@@ -19,6 +19,8 @@
 #include <vector>
 #include <mutex>
 
+static const unsigned int GreenKubo2ComponentIonicFluid::narr=10;
+
 GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads,unsigned int n_ris) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris)
 {
@@ -64,7 +66,7 @@ unsigned int GreenKubo2ComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsig
 
 void GreenKubo2ComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco) {
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
-    lunghezza_lista=(leff)*9; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
+    lunghezza_lista=(leff)*narr; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
@@ -94,6 +96,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
     double intez=0.0;
     double intze=0.0;
     double jeeo=0.0,jzzo=0.0,jezo=0.0,jzeo=0.0;
+    double inttest=0.0;
 
 
     if (nthread<1)
@@ -125,10 +128,10 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
             jez+=deltaez/(cont);
             jze+=deltaze/(cont);
         }
-        lista[(itimestep)*9+0]=jee;
-        lista[(itimestep)*9+1]=jzz;
-        lista[(itimestep)*9+2]=jez;
-        lista[(itimestep)*9+7]=jze;
+        lista[(itimestep)*narr+0]=jee;
+        lista[(itimestep)*narr+1]=jzz;
+        lista[(itimestep)*narr+2]=jez;
+        lista[(itimestep)*narr+7]=jze;
         //integrale con il metodo dei trapezi
 
             intee+=jeeo;
@@ -136,11 +139,11 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
             intze+=jzeo;
             intzz+=jzzo;
 
-        lista[(itimestep)*9+3]=intee+jee/2.0;
-        lista[(itimestep)*9+4]=intzz+jzz/2.0;
-        lista[(itimestep)*9+5]=intez+jez/2.0;
-        lista[(itimestep)*9+6]=intee+jee/2.0-(intez+jez/2.0)*(intez+jez/2.0)/(intzz+jzz/2.0);
-        lista[(itimestep)*9+8]=intze+jze/2.0;
+        lista[(itimestep)*narr+3]=intee+jee/2.0;
+        lista[(itimestep)*narr+4]=intzz+jzz/2.0;
+        lista[(itimestep)*narr+5]=intez+jez/2.0;
+        lista[(itimestep)*narr+6]=intee+jee/2.0-(intez+jez/2.0)*(intez+jez/2.0)/(intzz+jzz/2.0);
+        lista[(itimestep)*narr+8]=intze+jze/2.0;
 
         jeeo=jee;
         jezo=jez;
@@ -194,10 +197,10 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                         jez+=deltaez/(cont);
                         jze+=deltaze/(cont);
                     }
-                    lista[(itimestep)*9+0]=jee;
-                    lista[(itimestep)*9+1]=jzz;
-                    lista[(itimestep)*9+2]=jez;
-                    lista[(itimestep)*9+7]=jze;
+                    lista[(itimestep)*narr+0]=jee;
+                    lista[(itimestep)*narr+1]=jzz;
+                    lista[(itimestep)*narr+2]=jez;
+                    lista[(itimestep)*narr+7]=jze;
                     //integrale con il metodo dei trapezi, solo per il primo
 
                     if (ith==0){
@@ -205,12 +208,14 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                         intez+=jezo;
                         intze+=jzeo;
                         intzz+=jzzo;
+			inttest+=jeeo*itimestep;
 
-                        lista[(itimestep)*9+3]=intee+jee/2.0;
-                        lista[(itimestep)*9+4]=intzz+jzz/2.0;
-                        lista[(itimestep)*9+5]=intez+jez/2.0;
-                        lista[(itimestep)*9+6]=intee+jee/2.0-(intez+jez/2.0)*(intez+jez/2.0)/(intzz+jzz/2.0);
-                        lista[(itimestep)*9+8]=intze+jze/2.0;
+                        lista[(itimestep)*narr+3]=intee+jee/2.0;
+                        lista[(itimestep)*narr+4]=intzz+jzz/2.0;
+                        lista[(itimestep)*narr+5]=intez+jez/2.0;
+                        lista[(itimestep)*narr+6]=intee+jee/2.0-(intez+jez/2.0)*(intez+jez/2.0)/(intzz+jzz/2.0);
+                        lista[(itimestep)*narr+8]=intze+jze/2.0;
+			lista[(itimestep)*narr+9]=ittest+jee*itimestep/2.0;
 
                         jeeo=jee;
                         jezo=jez;
@@ -228,18 +233,20 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
         if (nthread>1) {
             for (unsigned int itimestep=npassith;itimestep<leff;itimestep++) {
 
-                intee+=lista[((itimestep-1))*9+0];
-                intzz+=lista[((itimestep-1))*9+1];
-                intez+=lista[((itimestep-1))*9+2];
-                intze+=lista[((itimestep-1))*9+7];
+                intee+=lista[((itimestep-1))*narr+0];
+                intzz+=lista[((itimestep-1))*narr+1];
+                intez+=lista[((itimestep-1))*narr+2];
+                intze+=lista[((itimestep-1))*narr+7];
+		inttest+=lista[((itimestep-1))*narr+9];
 
-                lista[(itimestep)*9+3]=intee+lista[(itimestep)*9+0]/2.0;
-                lista[(itimestep)*9+4]=intzz+lista[(itimestep)*9+1]/2.0;
-                lista[(itimestep)*9+5]=intez+lista[(itimestep)*9+2]/2.0;
-                lista[(itimestep)*9+6]=intee+lista[(itimestep)*9+0]/2.0
-                        -(intez+lista[(itimestep)*9+2]/2.0)*(intez+lista[(itimestep)*9+2]/2.0)/(intzz+lista[(itimestep)*9+1]/2.0);
-                lista[(itimestep)*9+8]=intze+lista[(itimestep)*9+7]/2.0;
-
+                lista[(itimestep)*narr+3]=intee+lista[(itimestep)*narr+0]/2.0;
+                lista[(itimestep)*narr+4]=intzz+lista[(itimestep)*narr+1]/2.0;
+                lista[(itimestep)*narr+5]=intez+lista[(itimestep)*narr+2]/2.0;
+                lista[(itimestep)*narr+6]=intee+lista[(itimestep)*narr+0]/2.0
+                        -(intez+lista[(itimestep)*narr+2]/2.0)*(intez+lista[(itimestep)*narr+2]/2.0)/(intzz+lista[(itimestep)*narr+1]/2.0);
+                lista[(itimestep)*narr+8]=intze+lista[(itimestep)*narr+7]/2.0;
+                lista[(itimestep)*narr+9]=ittest+lista[(itimestep)*narr+9]/2.0;
+		
             }
         }
     }
@@ -251,15 +258,15 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
         std::ofstream outfile_s21(log+".greekdump_s21",std::ios::app);
         std::ofstream outfile_s22(log+".greekdump_s22",std::ios::app);
         for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
-            for (unsigned int j=0;j<9;j++){
-                outfile << lista[(itimestep)*9+j] << " ";
+            for (unsigned int j=0;j<narr;j++){
+                outfile << lista[(itimestep)*narr+j] << " ";
             }
             outfile << "\n";
         }
-        outfile_s11 << " " << lista[n_ris*9+0];
-        outfile_s22 << " " << lista[n_ris*9+1];
-        outfile_s12 << " " << lista[n_ris*9+2];
-        outfile_s21 << " " << lista[n_ris*9+7];
+        outfile_s11 << " " << lista[n_ris*narr+0];
+        outfile_s22 << " " << lista[n_ris*narr+1];
+        outfile_s12 << " " << lista[n_ris*narr+2];
+        outfile_s21 << " " << lista[n_ris*narr+7];
         outfile << "\n\n";
     }
 
