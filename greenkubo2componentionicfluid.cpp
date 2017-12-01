@@ -246,14 +246,14 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
             for (unsigned int itimestep=npassith;itimestep<leff;itimestep++) {
 
                 intee+=lista[((itimestep-1))*narr+0];
-                intez+=lista[((itimestep-1))*narr+1];
+                intzz+=lista[((itimestep-1))*narr+1];
+                intez+=lista[((itimestep-1))*narr+2];
                 intze+=lista[((itimestep-1))*narr+7];
-                intzz+=lista[((itimestep-1))*narr+2];
 		//integrali differenza fra il metodo di greeen-kubo e quello di einstein
 		int_ein_ee+=lista[((itimestep-1))*narr+0]*itimestep;
-		int_ein_ez+=lista[((itimestep-1))*narr+1]*itimestep;
+		int_ein_ez+=lista[((itimestep-1))*narr+2]*itimestep;
 		int_ein_ze+=lista[((itimestep-1))*narr+7]*itimestep;
-		int_ein_zz+=lista[((itimestep-1))*narr+2]*itimestep;
+		int_ein_zz+=lista[((itimestep-1))*narr+1]*itimestep;
 
                 lista[(itimestep)*narr+3]=intee+lista[(itimestep)*narr+0]/2.0;
                 lista[(itimestep)*narr+4]=intzz+lista[(itimestep)*narr+1]/2.0;
@@ -263,9 +263,9 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 lista[(itimestep)*narr+8]=intze+lista[(itimestep)*narr+7]/2.0;
 		
                 lista[(itimestep)*narr+9]= int_ein_ee+lista[(itimestep)*narr+0]*itimestep/2.0;
-                lista[(itimestep)*narr+10]=int_ein_ez+lista[(itimestep)*narr+1]*itimestep/2.0;
+                lista[(itimestep)*narr+12]=int_ein_zz+lista[(itimestep)*narr+1]*itimestep/2.0;
+                lista[(itimestep)*narr+10]=int_ein_ez+lista[(itimestep)*narr+2]*itimestep/2.0;
                 lista[(itimestep)*narr+11]=int_ein_ze+lista[(itimestep)*narr+7]*itimestep/2.0;
-                lista[(itimestep)*narr+12]=int_ein_zz+lista[(itimestep)*narr+2]*itimestep/2.0;
 		//risultato con il metodo di einstein
 		lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
                         -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez)/(intzz-int_ein_zz/itimestep);
