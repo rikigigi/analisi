@@ -244,8 +244,8 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
             for (unsigned int itimestep=npassith;itimestep<leff;itimestep++) {
 
                 intee+=lista[((itimestep-1))*narr+0];
-                intzz+=lista[((itimestep-1))*narr+1];
-                intez+=lista[((itimestep-1))*narr+2];
+                intez+=lista[((itimestep-1))*narr+1];
+                intzz+=lista[((itimestep-1))*narr+2];
                 intze+=lista[((itimestep-1))*narr+7];
 		//integrali differenza fra il metodo di greeen-kubo e quello di einstein
 		int_ein_ee+=lista[((itimestep-1))*narr+0]*itimestep;
