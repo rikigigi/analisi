@@ -201,7 +201,11 @@ int main(int argc, char ** argv)
                 factor_conv, //lambda
                 factor_conv*factor_intToCorr, //Jze
                 factor_conv, //intze
-                factor_conv*5.0e-15 //inteetau
+                factor_conv, //int_ein_ee
+                factor_conv, //int_ein_ez
+                factor_conv, //int_ein_ze
+                factor_conv2, //int_ein_zz
+                factor_conv, //lambda_einst
             };
             double *lambda_conv=new double[greenK.size()];
             double *lambda_conv_var=new double[greenK.size()];
@@ -220,7 +224,7 @@ int main(int argc, char ** argv)
                          test.get_natoms()/pow(test.line(0)[idx_lx] ,3)*(22.990+35.453)/2.0*1.66054<<"\n"
                       <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
-            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
+            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
             for (unsigned int i=0;i<greenK.size();i++) {
                 for (unsigned int j=0;j<GreenKubo2ComponentIonicFluid::narr;j++) {
                     std::cout << greenK.media(j)[i]*factors[j] << " "
