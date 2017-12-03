@@ -203,7 +203,7 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                     lista[(itimestep)*narr+1]=jzz;
                     lista[(itimestep)*narr+2]=jez;
                     lista[(itimestep)*narr+7]=jze;
-		    
+
                     //integrale con il metodo dei trapezi, solo per il primo
 
                     if (ith==0){
@@ -211,23 +211,23 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                         intez+=jezo;
                         intze+=jzeo;
                         intzz+=jzzo;
-			int_ein_ee+=jeeo*itimestep;
-			int_ein_ez+=jezo*itimestep;
-			int_ein_ze+=jzeo*itimestep;
-			int_ein_zz+=jzzo*itimestep;
+                        int_ein_ee+=jeeo*itimestep;
+                        int_ein_ez+=jezo*itimestep;
+                        int_ein_ze+=jzeo*itimestep;
+                        int_ein_zz+=jzzo*itimestep;
 
                         lista[(itimestep)*narr+3]=intee+jee/2.0;
                         lista[(itimestep)*narr+4]=intzz+jzz/2.0;
                         lista[(itimestep)*narr+5]=intez+jez/2.0;
                         lista[(itimestep)*narr+6]=intee+jee/2.0-(intez+jez/2.0)*(intez+jez/2.0)/(intzz+jzz/2.0);
                         lista[(itimestep)*narr+8]=intze+jze/2.0;
-			
-			lista[(itimestep)*narr+9]=int_ein_ee+jee*itimestep/2.0;
-			lista[(itimestep)*narr+10]=int_ein_ez+jez*itimestep/2.0;
-			lista[(itimestep)*narr+11]=int_ein_ze+jze*itimestep/2.0;
-			lista[(itimestep)*narr+12]=int_ein_zz+jzz*itimestep/2.0;
-			lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
-			      -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez)/(intzz-int_ein_zz/itimestep);
+
+                        lista[(itimestep)*narr+9]=int_ein_ee+jee*itimestep/2.0;
+                        lista[(itimestep)*narr+10]=int_ein_ez+jez*itimestep/2.0;
+                        lista[(itimestep)*narr+11]=int_ein_ze+jze*itimestep/2.0;
+                        lista[(itimestep)*narr+12]=int_ein_zz+jzz*itimestep/2.0;
+                        lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
+                                -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez/itimestep)/(intzz-int_ein_zz/itimestep);
 
                         jeeo=jee;
                         jezo=jez;
@@ -249,11 +249,11 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 intzz+=lista[((itimestep-1))*narr+1];
                 intez+=lista[((itimestep-1))*narr+2];
                 intze+=lista[((itimestep-1))*narr+7];
-		//integrali differenza fra il metodo di greeen-kubo e quello di einstein
-		int_ein_ee+=lista[((itimestep-1))*narr+0]*itimestep;
-		int_ein_ez+=lista[((itimestep-1))*narr+2]*itimestep;
-		int_ein_ze+=lista[((itimestep-1))*narr+7]*itimestep;
-		int_ein_zz+=lista[((itimestep-1))*narr+1]*itimestep;
+                //integrali differenza fra il metodo di greeen-kubo e quello di einstein
+                int_ein_ee+=lista[((itimestep-1))*narr+0]*itimestep;
+                int_ein_ez+=lista[((itimestep-1))*narr+2]*itimestep;
+                int_ein_ze+=lista[((itimestep-1))*narr+7]*itimestep;
+                int_ein_zz+=lista[((itimestep-1))*narr+1]*itimestep;
 
                 lista[(itimestep)*narr+3]=intee+lista[(itimestep)*narr+0]/2.0;
                 lista[(itimestep)*narr+4]=intzz+lista[(itimestep)*narr+1]/2.0;
@@ -261,26 +261,26 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 lista[(itimestep)*narr+6]=intee+lista[(itimestep)*narr+0]/2.0
                         -(intez+lista[(itimestep)*narr+2]/2.0)*(intez+lista[(itimestep)*narr+2]/2.0)/(intzz+lista[(itimestep)*narr+1]/2.0);
                 lista[(itimestep)*narr+8]=intze+lista[(itimestep)*narr+7]/2.0;
-		
+
                 lista[(itimestep)*narr+9]= int_ein_ee+lista[(itimestep)*narr+0]*itimestep/2.0;
                 lista[(itimestep)*narr+12]=int_ein_zz+lista[(itimestep)*narr+1]*itimestep/2.0;
                 lista[(itimestep)*narr+10]=int_ein_ez+lista[(itimestep)*narr+2]*itimestep/2.0;
                 lista[(itimestep)*narr+11]=int_ein_ze+lista[(itimestep)*narr+7]*itimestep/2.0;
-		//risultato con il metodo di einstein
-		lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
-                        -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez)/(intzz-int_ein_zz/itimestep);
-		
-	
-		
-		
+                //risultato con il metodo di einstein
+                lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
+                        -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez/itimestep)/(intzz-int_ein_zz/itimestep);
+
+
+
+
             }
         }
         //divide per itimestep tutti gli integrali einsteniani
-	    for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
-	         for (unsigned int ieinst=9;ieinst<=12;ieinst++){
-		      lista[(itimestep)*narr+ieinst]/=itimestep;
-		 }
-	    }
+        for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
+            for (unsigned int ieinst=9;ieinst<=12;ieinst++){
+                lista[(itimestep)*narr+ieinst]/=itimestep;
+            }
+        }
     }
 
     if (scrivi_file) {
