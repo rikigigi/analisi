@@ -226,8 +226,9 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                         lista[(itimestep)*narr+10]=int_ein_ez+jez*itimestep/2.0;
                         lista[(itimestep)*narr+11]=int_ein_ze+jze*itimestep/2.0;
                         lista[(itimestep)*narr+12]=int_ein_zz+jzz*itimestep/2.0;
-                        lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
-                                -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez/itimestep)/(intzz-int_ein_zz/itimestep);
+                        //lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
+                        //        -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez/itimestep)/(intzz-int_ein_zz/itimestep);
+
 
                         jeeo=jee;
                         jezo=jez;
@@ -266,9 +267,6 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
                 lista[(itimestep)*narr+12]=int_ein_zz+lista[(itimestep)*narr+1]*itimestep/2.0;
                 lista[(itimestep)*narr+10]=int_ein_ez+lista[(itimestep)*narr+2]*itimestep/2.0;
                 lista[(itimestep)*narr+11]=int_ein_ze+lista[(itimestep)*narr+7]*itimestep/2.0;
-                //risultato con il metodo di einstein
-                lista[(itimestep)*narr+13]=intee-int_ein_ee/itimestep
-                        -(intez - int_ein_ez/itimestep)*(intez - int_ein_ez/itimestep)/(intzz-int_ein_zz/itimestep);
 
 
 
@@ -280,6 +278,10 @@ void GreenKubo2ComponentIonicFluid::calcola(unsigned int primo) {
             for (unsigned int ieinst=9;ieinst<=12;ieinst++){
                 lista[(itimestep)*narr+ieinst]/=itimestep;
             }
+            //risultato con il metodo di einstein
+            lista[(itimestep)*narr+13]=lista[(itimestep)*narr+3]-lista[(itimestep)*narr+9]
+                    -(lista[(itimestep)*narr+5]  - lista[(itimestep)*narr+10])*(lista[(itimestep)*narr+5]  - lista[(itimestep)*narr+10])
+                            /(lista[(itimestep)*narr+4]-lista[(itimestep)*narr+12]);
         }
     }
 
