@@ -93,9 +93,6 @@ double * GreenKuboNComponentIonicFluid::jN(unsigned int N,unsigned int ts){
 }
 
 
-double* GreenKuboNComponentIonicFluid::je(unsigned int ts){
-    return&traiettoria->line(ts)[idx_je];
-}
 
 unsigned int GreenKuboNComponentIonicFluid::get_narr(){
   return narr;
@@ -110,12 +107,6 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
     unsigned int allinea=0;//primo%skip;
 
-    double intzz=0.0;
-    double intee=0.0;
-    double intez=0.0;
-    double intze=0.0;
-    double jeeo=0.0,jzzo=0.0,jezo=0.0,jzeo=0.0;
-    double int_ein_ee=0.0,int_ein_ze=0.0,int_ein_ez=0.0,int_ein_zz=0.0;
 
     if(nthread<1)
       nthread=1;
@@ -157,9 +148,8 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                 for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
                     //fa la media sulla traiettoria dei vari prodotti,
                     //con una differenza di timesteps fissata "itimestep"
-                    double jee=0.0,jzz=0.0,jez=0.0,jze=0.0;
-		    
-		    for (unsigned int j=0;j<idx_j.size();j++){
+ 	    
+		    for (unsigned int j=0;j<N_corr;j++){
 		         JJ[j]=0.0;
 		    }
 		    
