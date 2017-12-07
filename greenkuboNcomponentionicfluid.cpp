@@ -10,7 +10,7 @@
   *
 **/
 
-#include "greenkubo2componentionicfluid.h"
+#include "greenkuboNcomponentionicfluid.h"
 #include "chargefluxts.h"
 #include "heatfluxts.h"
 #include <string>
@@ -24,13 +24,11 @@
 #include <Eigen/Dense>
 #endif
 
-const unsigned int GreenKuboNComponentIonicFluid::narr=14;
-
 GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettoria,
 							     std::string log,
 							     double * cariche,
 							     unsigned int skip,
-							     std::vector<string> headers,
+							     std::vector<std::string> headers,
 							     bool dump,
 							     unsigned int lunghezza_funzione_max,
 							     unsigned int nthreads,
@@ -46,7 +44,7 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
     
     
     //Trova gli indici degli header delle correnti da utilizzare per il calcolo
-    for (unsigned int j=0;j<headers.size();j++{
+    for (unsigned int j=0;j<headers.size();j++){
 	res=traiettoria->get_index_of(headers.at(j));
 	if (res.second)
 	    idx_j.push_back(res.first);
@@ -55,7 +53,13 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
 	    abort();
 	}
     }
-        
+    
+#ifdef HALF_CORR
+	N_corr=idx_j.size()*(idx_j.size()+1)/2;
+#else
+	N_corr=idx_j.size()*idx_j.size();
+#endif	
+        narr=3*N_corr+2;
 }
 
 GreenKuboNComponentIonicFluid::~GreenKuboNComponentIonicFluid(){
@@ -78,7 +82,7 @@ unsigned int GreenKuboNComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsig
 
 void GreenKuboNComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco) {
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
-    lunghezza_lista=(leff)*narr; // Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda
+    lunghezza_lista=(leff)*narr;
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
@@ -87,18 +91,18 @@ void GreenKuboNComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco)
 double * GreenKuboNComponentIonicFluid::jN(unsigned int N,unsigned int ts){
     return&traiettoria->line(ts)[idx_j[N]];
 }
-std::array<double,3> GreenKuboNComponentIonicFluid::jz(unsigned int ts){
-    double *j0=&traiettoria->line(ts)[idx_j0];
-    double *j1=&traiettoria->line(ts)[idx_j1];
-    return std::array<double,3> {{
-            j0[0]*carica[0]+j1[0]*carica[1],
-            j0[1]*carica[0]+j1[1]*carica[1],
-            j0[2]*carica[0]+j1[2]*carica[1],
-        }};
-}
+
 
 double* GreenKuboNComponentIonicFluid::je(unsigned int ts){
     return&traiettoria->line(ts)[idx_je];
+}
+
+unsigned int GreenKuboNComponentIonicFluid::get_narr(){
+  return narr;
+}
+
+unsigned int GreenKuboNComponentIonicFluid::get_indexOfKappa(){
+  return 3*N_corr;
 }
 
 void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
@@ -130,16 +134,14 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
             (anche per poter confrontare i risultati)
         */
 	
-#ifdef HALF_CORR
-	const unsigned int N_corr=idx_j.size()*(idx_j.size()+1)/2;
-#else
-	const unsigned int N_corr=idx_j.size()*idx_j.size();
-#endif	
+
 	double *matr=new double [idx_j.size()*idx_j.size()];
 	double *JJ=new double[N_corr];
 	double *intJJ=new double[N_corr];
 	double *JJo=new double[N_corr];
 	double *int_ein_JJ=new double[N_corr];
+	
+	
 	
 	for (unsigned int j=0;j<N_corr;j++){
 	    intJJ[j]=0.0;
@@ -165,8 +167,8 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                     unsigned int cont=0;
                     for (unsigned int jmedia=allinea;jmedia<ntimesteps;jmedia+=skip) {
                         //prodotto JzJz
-			cont++
-			unsigned int idxj=0
+			cont++;
+			unsigned int idxj=0;
 			for (unsigned int j1=0;j1<idx_j.size();j1++)
 			#ifdef HALF_CORR
 			  for (unsigned int j2=j1;j2<idx_j.size();j2++)
@@ -207,7 +209,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 			}
 			//calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
 		      
-		        unsigned int idxj=0
+		        unsigned int idxj=0;
 			for (unsigned int j1=0;j1<idx_j.size();j1++)
 		        #ifdef HALF_CORR
 			   for (unsigned int j2=j1;j2<idx_j.size();j2++) {
@@ -222,16 +224,16 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 			   }
 		        #endif
 		        
-		        Eigen::Map<Eigen::MatrixXd> coeff(matr,idx_j.size());
+		        Eigen::Map<Eigen::MatrixXd> coeff(matr,idx_j.size(),idx_j.size());
 			
 			//calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa: 
 			
-			double k= coeff(0,0) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1);
+			double k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
 			lista[(itimestep)*narr+3*N_corr+0]=k;
 			
 			//stessa cosa con la formula di einstein
 			
-			idxj=0
+			idxj=0;
 			for (unsigned int j1=0;j1<idx_j.size();j1++)
 		        #ifdef HALF_CORR
 			   for (unsigned int j2=j1;j2<idx_j.size();j2++) {
@@ -248,7 +250,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 		        			
 			//calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa: 
 			
-			double k= coeff(0,0) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1);
+			k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
 			lista[(itimestep)*narr+3*N_corr+1]=k;
                     }
                 }
@@ -273,7 +275,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 			}
 			//calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
 		      
-		        unsigned int idxj=0
+		        unsigned int idxj=0;
 			for (unsigned int j1=0;j1<idx_j.size();j1++)
 		        #ifdef HALF_CORR
 			   for (unsigned int j2=j1;j2<idx_j.size();j2++) {
@@ -288,16 +290,16 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 			   }
 		        #endif
 		        
-		        Eigen::Map<Eigen::MatrixXd> coeff(matr,idx_j.size());
+		        Eigen::Map<Eigen::MatrixXd> coeff(matr,idx_j.size(),idx_j.size());
 			
 			//calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa: 
 			
-			double k= coeff(0,0) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1);
+			double k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
 			lista[(itimestep)*narr+3*N_corr+0]=k;
 			
 			//stessa cosa con la formula di einstein
 			
-			idxj=0
+			idxj=0;
 			for (unsigned int j1=0;j1<idx_j.size();j1++)
 		        #ifdef HALF_CORR
 			   for (unsigned int j2=j1;j2<idx_j.size();j2++) {
@@ -314,7 +316,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 		        			
 			//calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa: 
 			
-			double k= coeff(0,0) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1);
+			k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
 			lista[(itimestep)*narr+3*N_corr+1]=k;
 		
 		

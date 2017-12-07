@@ -23,6 +23,7 @@
 #include "config.h"
 #include "istogrammavelocita.h"
 #include "greenkubo2componentionicfluid.h"
+#include "greenkuboNcomponentionicfluid.h"
 #include "convolution.h"
 #include "heatfluxts.h"
 #include "msd.h"
@@ -35,12 +36,13 @@
 
 int main(int argc, char ** argv)
 {
-    boost::program_options::options_description options("Opzioni consentite");
+    boost::program_options::options_description options("Riccardo Bertossa, 2017\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
     int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
-    double vmax_h=0,cariche[2];
+    double vmax_h=0,cariche[2],dt=5e-3;
     std::vector<unsigned int > cvar_list;
+    std::vector<std::string> headers;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
     options.add_options()
 #if BOOST_VERSION >= 105600
@@ -66,6 +68,8 @@ int main(int argc, char ** argv)
             ("bin-number,m",boost::program_options::value<int>(&nbins)->default_value(50),"numero di intervalli da usare nell'istogramma delle velocità")
             ("histogram-minmax,M",boost::program_options::value<double>(&vmax_h)->default_value(500),"l'istogramma viene calcolato nell'intervallo compreso fra -<valore> e +<valore>, dove <valore> è quello qui specificato")
             ("heat-transport-coefficient,H",boost::program_options::bool_switch(&heat_coeff)->default_value(false),"calcola il coefficiente di trasporto termico per sale fuso a due componenti")
+            ("headers,a",boost::program_options::value<std::vector<std::string> > (&headers)->multitoken(),"Specifica le colonne del log di LAMMPS da utilizzare per il calcolo del coefficiente. La prima colonna specificata deve essere quella della corrente di energia. Utilizza il codice generale con l'inversione della matrice.")
+            ("dt,D",boost::program_options::value<double>(&dt)->default_value(5e-3),"Intervallo di dump in picosecondi delle correnti nel file di log di LAMMPS")
             ("skip,s",boost::program_options::value<int>(&skip)->default_value(1),"incremento minimo di timesteps da usare nel calcolo delle funzioni di correlazione o nello spostamento quadratico medio")
             ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"carica in unità elementari del tipo 1")
             ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"carica in unità elementari del tipo 2")
@@ -151,13 +155,9 @@ int main(int argc, char ** argv)
             if (heat_coeff) {
             std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
             ReadLog test(log_input);
-            MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
-                    greenK_c(&test,blocknumber);
-
-            MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
-
-            greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
-            //calcola velocemente la media a blocchi per la temperatura
+	    
+	    
+	    //calcola velocemente la media a blocchi per la temperatura
 
             std::pair<unsigned int,bool> res=test.get_index_of("Temp");
             if(!res.second){
@@ -187,10 +187,25 @@ int main(int argc, char ** argv)
                 var_ = var_ + delta*(media2_ - media_);
             }
             var_=var_/(cont*(cont-1));
+	    
+	    //calcola le costanti di conversione da METAL di LAMMPS al sistema internazionale del coefficiente di conducibilità
+	    
+	    const double const_charge=1.6021765,const_boltzmann=1.38064852;
 
-            double factor_conv=1.6022*1.6022*5 / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_*media_);
-            double factor_conv2=1.6022*1.6022*5  / ((pow(test.line(0)[idx_lx],3) )*1.38064852e-4*media_);
-            double factor_intToCorr=1.0/(1e-15*5);  //0.005 ps è l'intervallo di integrazione
+            double factor_conv=const_charge*const_charge*dt*10e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
+            double factor_conv2=const_charge*const_charge*dt*10e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
+            double factor_intToCorr=1.0/(1e-12*dt);
+	    
+	    
+	    if (headers.size()==0){
+	    
+            MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
+                    greenK_c(&test,blocknumber);
+
+            MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
+
+            greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
+
             double factors[GreenKubo2ComponentIonicFluid::narr]={
                 factor_conv*factor_intToCorr, //Jee
                 factor_conv2*factor_intToCorr, //Jzz
@@ -218,10 +233,9 @@ int main(int argc, char ** argv)
             }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
             convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
             convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
-            std::cout << "# T T1sigma  atomi/volume densitNaCL\n#"
+            std::cout << "# T T1sigma  atomi/volume\n#"
                       <<media_ << " " << sqrt(var_) << " "
-                      << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< " "<<
-                         test.get_natoms()/pow(test.line(0)[idx_lx] ,3)*(22.990+35.453)/2.0*1.66054<<"\n"
+                      << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< "\n"
                       <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
             std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
@@ -241,6 +255,44 @@ int main(int argc, char ** argv)
             }
             delete [] lambda_conv;
             delete [] lambda_conv_var;
+	    
+	    } else {
+	    
+	            MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int>
+                    greenK_c(&test,blocknumber);
+	      unsigned int narr=headers.size()*headers.size()*3+2;
+            MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
+
+            greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread);
+
+            double *factors= new double [narr];
+	    
+	    for (unsigned int j=0;j<headers.size()*headers.size();j++)
+	      factors[j]=factor_conv*factor_intToCorr;
+	    for (unsigned int j=headers.size()*headers.size();j<headers.size()*headers.size()*3+2;j++)
+	      factors[j]=factor_conv;
+
+            if (final>=greenK.size()) final=greenK.size()-1;
+            if (final <0) final=0;
+
+            std::cout << "# T T1sigma V\n#"
+                      <<media_ << " " << sqrt(var_) << " "
+                      << pow(test.line(0)[idx_lx] ,3)<< "\n";
+   
+            for (unsigned int i=0;i<greenK.size();i++) {
+                for (unsigned int j=0;j<narr;j++) {
+                    std::cout << greenK.media(j)[i]*factors[j] << " "
+                              << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                }
+
+                for (unsigned int j=0;j<greenK.n_cvar();j++){
+                    std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
+                }
+                std::cout  << "\n";
+
+	    }
+	      delete [] factors;
+	    }
 
         }else if (msd){
 

@@ -31,7 +31,7 @@ public:
                                   std::string log,
                                   double *cariche,
                                   unsigned int skip,
-				  std::vector<string> headers,
+				  std::vector<std::string> headers,
                                   bool dump=false,
                                   unsigned int lunghezza_funzione_max=0,
                                   unsigned int nthreads=0,
@@ -42,17 +42,19 @@ public:
     void reset(unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     GreenKuboNComponentIonicFluid & operator =(const GreenKuboNComponentIonicFluid &);
-    static const unsigned int narr;
-private:
+    unsigned int get_narr();
+    unsigned int get_indexOfKappa();
+    
+    private:
+    unsigned int narr,N_corr;
     bool scrivi_file;
     unsigned int idx_je,idx_j0,idx_j1,n_ris;
-    std:vector<unsigned int> idx_j;
+    std::vector<unsigned int> idx_j;
     std::string log;
     ReadLog *traiettoria;
     unsigned int ntimesteps,lmax,leff,nthread,skip;
     double carica[2];
     double*  jN(unsigned int N,unsigned int ts);
-    std::array<double,3>  jz(unsigned int ts);
     double* je(unsigned int ts);
 };
 
