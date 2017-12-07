@@ -192,8 +192,8 @@ int main(int argc, char ** argv)
 	    
 	    const double const_charge=1.6021765,const_boltzmann=1.38064852;
 
-            double factor_conv=const_charge*const_charge*dt*10e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
-            double factor_conv2=const_charge*const_charge*dt*10e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
+            double factor_conv=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
+            double factor_conv2=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
             double factor_intToCorr=1.0/(1e-12*dt);
 	    
 	    
