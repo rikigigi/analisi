@@ -126,11 +126,17 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         */
 	
 
-	double *matr=new double [idx_j.size()*idx_j.size()];
-	double *JJ=new double[N_corr];
-	double *intJJ=new double[N_corr];
-	double *JJo=new double[N_corr];
-	double *int_ein_JJ=new double[N_corr];
+	      double *matr=new double [idx_j.size()*idx_j.size()];
+	      double *intJJ=new double[N_corr];
+	      double *int_ein_JJ=new double[N_corr];
+
+	
+        unsigned int npassith=leff/nthread;
+        std::vector<std::thread> threads;
+        for (unsigned int ith=0;ith<nthread;ith++){
+            threads.push_back(std::thread([&,ith](){
+	      double *JJo=new double[N_corr];
+	      double *JJ=new double[N_corr];
 	
 	
 	
@@ -139,12 +145,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 	    JJo[j]=0.0;
 	    int_ein_JJ[j]=0.0;
 	}
-	
-        unsigned int npassith=leff/nthread;
-        std::vector<std::thread> threads;
-        for (unsigned int ith=0;ith<nthread;ith++){
-            threads.push_back(std::thread([&,ith](){
-                unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
+	      unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
                 for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
                     //fa la media sulla traiettoria dei vari prodotti,
                     //con una differenza di timesteps fissata "itimestep"
@@ -244,6 +245,8 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 			lista[(itimestep)*narr+3*N_corr+1]=k;
                     }
                 }
+                delete [] JJ;
+		delete [] JJo;
             }));
         }
         for (unsigned int ithread=0;ithread<nthread;ithread++)
@@ -339,9 +342,9 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         outfile << "\n\n";
     }
     
-    delete [] JJ;
-    delete [] JJo;
-    delete [] intJJ;
-    delete [] int_ein_JJ;
-    delete [] matr;
+		delete [] intJJ;
+		delete [] int_ein_JJ;
+		delete [] matr;
+    
+
 }
