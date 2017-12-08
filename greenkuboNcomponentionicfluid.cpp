@@ -203,7 +203,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                     //calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
                     //simmetrizzandola
 
-                    for (unsigned int j=0;j<idx_j.size();j++){
+                    for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
                         matr[j]=0.0;
                     }
 
@@ -231,7 +231,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                     lista[(itimestep)*narr+3*N_corr+0]=k;
 
                     //stessa cosa con la formula di einstein
-                    for (unsigned int j=0;j<idx_j.size();j++){
+                    for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
                         matr[j]=0.0;
                     }
                     idxj=0;
@@ -279,7 +279,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
             }
             //calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
-            for (unsigned int j=0;j<idx_j.size();j++){
+            for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
                 matr[j]=0.0;
             }
             unsigned int idxj=0;
@@ -306,7 +306,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
             lista[(itimestep)*narr+3*N_corr+0]=k;
 
             //stessa cosa con la formula di einstein
-            for (unsigned int j=0;j<idx_j.size();j++){
+            for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
                 matr[j]=0.0;
             }
             idxj=0;
