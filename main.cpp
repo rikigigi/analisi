@@ -45,13 +45,13 @@ int main(int argc, char ** argv)
     std::vector<std::string> headers;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
     options.add_options()
-#if BOOST_VERSION >= 105600
+        #if BOOST_VERSION >= 105600
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input)->required(),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
-#else
+        #else
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
-#endif
+        #endif
             ("help,h", "messaggio di aiuto")
             ("thread,N",boost::program_options::value<int>(&numero_thread)->default_value(2),"numero di thread da usare (dove supportato)")
             ("timesteps,n",boost::program_options::value<int>(&numero_frame)->default_value(50000), "numero di timestep che il programma legge dal file")
@@ -79,13 +79,13 @@ int main(int argc, char ** argv)
             ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali o dello spostamento quadratico medio. Se posto a zero è pari alle dimensioni del blocco")
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
-#ifdef DEBUG
+        #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
-#endif
+        #endif
             ;
 
-//            ("nc,non-copressed-input",boost::program_options::bool_switch(&ncompress)->default_value(false),"legge il file di input come file non compresso con gz");
+    //            ("nc,non-copressed-input",boost::program_options::bool_switch(&ncompress)->default_value(false),"legge il file di input come file non compresso con gz");
 
     boost::program_options::variables_map vm;
 
@@ -93,7 +93,7 @@ int main(int argc, char ** argv)
         boost::program_options::store(
                     boost::program_options::parse_command_line(argc,argv,options)
                     ,vm
-        );
+                    );
 
 
         boost::program_options::notify(vm);
@@ -153,210 +153,210 @@ int main(int argc, char ** argv)
         } else
 #endif // DEBUG
             if (heat_coeff) {
-            std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
-            ReadLog test(log_input);
-	    
-	    
-	    //calcola velocemente la media a blocchi per la temperatura
+                std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
+                ReadLog test(log_input);
 
-            std::pair<unsigned int,bool> res=test.get_index_of("Temp");
-            if(!res.second){
-                std::cerr << "Non riesco a trovare la colonna 'Temp' nel file di log '"<<log_input<<"'\n";
-                abort();
-            }
-            unsigned int idx_T=res.first;
-            res=test.get_index_of("Lx");
-            if(!res.second){
-                std::cerr << "Non riesco a trovare la colonna 'Lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
-                abort();
-            }
-            unsigned int idx_lx=res.first;
-            double media_=0.0;
-            double var_=0.0;
-            unsigned int cont=0;
-            unsigned int block_size=test.n_timestep()/blocknumber;
-            for (unsigned int iblock=0;iblock<blocknumber;iblock++){
-                unsigned int cont2=0;
-                double media2_=0.0;
-                for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i+=skip){ // media sul blocco
-                    double delta2= test.line(i)[idx_T] - media2_;
-                    media2_ = media2_ + delta2/(++cont2);
+
+                //calcola velocemente la media a blocchi per la temperatura
+
+                std::pair<unsigned int,bool> res=test.get_index_of("Temp");
+                if(!res.second){
+                    std::cerr << "Non riesco a trovare la colonna 'Temp' nel file di log '"<<log_input<<"'\n";
+                    abort();
                 }
-                double delta=media2_-media_;
-                media_=media_+delta/(++cont);
-                var_ = var_ + delta*(media2_ - media_);
-            }
-            var_=var_/(cont*(cont-1));
-	    
-	    //calcola le costanti di conversione da METAL di LAMMPS al sistema internazionale del coefficiente di conducibilità
-	    
-	    const double const_charge=1.6021765,const_boltzmann=1.38064852;
+                unsigned int idx_T=res.first;
+                res=test.get_index_of("Lx");
+                if(!res.second){
+                    std::cerr << "Non riesco a trovare la colonna 'Lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
+                    abort();
+                }
+                unsigned int idx_lx=res.first;
+                double media_=0.0;
+                double var_=0.0;
+                unsigned int cont=0;
+                unsigned int block_size=test.n_timestep()/blocknumber;
+                for (unsigned int iblock=0;iblock<blocknumber;iblock++){
+                    unsigned int cont2=0;
+                    double media2_=0.0;
+                    for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i+=skip){ // media sul blocco
+                        double delta2= test.line(i)[idx_T] - media2_;
+                        media2_ = media2_ + delta2/(++cont2);
+                    }
+                    double delta=media2_-media_;
+                    media_=media_+delta/(++cont);
+                    var_ = var_ + delta*(media2_ - media_);
+                }
+                var_=var_/(cont*(cont-1));
 
-            double factor_conv=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
-            double factor_conv2=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
-            double factor_intToCorr=1.0/(1e-12*dt);
-	    
-	    
-	    if (headers.size()==0){
-	    
-            MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
-                    greenK_c(&test,blocknumber);
+                //calcola le costanti di conversione da METAL di LAMMPS al sistema internazionale del coefficiente di conducibilità
 
-            MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
+                const double const_charge=1.6021765,const_boltzmann=1.38064852;
 
-            greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
+                double factor_conv=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
+                double factor_conv2=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
+                double factor_intToCorr=1.0/(1e-12*dt);
 
-            double factors[GreenKubo2ComponentIonicFluid::narr]={
-                factor_conv*factor_intToCorr, //Jee
-                factor_conv2*factor_intToCorr, //Jzz
-                factor_conv*factor_intToCorr, //Jez
-                factor_conv, //intee
-                factor_conv2, //intzz
-                factor_conv, //intez
-                factor_conv, //lambda
-                factor_conv*factor_intToCorr, //Jze
-                factor_conv, //intze
-                factor_conv, //int_ein_ee
-                factor_conv, //int_ein_ez
-                factor_conv, //int_ein_ze
-                factor_conv2, //int_ein_zz
-                factor_conv, //lambda_einst
-            };
-            double *lambda_conv=new double[greenK.size()];
-            double *lambda_conv_var=new double[greenK.size()];
 
-            if (final>=greenK.size()) final=greenK.size()-1;
-            if (final <0) final=0;
+                if (headers.size()==0){
 
-            Convolution<double> convoluzione( std::function<double (const double  &)> ([&conv_n](const double & x)->double{
-                return exp(-x*x/(2*conv_n*conv_n));
-            }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
-            convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
-            convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
-            std::cout << "# T T1sigma  atomi/volume\n#"
-                      <<media_ << " " << sqrt(var_) << " "
-                      << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< "\n"
-                      <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
+                    MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
+                            greenK_c(&test,blocknumber);
 
-            std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
-            for (unsigned int i=0;i<greenK.size();i++) {
-                for (unsigned int j=0;j<GreenKubo2ComponentIonicFluid::narr;j++) {
-                    std::cout << greenK.media(j)[i]*factors[j] << " "
-                              << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                    MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
+
+                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
+
+                    double factors[GreenKubo2ComponentIonicFluid::narr]={
+                        factor_conv*factor_intToCorr, //Jee
+                        factor_conv2*factor_intToCorr, //Jzz
+                        factor_conv*factor_intToCorr, //Jez
+                        factor_conv, //intee
+                        factor_conv2, //intzz
+                        factor_conv, //intez
+                        factor_conv, //lambda
+                        factor_conv*factor_intToCorr, //Jze
+                        factor_conv, //intze
+                        factor_conv, //int_ein_ee
+                        factor_conv, //int_ein_ez
+                        factor_conv, //int_ein_ze
+                        factor_conv2, //int_ein_zz
+                        factor_conv, //lambda_einst
+                    };
+                    double *lambda_conv=new double[greenK.size()];
+                    double *lambda_conv_var=new double[greenK.size()];
+
+                    if (final>=greenK.size()) final=greenK.size()-1;
+                    if (final <0) final=0;
+
+                    Convolution<double> convoluzione( std::function<double (const double  &)> ([&conv_n](const double & x)->double{
+                        return exp(-x*x/(2*conv_n*conv_n));
+                    }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
+                    convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
+                    convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
+                    std::cout << "# T T1sigma  atomi/volume\n#"
+                              <<media_ << " " << sqrt(var_) << " "
+                             << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< "\n"
+                             <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
+
+                    std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
+                    for (unsigned int i=0;i<greenK.size();i++) {
+                        for (unsigned int j=0;j<GreenKubo2ComponentIonicFluid::narr;j++) {
+                            std::cout << greenK.media(j)[i]*factors[j] << " "
+                                      << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                        }
+
+                        std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
+                                  << factor_conv*(greenK.media(3)[i]-pow(greenK.media(5)[i],2)/greenK.media(4)[i])<<" ";
+                        for (unsigned int j=0;j<greenK.n_cvar();j++){
+                            std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
+                        }
+                        std::cout  << "\n";
+
+                    }
+                    delete [] lambda_conv;
+                    delete [] lambda_conv_var;
+
+                } else {
+
+                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int>
+                            greenK_c(&test,blocknumber);
+                    unsigned int narr=headers.size()*headers.size()*3+2;
+                    MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
+
+                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread);
+
+                    double *factors= new double [narr];
+
+                    for (unsigned int j=0;j<headers.size()*headers.size();j++)
+                        factors[j]=factor_conv*factor_intToCorr;
+                    for (unsigned int j=headers.size()*headers.size();j<headers.size()*headers.size()*3+2;j++)
+                        factors[j]=factor_conv;
+
+                    if (final>=greenK.size()) final=greenK.size()-1;
+                    if (final <0) final=0;
+
+                    std::cout << "# T T1sigma V\n#"
+                              <<media_ << " " << sqrt(var_) << " "
+                             << pow(test.line(0)[idx_lx] ,3)<< "\n";
+
+                    for (unsigned int i=0;i<greenK.size();i++) {
+                        for (unsigned int j=0;j<narr;j++) {
+                            std::cout << greenK.media(j)[i]*factors[j] << " "
+                                      << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                        }
+
+                        for (unsigned int j=0;j<greenK.n_cvar();j++){
+                            std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
+                        }
+                        std::cout  << "\n";
+
+                    }
+                    delete [] factors;
                 }
 
-                std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
-                          << factor_conv*(greenK.media(3)[i]-pow(greenK.media(5)[i],2)/greenK.media(4)[i])<<" ";
-                for (unsigned int j=0;j<greenK.n_cvar();j++){
-                    std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
-                }
-                std::cout  << "\n";
+            }else if (msd){
 
-            }
-            delete [] lambda_conv;
-            delete [] lambda_conv_var;
-	    
-	    } else {
-	    
-	            MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int>
-                    greenK_c(&test,blocknumber);
-	      unsigned int narr=headers.size()*headers.size()*3+2;
-            MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
+                std::cerr << "Inizio del calcolo dello spostamento quadratico medio...\n";
+                Traiettoria test(input);
+                test.imposta_dimensione_finestra_accesso(1);
+                test.imposta_inizio_accesso(0);
 
-            greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread);
-
-            double *factors= new double [narr];
-	    
-	    for (unsigned int j=0;j<headers.size()*headers.size();j++)
-	      factors[j]=factor_conv*factor_intToCorr;
-	    for (unsigned int j=headers.size()*headers.size();j<headers.size()*headers.size()*3+2;j++)
-	      factors[j]=factor_conv;
-
-            if (final>=greenK.size()) final=greenK.size()-1;
-            if (final <0) final=0;
-
-            std::cout << "# T T1sigma V\n#"
-                      <<media_ << " " << sqrt(var_) << " "
-                      << pow(test.line(0)[idx_lx] ,3)<< "\n";
-   
-            for (unsigned int i=0;i<greenK.size();i++) {
-                for (unsigned int j=0;j<narr;j++) {
-                    std::cout << greenK.media(j)[i]*factors[j] << " "
-                              << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int> Msd(&test,blocknumber);
+                Msd.calcola(skip,stop_acf,numero_thread);
+                for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes();i++) {
+                    for (unsigned int j=0;j<test.get_ntypes();j++)
+                        std::cout << Msd.media()->elemento(i*test.get_ntypes()+j) << " " <<
+                                     Msd.varianza()->elemento(i*test.get_ntypes()+j) << " ";
+                    std::cout << "\n";
                 }
 
-                for (unsigned int j=0;j<greenK.n_cvar();j++){
-                    std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
+            }else if (velocity_h) {
+                std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";
+                Traiettoria test(input);
+                test.imposta_dimensione_finestra_accesso(1);
+                test.imposta_inizio_accesso(0);
+                MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
+                istogramma_vel.calcola(nbins,vmax_h);
+
+                //stampa i risultati
+                unsigned int lungh_sing_h=istogramma_vel.media()->lunghezza()/(3*test.get_ntypes());
+                for (unsigned int i=0;i<lungh_sing_h;i++){
+                    std::cout << -vmax_h + 2*vmax_h*i/lungh_sing_h << " ";
+                    for (unsigned int it=0;it<3*test.get_ntypes();it++)
+                        std::cout << istogramma_vel.media()->elemento(lungh_sing_h*it+i) << " "
+                                  << istogramma_vel.varianza()->elemento(lungh_sing_h*it+i) << " ";
+                    std::cout << "\n";
                 }
-                std::cout  << "\n";
 
-	    }
-	      delete [] factors;
-	    }
+            } else if (fononefile != "") {
+                std::cerr << "Inizio analisi dei modi normale di vibrazione del cristallo...\n";
+                Traiettoria test(input);
+                test.imposta_dimensione_finestra_accesso(1);
+                test.imposta_inizio_accesso(0);
+                ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
+                test_normali.reset(numero_frame);
+                test_normali.calcola(0);
 
-        }else if (msd){
+                return 1;
+            } else if (spettro_vibraz) {
+                std::cerr << "Inizio del calcolo dello spettro vibrazionale...\n";
+                Traiettoria test(input);
+                test.imposta_dimensione_finestra_accesso(1);
+                test.imposta_inizio_accesso(0);
+                //            SpettroVibrazionale test_spettro(&test);
+                MediaBlocchi<SpettroVibrazionale> test_spettro_blocchi(&test,blocknumber);
 
-            std::cerr << "Inizio del calcolo dello spostamento quadratico medio...\n";
-            Traiettoria test(input);
-            test.imposta_dimensione_finestra_accesso(1);
-            test.imposta_inizio_accesso(0);
+                test_spettro_blocchi.calcola();
+                for (unsigned int i=0;i<test_spettro_blocchi.media()->lunghezza()/(3*test.get_ntypes());i++) {
+                    std::cout << i << " ";
+                    for (unsigned int itipo=0;itipo<test.get_ntypes();itipo++)
+                        std::cout << test_spettro_blocchi.media()->spettro(i,0,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,0,itipo) << " "
+                                  << test_spettro_blocchi.media()->spettro(i,1,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,1,itipo) << " "
+                                  << test_spettro_blocchi.media()->spettro(i,2,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,2,itipo) << " ";
+                    std::cout << "\n";
+                }
 
-            MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int> Msd(&test,blocknumber);
-            Msd.calcola(skip,stop_acf,numero_thread);
-            for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes();i++) {
-                for (unsigned int j=0;j<test.get_ntypes();j++)
-                    std::cout << Msd.media()->elemento(i*test.get_ntypes()+j) << " " <<
-                              Msd.varianza()->elemento(i*test.get_ntypes()+j) << " ";
-                std::cout << "\n";
             }
-
-        }else if (velocity_h) {
-            std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";
-            Traiettoria test(input);
-            test.imposta_dimensione_finestra_accesso(1);
-            test.imposta_inizio_accesso(0);
-            MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
-            istogramma_vel.calcola(nbins,vmax_h);
-
-            //stampa i risultati
-            unsigned int lungh_sing_h=istogramma_vel.media()->lunghezza()/(3*test.get_ntypes());
-            for (unsigned int i=0;i<lungh_sing_h;i++){
-                std::cout << -vmax_h + 2*vmax_h*i/lungh_sing_h << " ";
-                for (unsigned int it=0;it<3*test.get_ntypes();it++)
-                              std::cout << istogramma_vel.media()->elemento(lungh_sing_h*it+i) << " "
-                                        << istogramma_vel.varianza()->elemento(lungh_sing_h*it+i) << " ";
-                std::cout << "\n";
-            }
-
-        } else if (fononefile != "") {
-            std::cerr << "Inizio analisi dei modi normale di vibrazione del cristallo...\n";
-            Traiettoria test(input);
-            test.imposta_dimensione_finestra_accesso(1);
-            test.imposta_inizio_accesso(0);
-            ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
-            test_normali.reset(numero_frame);
-            test_normali.calcola(0);
-
-            return 1;
-        } else if (spettro_vibraz) {
-            std::cerr << "Inizio del calcolo dello spettro vibrazionale...\n";
-            Traiettoria test(input);
-            test.imposta_dimensione_finestra_accesso(1);
-            test.imposta_inizio_accesso(0);
-//            SpettroVibrazionale test_spettro(&test);
-            MediaBlocchi<SpettroVibrazionale> test_spettro_blocchi(&test,blocknumber);
-
-            test_spettro_blocchi.calcola();
-            for (unsigned int i=0;i<test_spettro_blocchi.media()->lunghezza()/(3*test.get_ntypes());i++) {
-                std::cout << i << " ";
-                for (unsigned int itipo=0;itipo<test.get_ntypes();itipo++)
-                    std::cout << test_spettro_blocchi.media()->spettro(i,0,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,0,itipo) << " "
-                              << test_spettro_blocchi.media()->spettro(i,1,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,1,itipo) << " "
-                              << test_spettro_blocchi.media()->spettro(i,2,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,2,itipo) << " ";
-                std::cout << "\n";
-            }
-
-        }
 
     }
 
