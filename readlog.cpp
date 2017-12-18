@@ -97,7 +97,7 @@ unsigned int ReadLog::timestep(unsigned int index){
 }
 
 bool ReadLog::if_only_numbers(std::string str){
-    return str.find_first_not_of("0123456789    .-+")==std::string::npos;
+    return str.find_first_not_of("e0123456789    .-+")==std::string::npos;
 }
 
 ReadLog::~ReadLog(){
