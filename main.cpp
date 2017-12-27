@@ -42,6 +42,7 @@ int main(int argc, char ** argv)
     bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
     double vmax_h=0,cariche[2],dt=5e-3;
     std::vector<unsigned int > cvar_list;
+    std::vector<double> factors_input;
     std::vector<std::string> headers;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
     options.add_options()
@@ -79,6 +80,7 @@ int main(int argc, char ** argv)
             ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali o dello spostamento quadratico medio. Se posto a zero è pari alle dimensioni del blocco")
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
+            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti.")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -156,45 +158,60 @@ int main(int argc, char ** argv)
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
                 ReadLog test(log_input);
 
+                double factor_conv;
+                double factor_conv2;
+                double factor_intToCorr;
 
-                //calcola velocemente la media a blocchi per la temperatura
-
-                std::pair<unsigned int,bool> res=test.get_index_of("Temp");
-                if(!res.second){
-                    std::cerr << "Non riesco a trovare la colonna 'Temp' nel file di log '"<<log_input<<"'\n";
-                    abort();
-                }
-                unsigned int idx_T=res.first;
-                res=test.get_index_of("Lx");
-                if(!res.second){
-                    std::cerr << "Non riesco a trovare la colonna 'Lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
-                    abort();
-                }
-                unsigned int idx_lx=res.first;
-                double media_=0.0;
-                double var_=0.0;
-                unsigned int cont=0;
-                unsigned int block_size=test.n_timestep()/blocknumber;
-                for (unsigned int iblock=0;iblock<blocknumber;iblock++){
-                    unsigned int cont2=0;
-                    double media2_=0.0;
-                    for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i+=skip){ // media sul blocco
-                        double delta2= test.line(i)[idx_T] - media2_;
-                        media2_ = media2_ + delta2/(++cont2);
-                    }
-                    double delta=media2_-media_;
-                    media_=media_+delta/(++cont);
-                    var_ = var_ + delta*(media2_ - media_);
-                }
-                var_=var_/(cont*(cont-1));
-
-                //calcola le costanti di conversione da METAL di LAMMPS al sistema internazionale del coefficiente di conducibilità
-
+                //calcola velocemente la media a blocchi per la temperatura, se non sono specificati manualmente i fattori
                 const double const_charge=1.6021765,const_boltzmann=1.38064852;
 
-                double factor_conv=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
-                double factor_conv2=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
-                double factor_intToCorr=1.0/(1e-12*dt);
+                unsigned int idx_lx=0;
+                double media_=0.0;
+                double var_=0.0;
+                if (factors_input.size()==0){
+
+                    std::pair<unsigned int,bool> res=test.get_index_of("Temp");
+                    idx_lx=res.first;
+                    if(!res.second){
+                        std::cerr << "Non riesco a trovare la colonna 'Temp' nel file di log '"<<log_input<<"'\n";
+                        abort();
+                    }
+                    unsigned int idx_T=res.first;
+                    res=test.get_index_of("Lx");
+                    if(!res.second){
+                        std::cerr << "Non riesco a trovare la colonna 'Lx' (lato della cella cubica) nel file di log '"<<log_input<<"'\n";
+                        abort();
+                    }
+
+                    unsigned int cont=0;
+                    unsigned int block_size=test.n_timestep()/blocknumber;
+                    for (unsigned int iblock=0;iblock<blocknumber;iblock++){
+                        unsigned int cont2=0;
+                        double media2_=0.0;
+                        for (unsigned int i=block_size*iblock;i<block_size*(iblock+1);i+=skip){ // media sul blocco
+                            double delta2= test.line(i)[idx_T] - media2_;
+                            media2_ = media2_ + delta2/(++cont2);
+                        }
+                        double delta=media2_-media_;
+                        media_=media_+delta/(++cont);
+                        var_ = var_ + delta*(media2_ - media_);
+                    }
+                    var_=var_/(cont*(cont-1));
+                    factor_conv=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_*media_);
+                    factor_conv2=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
+                    factor_intToCorr=1.0/(1e-12*dt);
+                } else{
+                    if (factors_input.size()!=2){
+                        std::cerr << "Errore: specificare 2 fattori, uno per le funzioni di correlazione e uno per il suo integrale.\n";
+                        abort();
+                    }
+                    factor_conv=factor_conv2=factors_input[0];
+                    factor_intToCorr=factors_input[1];
+
+                }
+                //calcola le costanti di conversione da METAL di LAMMPS al sistema internazionale del coefficiente di conducibilità
+
+
 
 
                 if (headers.size()==0){
@@ -233,10 +250,11 @@ int main(int argc, char ** argv)
                     }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
                     convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
                     convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
-                    std::cout << "# T T1sigma  atomi/volume\n#"
+                    if (factors_input.size()!=0)
+                        std::cout << "# T T1sigma  atomi/volume\n#"
                               <<media_ << " " << sqrt(var_) << " "
-                             << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< "\n"
-                             <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
+                             << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< "\n";
+                    std::cout <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
                     std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
                     for (unsigned int i=0;i<greenK.size();i++) {

@@ -41,8 +41,8 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
     carica[1]=cariche[1];
 
     std::pair<unsigned int ,bool> res;
-    
-    
+
+
     //Trova gli indici degli header delle correnti da utilizzare per il calcolo
     for (unsigned int j=0;j<headers.size();j++){
         res=traiettoria->get_index_of(headers.at(j));
@@ -53,12 +53,12 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
             abort();
         }
     }
-    
+
 #ifdef HALF_CORR
     N_corr=idx_j.size()*(idx_j.size()+1)/2;
 #else
     N_corr=idx_j.size()*idx_j.size();
-#endif	
+#endif
     narr=3*N_corr+2;
 }
 
@@ -227,7 +227,11 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
                     //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
 
-                    double k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+                    double k;
+                    if (idx_j.size()>1)
+                        k=(coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+                    else
+                        k=coeff(0,0);
                     lista[(itimestep)*narr+3*N_corr+0]=k;
 
                     //stessa cosa con la formula di einstein
@@ -252,7 +256,10 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
                     //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
 
-                    k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+                    if (idx_j.size()>1)
+                        k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+                    else
+                        k=coeff(0,0);
                     lista[(itimestep)*narr+3*N_corr+1]=k;
 
                 }
@@ -302,7 +309,11 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
             //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
 
-            double k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+            double k;
+            if (idx_j.size()>1)
+                k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+            else
+                k=coeff(0,0);
             lista[(itimestep)*narr+3*N_corr+0]=k;
 
             //stessa cosa con la formula di einstein
@@ -327,7 +338,10 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
             //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
 
-            k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+            if (idx_j.size()>1)
+                k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
+            else
+                k=coeff(0,0);
             lista[(itimestep)*narr+3*N_corr+1]=k;
 
 
@@ -339,7 +353,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
             lista[(itimestep)*narr+N_corr+2*ieinst+1]/=itimestep;
         }
     }
-    
+
 
     if (scrivi_file) {
         std::ofstream outfile(log+".greekdump",std::ios::app);
@@ -359,10 +373,10 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         outfile_s21 << " " << lista[n_ris*narr+7];
         outfile << "\n\n";
     }
-    
+
     delete [] intJJ;
     delete [] int_ein_JJ;
     delete [] matr;
-    
+
 
 }
