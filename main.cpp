@@ -207,6 +207,7 @@ int main(int argc, char ** argv)
                     }
                     factor_conv=factor_conv2=factors_input[0];
                     factor_intToCorr=factors_input[1];
+                    std::cout << "#Factors: "<<factor_conv<<", "<<factor_conv*factor_intToCorr<<"\n";
 
                 }
                 //calcola le costanti di conversione da METAL di LAMMPS al sistema internazionale del coefficiente di conducibilità
