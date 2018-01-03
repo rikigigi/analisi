@@ -31,11 +31,13 @@ public:
                                   std::string log,
                                   double *cariche,
                                   unsigned int skip,
-				  std::vector<std::string> headers,
+                                  std::vector<std::string> headers,
                                   bool dump=false,
                                   unsigned int lunghezza_funzione_max=0,
                                   unsigned int nthreads=0,
-				  unsigned int n_ris=100
+                                  unsigned int n_ris=100,
+                                  bool subtract_mean=false,
+                                  unsigned int start_mean=100
             );
     ~GreenKuboNComponentIonicFluid();
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
@@ -46,8 +48,8 @@ public:
     unsigned int get_indexOfKappa();
     
     private:
-    unsigned int narr,N_corr;
-    bool scrivi_file;
+    unsigned int narr,N_corr,start_mean;
+    bool scrivi_file,subtract_mean;
     unsigned int idx_je,idx_j0,idx_j1,n_ris;
     std::vector<unsigned int> idx_j;
     std::string log;

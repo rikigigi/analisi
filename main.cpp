@@ -38,8 +38,8 @@ int main(int argc, char ** argv)
 {
     boost::program_options::options_description options("Riccardo Bertossa, 2017\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
-    int numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    bool test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
+    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
+    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
     double vmax_h=0,cariche[2],dt=5e-3;
     std::vector<unsigned int > cvar_list;
     std::vector<double> factors_input;
@@ -81,6 +81,8 @@ int main(int argc, char ** argv)
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
             ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti.")
+            ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
+            ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -100,7 +102,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0){
+        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -277,12 +279,12 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int>
+                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int,bool,unsigned int>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
                     MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
 
-                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread);
+                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread,sub_mean,sub_mean_start);
 
                     double *factors= new double [narr];
 

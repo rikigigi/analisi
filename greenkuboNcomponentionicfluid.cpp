@@ -32,8 +32,12 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
                                                              bool dump,
                                                              unsigned int lunghezza_funzione_max,
                                                              unsigned int nthreads,
-                                                             unsigned int n_ris) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
-    traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris)
+                                                             unsigned int n_ris,
+                                                             bool subtract_mean,
+                                                             unsigned int start_mean) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
+    traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
+    lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris),subtract_mean(subtract_mean),
+    start_mean(start_mean)
 {
 
     //si sospetta fortemente che le cariche non servano (si semplifica tutto alla fine?)
@@ -129,6 +133,9 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     double *matr=new double [idx_j.size()*idx_j.size()];
     double *intJJ=new double[N_corr];
     double *int_ein_JJ=new double[N_corr];
+    double *JJm_T=new double[N_corr];
+    double **JJm=new double*[nthread];
+    unsigned int *cont_JJm=new unsigned int[nthread] ;
 
     for (unsigned int j=0;j<N_corr;j++){
         intJJ[j]=0.0;
@@ -141,7 +148,12 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         threads.push_back(std::thread([&,ith](){
             double *JJo=new double[N_corr];
             double *JJ=new double[N_corr];
-
+            if (subtract_mean){
+                JJm[ith]=new double[N_corr];
+                for (unsigned int j=0;j<N_corr;j++)
+                    JJm[ith][j]=0.0;
+                cont_JJm[ith]=0;
+            }
 
 
             for (unsigned int j=0;j<N_corr;j++){
@@ -178,10 +190,21 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                         }
 
                 }
+
                 for (unsigned int j1=0;j1<N_corr;j1++)
                 {
                     lista[(itimestep)*narr+j1]=JJ[j1];
                 }
+
+                if (subtract_mean && itimestep-npassith*ith>=start_mean) {
+                    cont_JJm[ith]++;
+                    for (unsigned int j1=0;j1<N_corr;j1++)
+                    {
+                        double delta=JJ[j1]-JJm[ith][j1];
+                        JJm[ith][j1]+=delta/cont_JJm[ith];
+                    }
+                }
+
 
 
                 //N_corr (funzioni di correlazione), N_corr (integrali,integrali di einstein), 1 (kappa), 1 (kappa_einstein)
@@ -189,7 +212,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
                 //integrale con il metodo dei trapezi, solo per il primo
 
-                if (ith==0){
+                if (ith==0 && (!subtract_mean)){
                     //calcola tutti gli integrali
                     for (unsigned int j=0;j<N_corr;j++){
                         intJJ[j]+=JJo[j];
@@ -266,20 +289,43 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
             }
             delete [] JJ;
             delete [] JJo;
+
         }));
     }
-    for (unsigned int ithread=0;ithread<nthread;ithread++)
+    unsigned int cont_JJm_T=0;
+    for (unsigned int ithread=0;ithread<nthread;ithread++){
         threads[ithread].join();
+        if (subtract_mean) { // fa la media dei valori medi
+            for (unsigned int j=0;j<N_corr;j++){
+                cont_JJm_T+=cont_JJm[ithread];
+                JJm_T[j]+=JJm[ithread][j]+cont_JJm[ithread];
+            }
+            delete [] JJm[ithread];
+        }
+    }
     threads.clear();
 
     // calcola gli integrali a partire da dove ci eravamo fermati
-    if (nthread>1) {
-        for (unsigned int itimestep=npassith;itimestep<leff;itimestep++) {
+    if (nthread>1 || subtract_mean) {
+        unsigned int istart=0;
+        if(!subtract_mean)
+            istart=npassith;
+        else { //toglie la media a tutte le funzioni di correlazione prima di fare gli integrali
+            for (unsigned int j=0;j<N_corr;j++) //finisce di calcolare il valore medio
+                JJm_T[j]/=cont_JJm_T;
+            for (unsigned int itimestep=0;itimestep<leff;itimestep++)
+                for (unsigned int j=0;j<N_corr;j++)
+                    lista[(itimestep)*narr+j]-=JJm_T[j];
+        }
+
+        for (unsigned int itimestep=istart;itimestep<leff;itimestep++) {
 
             //calcola tutti gli integrali
             for (unsigned int j=0;j<N_corr;j++){
-                intJJ[j]+=lista[(itimestep-1)*narr+j];
-                int_ein_JJ[j]+=lista[(itimestep-1)*narr+j]*itimestep;
+                if (itimestep>0){
+                    intJJ[j]+=lista[(itimestep-1)*narr+j];
+                    int_ein_JJ[j]+=lista[(itimestep-1)*narr+j]*itimestep;
+                }
 
                 lista[(itimestep)*narr+N_corr+2*j]=intJJ[j]+lista[(itimestep)*narr+j]/2.0;
                 lista[(itimestep)*narr+N_corr+2*j+1]=int_ein_JJ[j]+lista[(itimestep)*narr+j]*itimestep/2.0;
@@ -376,6 +422,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
     delete [] intJJ;
     delete [] int_ein_JJ;
+    delete [] JJm;
     delete [] matr;
 
 
