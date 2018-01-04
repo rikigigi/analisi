@@ -423,6 +423,8 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     delete [] intJJ;
     delete [] int_ein_JJ;
     delete [] JJm;
+    delete [] JJm_T;
+    delete [] cont_JJm;
     delete [] matr;
 
 
