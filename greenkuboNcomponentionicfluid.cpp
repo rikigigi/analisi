@@ -298,7 +298,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         if (subtract_mean) { // fa la media dei valori medi
             for (unsigned int j=0;j<N_corr;j++){
                 cont_JJm_T+=cont_JJm[ithread];
-                JJm_T[j]+=JJm[ithread][j]+cont_JJm[ithread];
+                JJm_T[j]+=JJm[ithread][j]*cont_JJm[ithread];
             }
             delete [] JJm[ithread];
         }
