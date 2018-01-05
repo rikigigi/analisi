@@ -403,20 +403,12 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
     if (scrivi_file) {
         std::ofstream outfile(log+".greekdump",std::ios::app);
-        std::ofstream outfile_s11(log+".greekdump_s11",std::ios::app);
-        std::ofstream outfile_s12(log+".greekdump_s12",std::ios::app);
-        std::ofstream outfile_s21(log+".greekdump_s21",std::ios::app);
-        std::ofstream outfile_s22(log+".greekdump_s22",std::ios::app);
         for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
             for (unsigned int j=0;j<narr;j++){
                 outfile << lista[(itimestep)*narr+j] << " ";
             }
             outfile << "\n";
         }
-        outfile_s11 << " " << lista[n_ris*narr+0];
-        outfile_s22 << " " << lista[n_ris*narr+1];
-        outfile_s12 << " " << lista[n_ris*narr+2];
-        outfile_s21 << " " << lista[n_ris*narr+7];
         outfile << "\n\n";
     }
 
