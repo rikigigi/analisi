@@ -39,6 +39,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Riccardo Bertossa, 2017\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
+    unsigned int n_seg=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false;
     double vmax_h=0,cariche[2],dt=5e-3;
     std::vector<unsigned int > cvar_list;
@@ -83,6 +84,7 @@ int main(int argc, char ** argv)
             ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti.")
             ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
+            ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -279,12 +281,12 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int,bool,unsigned int>
+                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int,bool,unsigned int,unsigned int>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
                     MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
 
-                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread,sub_mean,sub_mean_start);
+                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread,sub_mean,sub_mean_start,n_seg);
 
                     double *factors= new double [narr];
 

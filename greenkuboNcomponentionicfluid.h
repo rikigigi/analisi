@@ -37,7 +37,8 @@ public:
                                   unsigned int nthreads=0,
                                   unsigned int n_ris=100,
                                   bool subtract_mean=false,
-                                  unsigned int start_mean=100
+                                  unsigned int start_mean=100,
+                                  unsigned int n_seg=1
             );
     ~GreenKuboNComponentIonicFluid();
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
@@ -48,14 +49,13 @@ public:
     unsigned int get_indexOfKappa();
     
     private:
-    unsigned int narr,N_corr,start_mean;
+    unsigned int narr,N_corr,start_mean,n_seg;
     bool scrivi_file,subtract_mean;
     unsigned int idx_je,idx_j0,idx_j1,n_ris;
     std::vector<unsigned int> idx_j;
     std::string log;
     ReadLog *traiettoria;
     unsigned int ntimesteps,lmax,leff,nthread,skip;
-    double carica[2];
     double*  jN(unsigned int N,unsigned int ts);
     double* je(unsigned int ts);
 };

@@ -34,15 +34,18 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
                                                              unsigned int nthreads,
                                                              unsigned int n_ris,
                                                              bool subtract_mean,
-                                                             unsigned int start_mean) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
+                                                             unsigned int start_mean,
+                                                             unsigned int n_seg) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris),subtract_mean(subtract_mean),
-    start_mean(start_mean)
+    start_mean(start_mean),n_seg(n_seg)
 {
 
-    //si sospetta fortemente che le cariche non servano (si semplifica tutto alla fine?)
-    carica[0]=cariche[0];
-    carica[1]=cariche[1];
+
+    if (n_seg<1){
+        std::cerr << "Attenzione: n_seg < 1 . Imposto a 1.\n";
+        n_seg=1;
+    }
 
     std::pair<unsigned int ,bool> res;
 
@@ -90,6 +93,9 @@ void GreenKuboNComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco)
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
+    for (unsigned int i=0;i<lunghezza_lista;i++){
+        lista[i]=0.0;
+    }
 }
 
 double * GreenKuboNComponentIonicFluid::jN(unsigned int N,unsigned int ts){
@@ -108,8 +114,6 @@ unsigned int GreenKuboNComponentIonicFluid::get_indexOfKappa(){
 
 void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
-
-    unsigned int allinea=0;//primo%skip;
 
 
     if(nthread<1)
@@ -134,112 +138,95 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     double *intJJ=new double[N_corr];
     double *int_ein_JJ=new double[N_corr];
     double *JJm_T=new double[N_corr];
-    double **JJm=new double*[nthread];
-    unsigned int *cont_JJm=new unsigned int[nthread] ;
+    unsigned int cont_JJ=0;
 
     for (unsigned int j=0;j<N_corr;j++){
         intJJ[j]=0.0;
         int_ein_JJ[j]=0.0;
     }
+    cont_JJ=0;
 
     unsigned int npassith=leff/nthread;
     std::vector<std::thread> threads;
-    for (unsigned int ith=0;ith<nthread;ith++){
-        threads.push_back(std::thread([&,ith](){
-            double *JJo=new double[N_corr];
-            double *JJ=new double[N_corr];
-            if (subtract_mean){
-                JJm[ith]=new double[N_corr];
-                for (unsigned int j=0;j<N_corr;j++)
-                    JJm[ith][j]=0.0;
-                cont_JJm[ith]=0;
-            }
+    unsigned int timesteps_seg=ntimesteps/n_seg;
+    for (unsigned int iseg=0;iseg<n_seg;iseg++){
+        for (unsigned int ith=0;ith<nthread;ith++){
+            threads.push_back(std::thread([&,ith](){
+                double *JJ=new double[N_corr];
+                unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
+                for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
+                    //fa la media sulla traiettoria dei vari prodotti,
+                    //con una differenza di timesteps fissata "itimestep"
+
+                    for (unsigned int j=0;j<N_corr;j++){
+                        JJ[j]=0.0;
+                    }
 
 
-            for (unsigned int j=0;j<N_corr;j++){
-                JJo[j]=0.0;
-            }
-            unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
-            for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
-                //fa la media sulla traiettoria dei vari prodotti,
-                //con una differenza di timesteps fissata "itimestep"
+                    unsigned int cont=0;
+                    // cambio questo: la media viene fatta a pezzettini
 
-                for (unsigned int j=0;j<N_corr;j++){
-                    JJ[j]=0.0;
-                }
-
-
-                unsigned int cont=0;
-                // cambio questo: la media viene fatta a pezzettini
-                for (unsigned int jmedia=allinea;jmedia<ntimesteps;jmedia+=skip) {
-                    //prodotto JzJz
-                    cont++;
-                    unsigned int idxj=0;
-                    for (unsigned int j1=0;j1<idx_j.size();j1++)
+                    unsigned int allinea=(timesteps_seg*iseg)+(timesteps_seg*iseg)%skip;
+                    for (unsigned int jmedia=allinea;jmedia<timesteps_seg*(iseg+1);jmedia+=skip) {
+                        //prodotto JzJz
+                        cont++;
+                        unsigned int idxj=0;
+                        for (unsigned int j1=0;j1<idx_j.size();j1++)
 #ifdef HALF_CORR
-                        for (unsigned int j2=j1;j2<idx_j.size();j2++)
+                            for (unsigned int j2=j1;j2<idx_j.size();j2++)
 #else
-                        for (unsigned int j2=0;j2<idx_j.size();j2++)
+                            for (unsigned int j2=0;j2<idx_j.size();j2++)
 #endif
-                        {
-                            double delta=(jN(j1,primo+jmedia)[0]*jN(j2,primo+jmedia+itimestep)[0]+
-                                    jN(j1,primo+jmedia)[1]*jN(j2,primo+jmedia+itimestep)[1]+
-                                    jN(j1,primo+jmedia)[2]*jN(j2,primo+jmedia+itimestep)[2]
-                                    )/3.0 - JJ[idxj];
-                            JJ[idxj]+=delta/(cont);
-                            idxj++;
-                        }
+                            {
+                                double delta=(jN(j1,primo+jmedia)[0]*jN(j2,primo+jmedia+itimestep)[0]+
+                                        jN(j1,primo+jmedia)[1]*jN(j2,primo+jmedia+itimestep)[1]+
+                                        jN(j1,primo+jmedia)[2]*jN(j2,primo+jmedia+itimestep)[2]
+                                        )/3.0 - JJ[idxj];
+                                JJ[idxj]+=delta/(cont);
+                                idxj++;
+                            }
 
-                }
+                    }
 
-                for (unsigned int j1=0;j1<N_corr;j1++)
-                {
-                    //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
-                    //possibile perdita di precisione!
-                    lista[(itimestep)*narr+j1]=JJ[j1];
-                }
-
-                //questo deve andare dopo, prima del calcolo degli integrali
-                if (subtract_mean && itimestep-npassith*ith>=start_mean) {
-                    cont_JJm[ith]++;
+                    ++cont_JJ;
                     for (unsigned int j1=0;j1<N_corr;j1++)
                     {
-                        double delta=JJ[j1]-JJm[ith][j1];
-                        JJm[ith][j1]+=delta/cont_JJm[ith];
+                        //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
+                        //possibile perdita di precisione!
+                        double delta_JJ=JJ[j1]-lista[(itimestep)*narr+j1];
+                        lista[(itimestep)*narr+j1]+=delta_JJ/cont_JJ;
                     }
+
+                    //N_corr (funzioni di correlazione), N_corr (integrali,integrali di einstein), 1 (kappa), 1 (kappa_einstein)
+                    // totale 3*N_corr+2
                 }
+                delete [] JJ;
 
-
-
-                //N_corr (funzioni di correlazione), N_corr (integrali,integrali di einstein), 1 (kappa), 1 (kappa_einstein)
-                // totale 3*N_corr+2
-
-
-            }
-            delete [] JJ;
-            delete [] JJo;
-
-        }));
+            }));
+        }
+        for (unsigned int ithread=0;ithread<nthread;ithread++){
+            threads[ithread].join();
+        }
+        threads.clear();
     }
-    unsigned int cont_JJm_T=0;
-    for (unsigned int ithread=0;ithread<nthread;ithread++){
-        threads[ithread].join();
-        if (subtract_mean) { // fa la media dei valori medi
-            for (unsigned int j=0;j<N_corr;j++){
-                cont_JJm_T+=cont_JJm[ithread];
-                JJm_T[j]+=JJm[ithread][j]*cont_JJm[ithread];
+
+    //calcola la media delle funzioni di correlazione
+
+    if (subtract_mean) {
+        unsigned int cont_JJm_T=0;
+        for (unsigned int itimestep=start_mean;itimestep<leff;itimestep++){
+            cont_JJm_T++;
+            for (unsigned int j1=0;j1<N_corr;j1++)  {
+                double delta=lista[(itimestep)*narr+j1]-JJm_T[j1];
+                JJm_T[j1]+=delta/cont_JJm_T;
             }
-            delete [] JJm[ithread];
         }
     }
-    threads.clear();
 
     // calcola gli integrali
     if (true) {
         unsigned int istart=0;
         if (subtract_mean) { //toglie la media a tutte le funzioni di correlazione prima di fare gli integrali
-            for (unsigned int j=0;j<N_corr;j++) //finisce di calcolare il valore medio
-                JJm_T[j]/=cont_JJm_T;
             for (unsigned int itimestep=0;itimestep<leff;itimestep++)
                 for (unsigned int j=0;j<N_corr;j++)
                     lista[(itimestep)*narr+j]-=JJm_T[j];
@@ -341,9 +328,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
     delete [] intJJ;
     delete [] int_ein_JJ;
-    delete [] JJm;
     delete [] JJm_T;
-    delete [] cont_JJm;
     delete [] matr;
 
 
