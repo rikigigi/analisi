@@ -18,6 +18,7 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include "cronometro.h"
 #ifdef HAVEeigen3EigenDense
 #include <eigen3/Eigen/Dense>
 #else
@@ -35,10 +36,11 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
                                                              unsigned int n_ris,
                                                              bool subtract_mean,
                                                              unsigned int start_mean,
-                                                             unsigned int n_seg) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
+                                                             unsigned int n_seg,
+                                                             bool do_bench) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris),subtract_mean(subtract_mean),
-    start_mean(start_mean),n_seg(n_seg)
+    start_mean(start_mean),n_seg(n_seg),bench(false)
 {
 
 
@@ -46,6 +48,9 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
         std::cerr << "Attenzione: n_seg < 1 . Imposto a 1.\n";
         n_seg=1;
     }
+
+    if(!do_bench)
+        benchmarked=true;
 
     std::pair<unsigned int ,bool> res;
 
@@ -114,6 +119,9 @@ unsigned int GreenKuboNComponentIonicFluid::get_indexOfKappa(){
 
 void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
+
+    if(!benchmarked)
+        n_seg_bench(10,100);
 
 
     if(nthread<1)
@@ -209,7 +217,8 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         }
         threads.clear();
     }
-
+    if (bench)
+        return;
     //calcola la media delle funzioni di correlazione
 
     if (subtract_mean) {
@@ -332,4 +341,35 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     delete [] matr;
 
 
+}
+
+bool GreenKuboNComponentIonicFluid::benchmarked=false;
+
+unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(unsigned int n_seg_start,unsigned int n_seg_stop){
+    //salva la vecchia dimensione totale e il vecchio numero n_seg
+    unsigned int orig_n_seg=n_seg,orig_ntimesteps=ntimesteps,ris=0;
+    double min=std::numeric_limits<double>::max() ;
+    scrivi_file=false;
+    bench=true;
+    std::cerr << "# k    cputime\n";
+    for (unsigned int i=n_seg_start;i<n_seg_stop;i++){
+        ntimesteps=orig_ntimesteps/i;
+        cronometro cron;
+
+        cron.start();
+        calcola(0);
+        cron.stop();
+        std::cerr << i<<" "<<cron.time()*i<<"\n";
+        if (cron.time()*i<min){
+            min=cron.time()*i;
+            ris=i;
+        }
+    }
+
+    benchmarked=true;
+
+    bench=false;
+    n_seg=orig_n_seg;
+    ntimesteps=orig_ntimesteps;
+    return ris;
 }

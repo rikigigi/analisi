@@ -38,7 +38,8 @@ public:
                                   unsigned int n_ris=100,
                                   bool subtract_mean=false,
                                   unsigned int start_mean=100,
-                                  unsigned int n_seg=1
+                                  unsigned int n_seg=1,
+                                  bool do_bench=false
             );
     ~GreenKuboNComponentIonicFluid();
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
@@ -47,10 +48,11 @@ public:
     GreenKuboNComponentIonicFluid & operator =(const GreenKuboNComponentIonicFluid &);
     unsigned int get_narr();
     unsigned int get_indexOfKappa();
-    
+    unsigned int n_seg_bench(unsigned int n_seg_start, unsigned int n_seg_stop);
     private:
+    static bool benchmarked;
     unsigned int narr,N_corr,start_mean,n_seg;
-    bool scrivi_file,subtract_mean;
+    bool scrivi_file,subtract_mean,bench;
     unsigned int idx_je,idx_j0,idx_j1,n_ris;
     std::vector<unsigned int> idx_j;
     std::string log;

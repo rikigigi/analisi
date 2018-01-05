@@ -10,7 +10,8 @@
   *
 **/
 
-
+#ifndef CRONOMETRO_H
+#define CRONOMETRO_H
 
 #include <time.h>
 
@@ -35,3 +36,4 @@ private:
 	bool calc_exp;
 };
 
+#endif
