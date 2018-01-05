@@ -170,6 +170,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
 
                 unsigned int cont=0;
+                // cambio questo: la media viene fatta a pezzettini
                 for (unsigned int jmedia=allinea;jmedia<ntimesteps;jmedia+=skip) {
                     //prodotto JzJz
                     cont++;
@@ -193,9 +194,12 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
                 for (unsigned int j1=0;j1<N_corr;j1++)
                 {
+                    //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
+                    //possibile perdita di precisione!
                     lista[(itimestep)*narr+j1]=JJ[j1];
                 }
 
+                //questo deve andare dopo, prima del calcolo degli integrali
                 if (subtract_mean && itimestep-npassith*ith>=start_mean) {
                     cont_JJm[ith]++;
                     for (unsigned int j1=0;j1<N_corr;j1++)
@@ -210,82 +214,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                 //N_corr (funzioni di correlazione), N_corr (integrali,integrali di einstein), 1 (kappa), 1 (kappa_einstein)
                 // totale 3*N_corr+2
 
-                //integrale con il metodo dei trapezi, solo per il primo
 
-                if (ith==0 && (!subtract_mean)){
-                    //calcola tutti gli integrali
-                    for (unsigned int j=0;j<N_corr;j++){
-                        intJJ[j]+=JJo[j];
-                        int_ein_JJ[j]+=JJo[j]*itimestep;
-
-                        lista[(itimestep)*narr+N_corr+2*j]=intJJ[j]+JJ[j]/2.0;
-                        lista[(itimestep)*narr+N_corr+2*j+1]=int_ein_JJ[j]+JJo[j]*itimestep/2.0;
-
-                        JJo[j]=JJ[j];
-                    }
-                    //calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
-                    //simmetrizzandola
-
-                    for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
-                        matr[j]=0.0;
-                    }
-
-                    unsigned int idxj=0;
-                    for (unsigned int j1=0;j1<idx_j.size();j1++)
-#ifdef HALF_CORR
-                        for (unsigned int j2=j1;j2<idx_j.size();j2++) {
-                            matr[j2*idx_j.size()+j1]=lista[(itimestep)*narr+N_corr+2*idxj];
-                            matr[j1*idx_j.size()+j2]=lista[(itimestep)*narr+N_corr+2*idxj];
-                            idxj++;
-                        }
-#else
-                        for (unsigned int j2=0;j2<idx_j.size();j2++) {
-                            matr[j2*idx_j.size()+j1]+=lista[(itimestep)*narr+N_corr+2*idxj]/2.0;
-                            matr[j1*idx_j.size()+j2]+=lista[(itimestep)*narr+N_corr+2*idxj]/2.0;
-                            idxj++;
-                        }
-#endif
-
-                    Eigen::Map<Eigen::MatrixXd> coeff(matr,idx_j.size(),idx_j.size());
-
-                    //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
-
-                    double k;
-                    if (idx_j.size()>1)
-                        k=(coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
-                    else
-                        k=coeff(0,0);
-                    lista[(itimestep)*narr+3*N_corr+0]=k;
-
-                    //stessa cosa con la formula di einstein
-                    for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
-                        matr[j]=0.0;
-                    }
-                    idxj=0;
-                    for (unsigned int j1=0;j1<idx_j.size();j1++)
-#ifdef HALF_CORR
-                        for (unsigned int j2=j1;j2<idx_j.size();j2++) {
-                            matr[j2*idx_j.size()+j1]=lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep;
-                            matr[j1*idx_j.size()+j2]=lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep;
-                            idxj++;
-                        }
-#else
-                        for (unsigned int j2=0;j2<idx_j.size();j2++) {
-                            matr[j2*idx_j.size()+j1]+=(lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep)/2.0;
-                            matr[j1*idx_j.size()+j2]+=(lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep)/2.0;
-                            idxj++;
-                        }
-#endif
-
-                    //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
-
-                    if (idx_j.size()>1)
-                        k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
-                    else
-                        k=coeff(0,0);
-                    lista[(itimestep)*narr+3*N_corr+1]=k;
-
-                }
             }
             delete [] JJ;
             delete [] JJo;
@@ -305,12 +234,10 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     }
     threads.clear();
 
-    // calcola gli integrali a partire da dove ci eravamo fermati
-    if (nthread>1 || subtract_mean) {
+    // calcola gli integrali
+    if (true) {
         unsigned int istart=0;
-        if(!subtract_mean)
-            istart=npassith;
-        else { //toglie la media a tutte le funzioni di correlazione prima di fare gli integrali
+        if (subtract_mean) { //toglie la media a tutte le funzioni di correlazione prima di fare gli integrali
             for (unsigned int j=0;j<N_corr;j++) //finisce di calcolare il valore medio
                 JJm_T[j]/=cont_JJm_T;
             for (unsigned int itimestep=0;itimestep<leff;itimestep++)
