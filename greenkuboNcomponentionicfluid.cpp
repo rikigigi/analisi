@@ -215,8 +215,13 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         }
         threads.clear();
     }
-    if (bench)
+    if (bench){
+        delete [] intJJ;
+        delete [] int_ein_JJ;
+        delete [] JJm_T;
+        delete [] matr;
         return;
+    }
     //calcola la media delle funzioni di correlazione
 
     if (subtract_mean) {
@@ -348,6 +353,7 @@ unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(unsigned int n_seg_start
     unsigned int orig_n_seg=n_seg,orig_ntimesteps=ntimesteps,ris=0;
     double min=std::numeric_limits<double>::max() ;
     scrivi_file=false;
+    benchmarked=true;
     bench=true;
     std::cerr << "# k    cputime\n";
     for (unsigned int i=n_seg_start;i<n_seg_stop;i++){
@@ -364,7 +370,6 @@ unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(unsigned int n_seg_start
         }
     }
 
-    benchmarked=true;
 
     bench=false;
     n_seg=orig_n_seg;
