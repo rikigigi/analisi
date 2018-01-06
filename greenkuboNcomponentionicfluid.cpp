@@ -27,19 +27,17 @@
 
 GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettoria,
                                                              std::string log,
-                                                             double * cariche,
                                                              unsigned int skip,
                                                              std::vector<std::string> headers,
                                                              bool dump,
                                                              unsigned int lunghezza_funzione_max,
                                                              unsigned int nthreads,
-                                                             unsigned int n_ris,
                                                              bool subtract_mean,
                                                              unsigned int start_mean,
                                                              unsigned int n_seg,
                                                              bool do_bench) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
-    lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris),subtract_mean(subtract_mean),
+    lmax(lunghezza_funzione_max),nthread(nthreads),subtract_mean(subtract_mean),
     start_mean(start_mean),n_seg(n_seg),bench(false)
 {
 

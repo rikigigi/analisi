@@ -282,12 +282,32 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,std::string,double*,unsigned int,std::vector<std::string>,bool,unsigned int,unsigned int,bool,unsigned int,unsigned int,bool>
+                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,
+                            std::string,
+                            unsigned int,
+                            std::vector<std::string>,
+                            bool,
+                            unsigned int,
+                            unsigned int,
+                            bool,
+                            unsigned int,
+                            unsigned int,
+                            bool>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
                     MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
 
-                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,headers,dumpGK,stop_acf,numero_thread,sub_mean,sub_mean_start,n_seg,bench);
+                    greenK_c.calcola_custom(&greenK,
+                                            log_input,
+                                            skip,
+                                            headers,
+                                            dumpGK,
+                                            stop_acf,
+                                            numero_thread,
+                                            sub_mean,
+                                            sub_mean_start,
+                                            n_seg,
+                                            bench);
 
                     double *factors= new double [narr];
 

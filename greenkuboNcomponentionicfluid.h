@@ -29,13 +29,11 @@ class GreenKuboNComponentIonicFluid : public OperazioniSuLista<GreenKuboNCompone
 public:
     GreenKuboNComponentIonicFluid(ReadLog * traiettoria,
                                   std::string log,
-                                  double *cariche,
                                   unsigned int skip,
                                   std::vector<std::string> headers,
                                   bool dump=false,
                                   unsigned int lunghezza_funzione_max=0,
                                   unsigned int nthreads=0,
-                                  unsigned int n_ris=100,
                                   bool subtract_mean=false,
                                   unsigned int start_mean=100,
                                   unsigned int n_seg=1,
@@ -53,7 +51,7 @@ public:
     static bool benchmarked;
     unsigned int narr,N_corr,start_mean,n_seg;
     bool scrivi_file,subtract_mean,bench;
-    unsigned int idx_je,idx_j0,idx_j1,n_ris;
+    unsigned int idx_je,idx_j0,idx_j1;
     std::vector<unsigned int> idx_j;
     std::string log;
     ReadLog *traiettoria;
