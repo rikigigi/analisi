@@ -35,10 +35,13 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
                                                              bool subtract_mean,
                                                              unsigned int start_mean,
                                                              unsigned int n_seg,
-                                                             bool do_bench) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
+                                                             bool do_bench,
+                                                             unsigned int n_seg_start,
+                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),subtract_mean(subtract_mean),
-    start_mean(start_mean),n_seg(n_seg),bench(false)
+    start_mean(start_mean),n_seg(n_seg),bench(false),
+    n_seg_start(n_seg_start), n_seg_stop(n_seg_stop)
 {
 
 
@@ -119,7 +122,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
 
     if(!benchmarked)
-        n_seg_bench(10,100);
+        n_seg_bench();
 
 
     if(nthread<1)
@@ -348,15 +351,15 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
 bool GreenKuboNComponentIonicFluid::benchmarked=false;
 
-unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(unsigned int n_seg_start,unsigned int n_seg_stop){
+unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(){
     //salva la vecchia dimensione totale e il vecchio numero n_seg
     unsigned int orig_n_seg=n_seg,orig_ntimesteps=ntimesteps,ris=0;
     double min=std::numeric_limits<double>::max() ;
-    scrivi_file=false;
     benchmarked=true;
     bench=true;
+    n_seg=1;
     std::cerr << "# k    cputime\n";
-    for (unsigned int i=n_seg_start;i<n_seg_stop;i++){
+    for (unsigned int i=n_seg_start;i<n_seg_stop;i+=5){
         ntimesteps=orig_ntimesteps/i;
         cronometro cron;
 

@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
     unsigned int n_seg=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3;
-    std::vector<unsigned int > cvar_list;
+    std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
     std::vector<std::string> headers;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
@@ -86,6 +86,7 @@ int main(int argc, char ** argv)
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
             ("kk",boost::program_options::bool_switch(&bench)->default_value(false),"esegue un benchmark per il valore ottimale di k")
+            ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"valore minimo e massimo del range in cui testare k")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -105,7 +106,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0){
+        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -292,11 +293,17 @@ int main(int argc, char ** argv)
                             bool,
                             unsigned int,
                             unsigned int,
-                            bool>
+                            bool,
+                            unsigned int,
+                            unsigned int>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
                     MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
 
+                    if(kk_l.size()==0){
+                        kk_l.push_back(10);
+                        kk_l.push_back(100);
+                    }
                     greenK_c.calcola_custom(&greenK,
                                             log_input,
                                             skip,
@@ -307,7 +314,8 @@ int main(int argc, char ** argv)
                                             sub_mean,
                                             sub_mean_start,
                                             n_seg,
-                                            bench);
+                                            bench,
+                                            kk_l[0],kk_l[1]);
 
                     double *factors= new double [narr];
 
