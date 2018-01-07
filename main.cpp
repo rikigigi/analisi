@@ -258,9 +258,9 @@ int main(int argc, char ** argv)
                     convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
                     convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
                     if (factors_input.size()!=0)
-                        std::cout << "# T T1sigma  atomi/volume\n#"
+                        std::cout << "# T T1sigma  atomi/volume factor1 factor2\n#"
                               <<media_ << " " << sqrt(var_) << " "
-                             << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< "\n";
+                             << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< " "<< factor_conv<<" "<<factor_intToCorr<< "\n";
                     std::cout <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
                     std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
