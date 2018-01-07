@@ -1,13 +1,15 @@
 #include "readlog.h"
 #include <fstream>
 #include <sstream>
+#include <limits>
 
 ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
-    traiettoria(t),skip(skip),step_index(0)
+    traiettoria(t),skip(skip)
 {
     unsigned int lcont=0;
     std::string tmp,header;
     std::ifstream log(filename);
+    step_index=std::numeric_limits< unsigned int>::max();
 
     //trova la prima linea fatta di soli numeri. Quella prima
 
@@ -41,16 +43,17 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
 #endif
 
     unsigned int cont=0;
+    unsigned int data_size= (step_index==std::numeric_limits< unsigned int>::max())?headers.size():(headers.size()-1);
     while (log.good()) {
 
         if(if_only_numbers(tmp)&&tmp.length()>1){
 
-            double * reads=new double[headers.size()];
-            unsigned int TS=0;
+            double * reads=new double[data_size];
+            unsigned int TS=cont;
             std::stringstream sstr(tmp);
 
             if (cont++ % skip==0)
-            for(int i=0;i<headers.size();i++){
+            for(unsigned int i=0;i<headers.size();i++){
                 if (i<step_index){
                     sstr >> reads[i];
                 } else if (i>step_index) {
@@ -62,6 +65,7 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
             if (sstr.fail()){
                 std::cerr << "Ignoro la linea "<<lcont<<": '"<<tmp<<"'\n";
                 sstr.clear();
+                cont--;
                 delete [] reads;
             } else {
                 data.push_back(std::pair<unsigned int ,double*>(TS,reads));
