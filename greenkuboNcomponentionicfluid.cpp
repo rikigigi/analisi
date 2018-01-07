@@ -159,11 +159,14 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     std::vector<std::thread> threads;
     unsigned int timesteps_seg=ntimesteps/n_seg;
     for (unsigned int iseg=0;iseg<n_seg;iseg++){
+        ++cont_JJ;
         for (unsigned int ith=0;ith<nthread;ith++){
             threads.push_back(std::thread([&,ith](){
                 double *JJ=new double[N_corr];
-                unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
-                for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
+//                unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
+//                for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
+                  //fa fare ai threads diversi conti con i dati vicini (per ottimizzare l'uso della cache in comune fra i vari core)
+                    for (unsigned int itimestep=ith;itimestep<leff;itimestep+=nthread) {
                     //fa la media sulla traiettoria dei vari prodotti,
                     //con una differenza di timesteps fissata "itimestep"
 
@@ -197,7 +200,6 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
                     }
 
-                    ++cont_JJ;
                     for (unsigned int j1=0;j1<N_corr;j1++)
                     {
                         //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
