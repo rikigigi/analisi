@@ -152,6 +152,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
     for (unsigned int j=0;j<N_corr;j++){
         intJJ[j]=0.0;
         int_ein_JJ[j]=0.0;
+        JJm_T[j]=0.0;
     }
     cont_JJ=0;
 
@@ -203,7 +204,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                     for (unsigned int j1=0;j1<N_corr;j1++)
                     {
                         //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
-                        //possibile perdita di precisione!
+                        //possibile perdita di precisione(?)
                         double delta_JJ=JJ[j1]-lista[(itimestep)*narr+j1];
                         lista[(itimestep)*narr+j1]+=delta_JJ/cont_JJ;
                     }
