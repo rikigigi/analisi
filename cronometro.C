@@ -19,14 +19,14 @@ using namespace std;
 
 cronometro::cronometro(){
 	tempo=0.0;
-	t0=clock();
+    t0=std::chrono::high_resolution_clock::now();
 	calc_exp=false;
 	tempo_exp=42.0;
 	pi=5.0;
 	last_print=0;
 }
 
-void cronometro::set_print_interval(float P){
+void cronometro::set_print_interval(double P){
 	pi=P;
 }
 
@@ -42,17 +42,17 @@ void cronometro::unset_expected(){
 }
 
 //ppc è la percentuale del lavoro fatta a ogni chiamata di stop
-void cronometro::set_expected(float ppc){
+void cronometro::set_expected(double ppc){
 	p=ppc;
 	p_cont=0.0;
 	calc_exp=true;
 }
 
-float cronometro::time(){
+double cronometro::time(){
 	return tempo;
 }
 
-float cronometro::expected(){
+double cronometro::expected(){
 	return tempo_exp;
 }
 
@@ -61,13 +61,14 @@ void cronometro::reset(){
 }
 
 void cronometro::start(){
-	t0=clock();
+    t0=std::chrono::high_resolution_clock::now();
 }
 
 void cronometro::stop(unsigned int nthread){
     if (nthread==0){
-        clock_t t=clock();
-        tempo+=((float)t-t0)/CLOCKS_PER_SEC;
+        std::chrono::high_resolution_clock::time_point t=std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> dt= std::chrono::duration_cast< std::chrono::duration<double> >(t-t0);
+        tempo+=dt.count();
         t0=t;
     }
 	if (calc_exp){

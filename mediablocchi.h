@@ -127,7 +127,7 @@ public:
 
             cron.stop();
 #ifdef DEBUG
-            std::cerr << "Tempo cpu per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time()<<"s.\n";
+            std::cerr << "Tempo per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time()<<"s.\n";
 #endif
         }
         calc->calcola_end(n_b);

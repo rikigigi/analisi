@@ -397,7 +397,7 @@ void Traiettoria::index_all() {
     }
 #ifdef DEBUG
     cron.stop();
-    std::cerr << " OK, tempo cpu "<<cron.time()  << "s.\nIndicizzati tutti i timesteps fino a "<<timestep_indicizzato<<" compreso\n";
+    std::cerr << " OK, tempo "<<cron.time()  << "s.\nIndicizzati tutti i timesteps fino a "<<timestep_indicizzato<<" compreso\n";
     std::cerr.flush();
 #endif
 }
@@ -575,7 +575,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     cron.stop();
 
 #ifdef DEBUG
-    std::cerr << "Tempo cpu per la lettura: "<< cron.time()<<"s.\n";
+    std::cerr << "Tempo per la lettura: "<< cron.time()<<"s.\n";
 #endif
 
     return Ok;
