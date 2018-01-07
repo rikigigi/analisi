@@ -111,23 +111,25 @@ public:
         calc->calcola_begin(s,calcolo);
 
         TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
+
+        cronometro cron;
+        cron.set_expected(1.0/double(n_b));
+        cron.start();
         for (unsigned int iblock=0;iblock<n_b;iblock++){
 
 #ifdef DEBUG
             std::cerr << "calcolo->calcola(iblock*s);\n";
 #endif
 
-            cronometro cron;
-            cron.start();
             calcolo->reset(s);
             TraiettoriaF<TR>::imposta_inizio_accesso(iblock*s,traiettoria);
             calcolo->calcola(iblock*s);
 
             calc->calcola(calcolo);
-
             cron.stop();
 #ifdef DEBUG
-            std::cerr << "Tempo per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time()<<"s.\n";
+            std::cerr << "Tempo per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time_last()<<
+                         "s. Tempo trascorso e rimanente: "<<cron.time()<<"s "<<cron.expected()<<"s.\n";
 #endif
         }
         calc->calcola_end(n_b);

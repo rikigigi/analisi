@@ -45,7 +45,7 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
 
         if(if_only_numbers(tmp)&&tmp.length()>1){
 
-            double * reads=new double[headers.size()-1];
+            double * reads=new double[headers.size()];
             unsigned int TS=0;
             std::stringstream sstr(tmp);
 

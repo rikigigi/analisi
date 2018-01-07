@@ -19,6 +19,7 @@ using namespace std;
 
 cronometro::cronometro(){
 	tempo=0.0;
+    tempo_ultimo=0.0;
     t0=std::chrono::high_resolution_clock::now();
 	calc_exp=false;
 	tempo_exp=42.0;
@@ -52,6 +53,10 @@ double cronometro::time(){
 	return tempo;
 }
 
+double cronometro::time_last(){
+    return tempo_ultimo;
+}
+
 double cronometro::expected(){
 	return tempo_exp;
 }
@@ -68,7 +73,8 @@ void cronometro::stop(unsigned int nthread){
     if (nthread==0){
         std::chrono::high_resolution_clock::time_point t=std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> dt= std::chrono::duration_cast< std::chrono::duration<double> >(t-t0);
-        tempo+=dt.count();
+        tempo_ultimo=dt.count();
+        tempo+=tempo_ultimo;
         t0=t;
     }
 	if (calc_exp){
