@@ -43,12 +43,12 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
 #endif
 
     unsigned int cont=0;
-    unsigned int data_size= (step_index==std::numeric_limits< unsigned int>::max())?headers.size():(headers.size()-1);
+    data_size= (step_index==std::numeric_limits< unsigned int>::max())?headers.size():(headers.size()-1);
+    double * reads=new double[data_size];
     while (log.good()) {
 
         if(if_only_numbers(tmp)&&tmp.length()>1){
 
-            double * reads=new double[data_size];
             unsigned int TS=cont;
             std::stringstream sstr(tmp);
 
@@ -66,15 +66,17 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
                 std::cerr << "Ignoro la linea "<<lcont<<": '"<<tmp<<"'\n";
                 sstr.clear();
                 cont--;
-                delete [] reads;
             } else {
-                data.push_back(std::pair<unsigned int ,double*>(TS,reads));
+                for (unsigned int i=0;i<data_size;i++)
+                    data.push_back(reads[i]);
+                timesteps.push_back(TS);
             }
         }
 
         std::getline(log,tmp);
         lcont++;
     }
+    delete [] reads;
 #ifdef DEBUG
     std::cerr << "Numero di dati letti dal file '"<<filename<<"': "<<data.size()<<"\n";
 #endif
@@ -97,7 +99,7 @@ std::pair<unsigned int, bool> ReadLog::get_index_of(std::string header) {
 }
 
 unsigned int ReadLog::timestep(unsigned int index){
-    return data.at(index).first;
+    return timesteps[index];
 }
 
 bool ReadLog::if_only_numbers(std::string str){
@@ -106,12 +108,9 @@ bool ReadLog::if_only_numbers(std::string str){
 
 ReadLog::~ReadLog(){
 
-    for (unsigned int i=0;i<data.size();i++){
-        delete [] data.at(i).second;
-    }
 
 }
 
 double * ReadLog::line(unsigned int index){
-    return data.at(index).second;
+    return &data[index*data_size];
 }

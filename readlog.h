@@ -11,7 +11,7 @@ public:
     ReadLog(std::string filename,Traiettoria * t=0,unsigned int skip=1);
     ~ReadLog();
     double * line(unsigned int index);
-    unsigned int n_timestep(){return data.size();}
+    unsigned int n_timestep(){return data.size()/data_size;}
     unsigned int n_data(){return headers.size()-1;}
     unsigned int timestep(unsigned int index);
     unsigned int get_natoms(){return 1728;}
@@ -19,8 +19,10 @@ public:
 private:
     Traiettoria * traiettoria;
     std::vector<std::string> headers;
-    std::vector<std::pair<unsigned int ,double*> > data;
+    std::vector<double > data;
+    std::vector<unsigned int > timesteps;
     unsigned int skip,size,step_index;
+    size_t data_size;
     bool if_only_numbers(std::string str);
     unsigned int natoms;
 
