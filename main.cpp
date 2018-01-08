@@ -161,7 +161,7 @@ int main(int argc, char ** argv)
         } else
 #endif // DEBUG
             if (heat_coeff) {
-                std::cerr << "Inizio del calcolo del coefficiente di trasporto termico per un sale a due componenti...\n";
+                std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
                 ReadLog test(log_input);
 
                 double factor_conv;
@@ -327,9 +327,8 @@ int main(int argc, char ** argv)
                     if (final>=greenK.size()) final=greenK.size()-1;
                     if (final <0) final=0;
 
-                    std::cout << "# T T1sigma V\n#"
-                              <<media_ << " " << sqrt(var_) << " "
-                             << pow(test.line(0)[idx_lx] ,3)<< "\n";
+                    std::cout << "# factor integral, factor correlation\n#"
+                              << factor_conv << " " << factor_intToCorr <<  "\n";
 
                     for (unsigned int i=0;i<greenK.size();i++) {
                         for (unsigned int j=0;j<narr;j++) {
