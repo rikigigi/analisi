@@ -25,7 +25,7 @@
 #include <Eigen/Dense>
 #endif
 
-GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettoria,
+template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT>::GreenKuboNComponentIonicFluid(ReadLog *traiettoria,
                                                              std::string log,
                                                              unsigned int skip,
                                                              std::vector<std::string> headers,
@@ -37,7 +37,7 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
                                                              unsigned int n_seg,
                                                              bool do_bench,
                                                              unsigned int n_seg_start,
-                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid>(),
+                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),subtract_mean(subtract_mean),
     start_mean(start_mean),n_seg(n_seg),bench(false),
@@ -75,50 +75,49 @@ GreenKuboNComponentIonicFluid::GreenKuboNComponentIonicFluid(ReadLog *traiettori
     narr=3*N_corr+2;
 }
 
-GreenKuboNComponentIonicFluid::~GreenKuboNComponentIonicFluid(){
+template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT>::~GreenKuboNComponentIonicFluid(){
 #ifdef DEBUG2
-    //    std::cerr << "Called delete GreenKuboNComponentIonicFluid, je="<<je<<", jz="<<jz<<"\n";
 #endif
 }
 
-GreenKuboNComponentIonicFluid & GreenKuboNComponentIonicFluid::operator =(const GreenKuboNComponentIonicFluid & destra) {
+template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT> & GreenKuboNComponentIonicFluid<TFLOAT>::operator =(const GreenKuboNComponentIonicFluid<TFLOAT> & destra) {
 #ifdef DEBUG2
-    std::cerr << "Chiamato GreenKuboNComponentIonicFluid::operator =\n";
+    std::cerr << "Chiamato GreenKuboNComponentIonicFluid<TFLOAT>::operator =\n";
 #endif
     OperazioniSuLista<GreenKuboNComponentIonicFluid>::operator =( destra);
     return *this;
 }
 
-unsigned int GreenKuboNComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
     return (traiettoria->n_timestep()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->n_timestep()/(n_b+1)+1 : lmax;
 }
 
-void GreenKuboNComponentIonicFluid::reset(unsigned int numeroTimestepsPerBlocco) {
+template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::reset(unsigned int numeroTimestepsPerBlocco) {
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     lunghezza_lista=(leff)*narr;
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
-    lista=new double [lunghezza_lista];
+    lista=new TFLOAT [lunghezza_lista];
     for (unsigned int i=0;i<lunghezza_lista;i++){
         lista[i]=0.0;
     }
 }
 
-double * GreenKuboNComponentIonicFluid::jN(unsigned int N,unsigned int ts){
+template< class TFLOAT> double * GreenKuboNComponentIonicFluid<TFLOAT>::jN(unsigned int N,unsigned int ts){
     return&traiettoria->line(ts)[idx_j[N]];
 }
 
 
 
-unsigned int GreenKuboNComponentIonicFluid::get_narr(){
+template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::get_narr(){
     return narr;
 }
 
-unsigned int GreenKuboNComponentIonicFluid::get_indexOfKappa(){
+template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::get_indexOfKappa(){
     return 3*N_corr;
 }
 
-void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
+template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::calcola(unsigned int primo) {
 
 
     if(!benchmarked)
@@ -143,10 +142,10 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         */
 
 
-    double *matr=new double [idx_j.size()*idx_j.size()];
-    double *intJJ=new double[N_corr];
-    double *int_ein_JJ=new double[N_corr];
-    double *JJm_T=new double[N_corr];
+    TFLOAT *matr=new TFLOAT [idx_j.size()*idx_j.size()];
+    TFLOAT *intJJ=new TFLOAT[N_corr];
+    TFLOAT *int_ein_JJ=new TFLOAT[N_corr];
+    TFLOAT *JJm_T=new TFLOAT[N_corr];
     unsigned int cont_JJ=0;
 
     for (unsigned int j=0;j<N_corr;j++){
@@ -163,7 +162,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         ++cont_JJ;
         for (unsigned int ith=0;ith<nthread;ith++){
             threads.push_back(std::thread([&,ith](){
-                double *JJ=new double[N_corr];
+                TFLOAT *JJ=new TFLOAT[N_corr];
 //                unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
 //                for (unsigned int itimestep=npassith*ith;itimestep<ultimo;itimestep++) {
                   //fa fare ai threads diversi conti con i dati vicini (per ottimizzare l'uso della cache in comune fra i vari core)
@@ -191,7 +190,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                             for (unsigned int j2=0;j2<idx_j.size();j2++)
 #endif
                             {
-                                double delta=(jN(j1,primo+jmedia)[0]*jN(j2,primo+jmedia+itimestep)[0]+
+                                TFLOAT delta=(jN(j1,primo+jmedia)[0]*jN(j2,primo+jmedia+itimestep)[0]+
                                         jN(j1,primo+jmedia)[1]*jN(j2,primo+jmedia+itimestep)[1]+
                                         jN(j1,primo+jmedia)[2]*jN(j2,primo+jmedia+itimestep)[2]
                                         )/3.0 - JJ[idxj];
@@ -205,7 +204,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
                     {
                         //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
                         //possibile perdita di precisione(?)
-                        double delta_JJ=JJ[j1]-lista[(itimestep)*narr+j1];
+                        TFLOAT delta_JJ=JJ[j1]-lista[(itimestep)*narr+j1];
                         lista[(itimestep)*narr+j1]+=delta_JJ/cont_JJ;
                     }
 
@@ -235,7 +234,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
         for (unsigned int itimestep=start_mean;itimestep<leff;itimestep++){
             cont_JJm_T++;
             for (unsigned int j1=0;j1<N_corr;j1++)  {
-                double delta=lista[(itimestep)*narr+j1]-JJm_T[j1];
+                TFLOAT delta=lista[(itimestep)*narr+j1]-JJm_T[j1];
                 JJm_T[j1]+=delta/cont_JJm_T;
             }
         }
@@ -287,7 +286,7 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
             //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
 
-            double k;
+            TFLOAT k;
             if (idx_j.size()>1)
                 k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
             else
@@ -352,12 +351,12 @@ void GreenKuboNComponentIonicFluid::calcola(unsigned int primo) {
 
 }
 
-bool GreenKuboNComponentIonicFluid::benchmarked=false;
+template< class TFLOAT> bool GreenKuboNComponentIonicFluid<TFLOAT>::benchmarked=false;
 
-unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(){
+template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::n_seg_bench(){
     //salva la vecchia dimensione totale e il vecchio numero n_seg
     unsigned int orig_n_seg=n_seg,orig_ntimesteps=ntimesteps,ris=0;
-    double min=std::numeric_limits<double>::max() ;
+    TFLOAT min=std::numeric_limits<TFLOAT>::max() ;
     benchmarked=true;
     bench=true;
     n_seg=1;
@@ -382,3 +381,5 @@ unsigned int GreenKuboNComponentIonicFluid::n_seg_bench(){
     ntimesteps=orig_ntimesteps;
     return ris;
 }
+
+template class GreenKuboNComponentIonicFluid<double>;

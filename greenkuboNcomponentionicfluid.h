@@ -23,8 +23,8 @@
 #include <vector>
 #include <string>
 
-
-class GreenKuboNComponentIonicFluid : public OperazioniSuLista<GreenKuboNComponentIonicFluid>
+template <class TFLOAT=double>
+class GreenKuboNComponentIonicFluid : public OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT>
 {
 public:
     GreenKuboNComponentIonicFluid(ReadLog * traiettoria,
@@ -50,6 +50,8 @@ public:
     unsigned int get_indexOfKappa();
     unsigned int n_seg_bench();
     private:
+    using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT>::lista;
+    using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT>::lunghezza_lista;
     static bool benchmarked;
     unsigned int narr,N_corr,start_mean,n_seg,n_seg_start,n_seg_stop;
     bool scrivi_file,subtract_mean,bench;
@@ -59,7 +61,6 @@ public:
     ReadLog *traiettoria;
     unsigned int ntimesteps,lmax,leff,nthread,skip;
     double*  jN(unsigned int N,unsigned int ts);
-    double* je(unsigned int ts);
 };
 
 

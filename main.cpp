@@ -283,7 +283,7 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,
+                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid<>,
                             std::string,
                             unsigned int,
                             std::vector<std::string>,
@@ -298,7 +298,7 @@ int main(int argc, char ** argv)
                             unsigned int>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
-                    MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
+                    MediaVarCovar<GreenKuboNComponentIonicFluid<> > greenK(narr,cvar);
 
                     if(kk_l.size()==0){
                         kk_l.push_back(10);

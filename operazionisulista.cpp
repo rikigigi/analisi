@@ -217,5 +217,5 @@ template class OperazioniSuLista<PosizioniEquilibrio>;
 template class OperazioniSuLista<ModiVibrazionali>;
 template class OperazioniSuLista<IstogrammaVelocita>;
 template class OperazioniSuLista<GreenKubo2ComponentIonicFluid>;
-template class OperazioniSuLista<GreenKuboNComponentIonicFluid>;
+template class OperazioniSuLista<GreenKuboNComponentIonicFluid<> >;
 template class OperazioniSuLista<MSD>;
