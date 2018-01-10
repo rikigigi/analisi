@@ -218,5 +218,6 @@ template class OperazioniSuLista<ModiVibrazionali>;
 template class OperazioniSuLista<IstogrammaVelocita>;
 template class OperazioniSuLista<GreenKubo2ComponentIonicFluid>;
 template class OperazioniSuLista<GreenKuboNComponentIonicFluid<> >;
-template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double>,long double >;
+template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,double>,long double >;
+template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,long double>,long double >;
 template class OperazioniSuLista<MSD>;

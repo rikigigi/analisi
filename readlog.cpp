@@ -3,7 +3,7 @@
 #include <sstream>
 #include <limits>
 
-ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
+template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
     traiettoria(t),skip(skip)
 {
     unsigned int lcont=0;
@@ -44,7 +44,7 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
 
     unsigned int cont=0;
     data_size= (step_index==std::numeric_limits< unsigned int>::max())?headers.size():(headers.size()-1);
-    double * reads=new double[data_size];
+    TFLOAT * reads=new TFLOAT[data_size];
     while (log.good()) {
 
         if(if_only_numbers(tmp)&&tmp.length()>1){
@@ -84,7 +84,7 @@ ReadLog::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
 }
 
 
-std::pair<unsigned int, bool> ReadLog::get_index_of(std::string header) {
+template <class TFLOAT> std::pair<unsigned int, bool> ReadLog<TFLOAT>::get_index_of(std::string header) {
     unsigned int idx=0;
     for (unsigned int i=0;i<headers.size();i++){
         if (headers.at(i)!="Step"){
@@ -98,19 +98,22 @@ std::pair<unsigned int, bool> ReadLog::get_index_of(std::string header) {
     return std::pair<unsigned int ,bool>(idx,false);
 }
 
-unsigned int ReadLog::timestep(unsigned int index){
+template <class TFLOAT> unsigned int ReadLog<TFLOAT>::timestep(unsigned int index){
     return timesteps[index];
 }
 
-bool ReadLog::if_only_numbers(std::string str){
+template <class TFLOAT> bool ReadLog<TFLOAT>::if_only_numbers(std::string str){
     return str.find_first_not_of("e0123456789    .-+")==std::string::npos;
 }
 
-ReadLog::~ReadLog(){
+template <class TFLOAT> ReadLog<TFLOAT>::~ReadLog(){
 
 
 }
 
-double * ReadLog::line(unsigned int index){
+template <class TFLOAT> TFLOAT * ReadLog<TFLOAT>::line(unsigned int index){
     return &data[index*data_size];
 }
+
+template class ReadLog<double>;
+template class ReadLog<long double>;

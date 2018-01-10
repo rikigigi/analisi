@@ -25,7 +25,7 @@
 #include <Eigen/Dense>
 #endif
 
-template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT>::GreenKuboNComponentIonicFluid(ReadLog *traiettoria,
+template< class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::GreenKuboNComponentIonicFluid(ReadLog<TFLOAT_READ> *traiettoria,
                                                              std::string log,
                                                              unsigned int skip,
                                                              std::vector<std::string> headers,
@@ -37,7 +37,7 @@ template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT>::GreenKuboNCompone
                                                              unsigned int n_seg,
                                                              bool do_bench,
                                                              unsigned int n_seg_start,
-                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT>(),
+                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),subtract_mean(subtract_mean),
     start_mean(start_mean),n_seg(n_seg),bench(false),
@@ -75,24 +75,24 @@ template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT>::GreenKuboNCompone
     narr=3*N_corr+2;
 }
 
-template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT>::~GreenKuboNComponentIonicFluid(){
+template< class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::~GreenKuboNComponentIonicFluid(){
 #ifdef DEBUG2
 #endif
 }
 
-template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT> & GreenKuboNComponentIonicFluid<TFLOAT>::operator =(const GreenKuboNComponentIonicFluid<TFLOAT> & destra) {
+template< class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ> & GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::operator =(const GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ> & destra) {
 #ifdef DEBUG2
     std::cerr << "Chiamato GreenKuboNComponentIonicFluid<TFLOAT>::operator =\n";
 #endif
-    OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT >::operator =( destra);
+    OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT >::operator =( destra);
     return *this;
 }
 
-template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+template< class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
     return (traiettoria->n_timestep()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->n_timestep()/(n_b+1)+1 : lmax;
 }
 
-template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::reset(unsigned int numeroTimestepsPerBlocco) {
+template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::reset(unsigned int numeroTimestepsPerBlocco) {
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     lunghezza_lista=(leff)*narr;
     ntimesteps=numeroTimestepsPerBlocco;
@@ -103,21 +103,21 @@ template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::reset(unsign
     }
 }
 
-template< class TFLOAT> double * GreenKuboNComponentIonicFluid<TFLOAT>::jN(unsigned int N,unsigned int ts){
+template< class TFLOAT, class TFLOAT_READ> TFLOAT_READ * GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::jN(unsigned int N,unsigned int ts){
     return&traiettoria->line(ts)[idx_j[N]];
 }
 
 
 
-template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::get_narr(){
+template< class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::get_narr(){
     return narr;
 }
 
-template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::get_indexOfKappa(){
+template< class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::get_indexOfKappa(){
     return 3*N_corr;
 }
 
-template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::calcola(unsigned int primo) {
+template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::calcola(unsigned int primo) {
 
 
     if(!benchmarked)
@@ -351,9 +351,9 @@ template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::calcola(unsi
 
 }
 
-template< class TFLOAT> bool GreenKuboNComponentIonicFluid<TFLOAT>::benchmarked=false;
+template< class TFLOAT, class TFLOAT_READ> bool GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::benchmarked=false;
 
-template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::n_seg_bench(){
+template< class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::n_seg_bench(){
     //salva la vecchia dimensione totale e il vecchio numero n_seg
     unsigned int orig_n_seg=n_seg,orig_ntimesteps=ntimesteps,ris=0;
     TFLOAT min=std::numeric_limits<TFLOAT>::max() ;
@@ -382,5 +382,6 @@ template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::n_se
     return ris;
 }
 
-template class GreenKuboNComponentIonicFluid<double>;
-template class GreenKuboNComponentIonicFluid<long double>;
+template class GreenKuboNComponentIonicFluid<double,double>;
+template class GreenKuboNComponentIonicFluid<long double,double>;
+template class GreenKuboNComponentIonicFluid<long double,long double>;

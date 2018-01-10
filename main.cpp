@@ -149,7 +149,7 @@ int main(int argc, char ** argv)
 #ifdef DEBUG
         if (debug2){
 
-            ReadLog test(log_input);
+            ReadLog<> test(log_input);
             for (unsigned int i=0;i<test.n_timestep();i++){
                 std::cerr << i << " "<<test.timestep(i)<< " ";
                 for (unsigned int j=0;j<test.n_data();j++){
@@ -162,7 +162,7 @@ int main(int argc, char ** argv)
 #endif // DEBUG
             if (heat_coeff) {
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
-                ReadLog test(log_input);
+                ReadLog<> test(log_input);
 
                 double factor_conv;
                 double factor_conv2;
@@ -223,7 +223,7 @@ int main(int argc, char ** argv)
 
                 if (headers.size()==0){
 
-                    MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
+                    MediaBlocchiG<ReadLog<>,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
                             greenK_c(&test,blocknumber);
 
                     MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
@@ -283,7 +283,7 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid<long double>,
+                    MediaBlocchiG<ReadLog<>,GreenKuboNComponentIonicFluid<>,
                             std::string,
                             unsigned int,
                             std::vector<std::string>,
@@ -298,7 +298,7 @@ int main(int argc, char ** argv)
                             unsigned int>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
-                    MediaVarCovar<GreenKuboNComponentIonicFluid<long double> > greenK(narr,cvar);
+                    MediaVarCovar<GreenKuboNComponentIonicFluid<> > greenK(narr,cvar);
 
                     if(kk_l.size()==0){
                         kk_l.push_back(10);
