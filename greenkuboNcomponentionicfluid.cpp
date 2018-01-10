@@ -249,17 +249,14 @@ template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TF
                     lista[(itimestep)*narr+j]-=JJm_T[j];
         }
 
-        for (unsigned int itimestep=istart;itimestep<leff;itimestep++) {
+        for (unsigned int itimestep=1;itimestep<leff;itimestep++) {
 
-            //calcola tutti gli integrali
+            //calcola tutti gli integrali (metodo dei trapezi)
+	    // I[i] = I[i-1]+ f[i-1]/2.0 + f[i]/2.0
             for (unsigned int j=0;j<N_corr;j++){
-                if (itimestep>0){
-                    intJJ[j]+=lista[(itimestep-1)*narr+j];
-                    int_ein_JJ[j]+=lista[(itimestep-1)*narr+j]*itimestep;
-                }
 
-                lista[(itimestep)*narr+N_corr+2*j]=intJJ[j]+lista[(itimestep)*narr+j]/2.0;
-                lista[(itimestep)*narr+N_corr+2*j+1]=int_ein_JJ[j]+lista[(itimestep)*narr+j]*itimestep/2.0;
+	        lista[(itimestep)*narr+N_corr+2*j]  = lista[(itimestep-1)*narr+N_corr+2*j]    +lista[(itimestep-1)*narr+j]/2.0 +          lista[(itimestep)*narr+j]/2.0;
+                lista[(itimestep)*narr+N_corr+2*j+1]= lista[(itimestep-1)*narr+N_corr+2*j+1]  +lista[(itimestep-1)*narr+j]*itimestep/2.0 +lista[(itimestep)*narr+j]*itimestep/2.0  ;
 
             }
             //calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
@@ -325,7 +322,7 @@ template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TF
         }
     }
     //divide per itimestep tutti gli integrali einsteniani
-    for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
+    for (unsigned int itimestep=1;itimestep<leff;itimestep++) {
         for (unsigned int ieinst=0;ieinst<N_corr;ieinst++){
             lista[(itimestep)*narr+N_corr+2*ieinst+1]/=itimestep;
         }
