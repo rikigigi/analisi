@@ -84,7 +84,7 @@ template< class TFLOAT> GreenKuboNComponentIonicFluid<TFLOAT> & GreenKuboNCompon
 #ifdef DEBUG2
     std::cerr << "Chiamato GreenKuboNComponentIonicFluid<TFLOAT>::operator =\n";
 #endif
-    OperazioniSuLista<GreenKuboNComponentIonicFluid>::operator =( destra);
+    OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT>,TFLOAT >::operator =( destra);
     return *this;
 }
 
@@ -282,7 +282,7 @@ template< class TFLOAT> void GreenKuboNComponentIonicFluid<TFLOAT>::calcola(unsi
                 }
 #endif
 
-            Eigen::Map<Eigen::MatrixXd> coeff(matr,idx_j.size(),idx_j.size());
+            Eigen::Map<Eigen::Matrix<TFLOAT, Eigen::Dynamic, Eigen::Dynamic> > coeff(matr,idx_j.size(),idx_j.size());
 
             //calcola il complemento di schur di (0,0)  -- questo è equivalente alla componente (0,0)^-1 della matrice inversa:
 
@@ -383,3 +383,4 @@ template< class TFLOAT> unsigned int GreenKuboNComponentIonicFluid<TFLOAT>::n_se
 }
 
 template class GreenKuboNComponentIonicFluid<double>;
+template class GreenKuboNComponentIonicFluid<long double>;
