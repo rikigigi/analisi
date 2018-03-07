@@ -29,6 +29,7 @@
 #include "msd.h"
 #include <functional>
 #include <fftw3.h>
+#include "convertibinario.h"
 #ifdef DEBUG
 #include "readlog.h"
 #endif
@@ -37,7 +38,7 @@
 int main(int argc, char ** argv)
 {
     boost::program_options::options_description options("Riccardo Bertossa, 2017\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica tramite l'analisi a blocchi.\n\nOpzioni consentite");
-    std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
+    std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,bench=false;
@@ -49,7 +50,7 @@ int main(int argc, char ** argv)
     options.add_options()
         #if BOOST_VERSION >= 105600
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
-            ("loginput,l",boost::program_options::value<std::string>(&log_input)->required(),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
+            ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
         #else
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
@@ -87,6 +88,7 @@ int main(int argc, char ** argv)
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
             ("kk",boost::program_options::bool_switch(&bench)->default_value(false),"esegue un benchmark per il valore ottimale di k")
             ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"valore minimo e massimo del range in cui testare k")
+            ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input nel file qui specificato")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -106,7 +108,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
+        if ((output_conversion!="" && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && (output_conversion=="" && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -134,6 +136,13 @@ int main(int argc, char ** argv)
 
 
     try {
+
+        if (output_conversion!="") {
+
+            ConvertiBinario conv(input,output_conversion);
+            return 0;
+        }
+
 
 #ifdef FFTW3_THREADS
         fftw_init_threads();
