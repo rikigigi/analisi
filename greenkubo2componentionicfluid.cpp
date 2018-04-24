@@ -19,7 +19,7 @@
 #include <vector>
 #include <mutex>
 
-const unsigned int GreenKubo2ComponentIonicFluid::narr=14;
+//const unsigned int GreenKubo2ComponentIonicFluid::narr=14;
 
 GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog<> *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads,unsigned int n_ris) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris)
