@@ -173,9 +173,14 @@ int main(int argc, char ** argv)
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
                 ReadLog<> test(log_input);
 
-                double factor_conv;
-                double factor_conv2;
-                double factor_intToCorr;
+                //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità -- NOT IMPLEMENTED
+                if (test.need_binary(headers)) {
+                    //fai cose -- NOT IMPLEMENTED
+                }
+
+                double factor_conv=1.0;
+                double factor_conv2=1.0;
+                double factor_intToCorr=1.0;
 
                 //calcola velocemente la media a blocchi per la temperatura, se non sono specificati manualmente i fattori
                 const double const_charge=1.6021765,const_boltzmann=1.38064852;

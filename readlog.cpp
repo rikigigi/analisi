@@ -83,8 +83,28 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
 
 }
 
+//questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
+template <class TFLOAT> std::vector<double> ReadLog<TFLOAT>::qs(std::string header) {
+
+}
+
+template <class TFLOAT> bool ReadLog<TFLOAT>::need_binary(std::vector<std::string> headers) {
+    for (auto it=headers.begin();it!=headers.end();++it) {
+        //usa la funzione qs per verificare se serve la traiettoria NOT IMPLEMENTED
+    }
+
+    return false;
+
+}
+
+template <class TFLOAT> void ReadLog<TFLOAT>::set_traj(Traiettoria * t){
+    traiettoria=t;
+}
 
 template <class TFLOAT> std::pair<unsigned int, bool> ReadLog<TFLOAT>::get_index_of(std::string header) {
+    //qui devo controllare la sintassi. Se "#traj:JZ N q1 ... qN", allora calcolo le correnti
+    //partendo dalla traiettoria binaria NOT IMPLEMENTED
+
     unsigned int idx=0;
     for (unsigned int i=0;i<headers.size();i++){
         if (headers.at(i)!="Step"){
