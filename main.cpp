@@ -258,7 +258,7 @@ int main(int argc, char ** argv)
                         factor_conv, //int_ein_ez
                         factor_conv, //int_ein_ze
                         factor_conv2, //int_ein_zz
-                        factor_conv, //lambda_einst
+                        factor_conv //lambda_einst
                     };
                     double *lambda_conv=new double[greenK.size()];
                     double *lambda_conv_var=new double[greenK.size()];
