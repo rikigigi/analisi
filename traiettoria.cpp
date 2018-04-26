@@ -14,7 +14,7 @@
 
 
 
-#include config.h
+#include "config.h"
 
 #include "traiettoria.h"
 #include <sys/mman.h>
