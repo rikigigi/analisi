@@ -28,7 +28,11 @@
 #include "heatfluxts.h"
 #include "msd.h"
 #include <functional>
+#ifdef HAVEfftw3
 #include <fftw3.h>
+#else
+#include <fftw.h>
+#endif
 #include "convertibinario.h"
 #ifdef DEBUG
 #include "readlog.h"

@@ -14,7 +14,6 @@
 
 #include "spettrovibrazionale.h"
 #include "traiettoria.h"
-#include <fftw3.h>
 
 SpettroVibrazionale::SpettroVibrazionale(Traiettoria * t):OperazioniSuLista<SpettroVibrazionale>()
 {

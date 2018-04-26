@@ -15,7 +15,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-
+#cmakedefine HAVEfftw3 ${HAVEfftw3}
+#cmakedefine HAVEfftw ${HAVEfftw}
 #cmakedefine HAVEeigen3EigenDense ${HAVEeigen3EigenDense}
 #cmakedefine HAVEEigenDense ${HAVEEigenDense}
 #cmakedefine FFTW_OMP

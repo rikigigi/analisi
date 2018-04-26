@@ -14,7 +14,7 @@
 
 
 
-
+#include config.h
 
 #include "traiettoria.h"
 #include <sys/mman.h>
@@ -27,7 +27,12 @@
 #include <unistd.h>
 #include <math.h>
 #include <cerrno>
+#ifdef HAVEfftw3
 #include <fftw3.h>
+#else
+#include <fftw.h>
+#endif
+
 #include "cronometro.h"
 #include "lammps_struct.h"
 

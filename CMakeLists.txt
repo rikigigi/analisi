@@ -43,6 +43,8 @@ add_definitions(-DANALISI -DDEBUG)
 
 check_include_file_CXX ("eigen3/Eigen/Dense" HAVEeigen3EigenDense)
 check_include_file_CXX ("Eigen/Dense" HAVEEigenDense)
+check_include_file_CXX ("fftw3.h" HAVEfftw3)
+check_include_file_CXX ("fftw.h" HAVEfftw)
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
