@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <cerrno>
+#include <algorithm>
 #ifdef HAVEfftw3
 #include <fftw3.h>
 #else
@@ -653,7 +654,7 @@ double * Traiettoria::scatola_last() {
 
 unsigned int Traiettoria::get_type(const unsigned int &atomo) {
     if (dati_caricati && atomo < natoms) {
-        return buffer_tipi[atomo]-min_type;
+        return type_map.at(buffer_tipi[atomo]);
     } else {
         std::cerr << "Errore: tipo atomo fuori dal range! ("<< atomo <<" su un massimo di "<<natoms<<")\n";
         abort();
@@ -661,12 +662,17 @@ unsigned int Traiettoria::get_type(const unsigned int &atomo) {
     }
 }
 
+std::vector<unsigned int> Traiettoria::get_types(){
+    get_ntypes();
+    return types;
+}
 
 ///conta il numero di tipi di atomi nel primo modo che mi è venuto in mente
 int Traiettoria::get_ntypes(){
 
     if (dati_caricati && ntypes==0) {
         ntypes=0;
+        types.clear();
         min_type=buffer_tipi[0];
         max_type=buffer_tipi[0];
         bool *duplicati = new bool[natoms];
@@ -683,10 +689,15 @@ int Traiettoria::get_ntypes(){
                         duplicati[j]=true;
                     }
                 }
+                types.push_back(buffer_tipi[i]);
                 ntypes++;
             }
         }
-
+        std::sort(types.begin(),types.end());
+        type_map.clear();
+        for (unsigned int i=0;i<types.size(); i++){
+            type_map[types[i]]=i;
+        }
         delete [] duplicati;
         masse = new double [ntypes];
         cariche = new double [ntypes];

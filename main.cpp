@@ -27,6 +27,7 @@
 #include "convolution.h"
 #include "heatfluxts.h"
 #include "msd.h"
+#include "istogrammaatomiraggio.h"
 #include <functional>
 #ifdef HAVEfftw3
 #include <fftw3.h>
@@ -46,7 +47,7 @@ int main(int argc, char ** argv)
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,bench=false;
-    double vmax_h=0,cariche[2],dt=5e-3;
+    double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
     std::vector<std::string> headers;
@@ -93,6 +94,7 @@ int main(int argc, char ** argv)
             ("kk",boost::program_options::bool_switch(&bench)->default_value(false),"esegue un benchmark per il valore ottimale di k")
             ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"valore minimo e massimo del range in cui testare k")
             ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input nel file qui specificato")
+            ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -378,6 +380,32 @@ int main(int argc, char ** argv)
                                      Msd.varianza()->elemento(i*test.get_ntypes()+j) << " ";
                     std::cout << "\n";
                 }
+
+            }else if (vicini_r>0){
+                std::cerr << "Inizio del calcolo dell'istogramma del numero di vicini per tipo di tutti gli atomi\n";
+                Traiettoria test(input);
+                test.imposta_dimensione_finestra_accesso(1);
+                test.imposta_inizio_accesso(0);
+
+                IstogrammaAtomiRaggio h(&test,vicini_r,skip,numero_thread);
+                unsigned int nt=test.get_ntimesteps(),
+                        s=(nt-1)/blocknumber;
+                h.reset(s);
+                test.imposta_dimensione_finestra_accesso(s);
+                for (unsigned int i=0;i<blocknumber;i++){
+                    unsigned int t=blocknumber*i;
+                    test.imposta_inizio_accesso(t);
+                    h.calcola(t);
+                }
+                std::map<unsigned int, unsigned int> *hist=h.get_hist();
+                for (unsigned int i=0;i<test.get_ntypes();i++){
+                    std::cout << "\""<<i<<"\"\n";
+                    for (auto it=hist[i].begin();it!=hist[i].end();++it){
+                        std::cout << it->first << " " << it->second << "\n";
+                    }
+                    std::cout << "\n\n";
+                }
+
 
             }else if (velocity_h) {
                 std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";

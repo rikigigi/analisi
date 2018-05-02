@@ -18,6 +18,8 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#include <vector>
+#include <map>
 
 
 struct Intestazione_timestep;
@@ -45,6 +47,7 @@ public:
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
     int get_ntypes();
+    std::vector<unsigned int> get_types();
     unsigned int get_type(const unsigned int &atomo);
     int get_type_min() {return min_type;}
     int get_type_max() {return max_type;}
@@ -60,6 +63,8 @@ public:
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; std::cerr<< "Errore: non posso ritornare una carica per un tipo che non esiste!\n";abort(); return 0.0;}
     void index_all();
 private:
+    std::vector<unsigned int> types;
+    std::map<unsigned int,unsigned int>type_map;
     double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
     double * buffer_velocita;
     double * masse;
