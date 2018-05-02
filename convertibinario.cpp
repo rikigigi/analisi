@@ -21,7 +21,11 @@ ConvertiBinario::ConvertiBinario(std::string filein, std::string fileout, Type t
         in >> head.natoms >> head.scatola[0] >> head.scatola[1] >> head.scatola[2] >> head.scatola[3] >> head.scatola[4] >> head.scatola[5];
         head.timestep=++itim;
         if (!in.good()){
-            std::cerr << "Errore nella lettura del file (timestep "<<itim<<")!\n";
+            if (in.eof()) {
+                std::cerr << "Fine del file raggiunta al timestep "<<itim-1<<"\n";
+            } else {
+                std::cerr << "Errore nella lettura del file al timestep (timestep "<<itim<<")!\n";
+            }
             break;
         }
 
@@ -43,15 +47,11 @@ ConvertiBinario::ConvertiBinario(std::string filein, std::string fileout, Type t
             double data[8];
             in >> data[0] >> data[1] >> data[2] >> data[3] >> data[4] >> data[5] >> data[6] >> data[7];
             if (!in.good()){
-                std::cerr << "Errore nella lettura del file (timestep "<<itim<<")!\n";
+                std::cerr << "Errore nella lettura del file (timestep "<<itim<<")!\nATTENZIONE: file di output non completo!\n";
                 break;
             }
-
             out.write((char*) data,sizeof(double)*8);
         }
-
-
-
     }
 
 
