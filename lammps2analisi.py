@@ -65,9 +65,9 @@ if len(sys.argv) == 11 :
 
 print "velocities: ", col_pos
 print "positions: ", col_vel
-print "id: ", int(argv[3])
-print "type: ",int(argv[4])
+print "id: ", int(sys.argv[3])
+print "type: ",int(sys.argv[4])
 
-read_write_xyz(sys.argv[1],sys.argv[2],col_pos,col_vel,int(argv[3]),int(argv[4]))
+read_write_xyz(sys.argv[1],sys.argv[2],col_pos,col_vel,int(sys.argv[3]),int(sys.argv[4]))
 
 
