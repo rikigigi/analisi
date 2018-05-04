@@ -384,6 +384,7 @@ int main(int argc, char ** argv)
             }else if (vicini_r>0){
                 std::cerr << "Inizio del calcolo dell'istogramma del numero di vicini per tipo di tutti gli atomi\n";
                 Traiettoria test(input);
+                test.set_pbc_wrap(true);
                 test.imposta_dimensione_finestra_accesso(1);
                 test.imposta_inizio_accesso(0);
 
