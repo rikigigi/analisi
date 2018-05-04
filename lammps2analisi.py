@@ -39,7 +39,7 @@ def read_write_xyz(infile,outfile,cols_pos=[3,4,5],cols_vel=None,col_id=0,col_ty
         for iatom in range(int(natoms)):
              line = in_file.readline()
              line_s=line.split()
-             line_o=line_s[col_id]+line_s[col_type]
+             line_o=line_s[col_id]+" "+line_s[col_type]
              for col in cols_pos:
                  line_o += " {}".format(line_s[col])
              if cols_vel != None:
@@ -63,8 +63,8 @@ if len(sys.argv) == 8 or len(sys.argv) == 11:
 if len(sys.argv) == 11 :
     col_vel=[int(sys.argv[8]),int(sys.argv[9]),int(sys.argv[10])]
 
-print "velocities: ", col_pos
-print "positions: ", col_vel
+print "velocities: ", col_vel
+print "positions: ", col_pos
 print "id: ", int(sys.argv[3])
 print "type: ",int(sys.argv[4])
 

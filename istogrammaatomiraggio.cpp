@@ -27,6 +27,9 @@ void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
         histth[i]=new std::map<unsigned int, unsigned int> [ntypes];
 
     for (unsigned int itimestep=tstart;itimestep<tstop;itimestep+=skip){
+        double l[3]={traiettoria->scatola(itimestep)[1]-traiettoria->scatola(itimestep)[0],
+                     traiettoria->scatola(itimestep)[3]-traiettoria->scatola(itimestep)[2],
+                     traiettoria->scatola(itimestep)[5]-traiettoria->scatola(itimestep)[4]};
         for (unsigned int ith=0;ith<nthreads;ith++) {
             threads.push_back(std::thread([&,ith](){
                 unsigned int primo= natomith*ith;
@@ -36,18 +39,14 @@ void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
 
 
                 for (unsigned int iatom=primo;iatom<ultimo;iatom++) {
-                    double *xi=traiettoria->posizioni(itimestep,iatom);
                     for (unsigned int j=0;j<ntypes;j++)
                         cont[j]=0;
                     for (unsigned int jatom=0;jatom<natoms;jatom++) {
-                        double *xj=traiettoria->posizioni(itimestep,jatom);
-                        if (    (xj[0]-xi[0])*(xj[0]-xi[0])+
-                                (xj[1]-xi[1])*(xj[1]-xi[1])+
-                                (xj[2]-xi[2])*(xj[2]-xi[2])    <   r2)
+                        if (   traiettoria->d2_minImage(iatom,jatom,itimestep,l)    <   r2)
                             cont[traiettoria->get_type(jatom)]++;
                     }
                     for (unsigned int j=0;j<ntypes;j++)
-                        histth[ith][j][cont[j]]++;
+                        ((histth[ith])[j])[cont[j]]++;
                 }
 
             }));
@@ -63,7 +62,7 @@ void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
     for (unsigned int i=0;i<nthreads;i++){
         for (unsigned int j=0;j<ntypes;j++)
             for (auto it=histth[j]->begin();it!=histth[j]->end();++it){
-                hist[j][it->first]+=it->second;
+                (hist[j])[it->first]+=it->second;
             }
     }
 

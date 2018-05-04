@@ -25,7 +25,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <math.h>
+#include <cmath>
 #include <cerrno>
 #include <algorithm>
 #ifdef HAVEfftw3
@@ -67,6 +67,7 @@ Traiettoria::Traiettoria(std::string filename)
     max_type=0;
     masse=0;
     cariche=0;
+    wrap_pbc=false;
 
     fd=open(filename.c_str(), O_RDONLY);
     if (fd==-1) {
@@ -118,6 +119,10 @@ Traiettoria::Traiettoria(std::string filename)
     ok=true;
 }
 
+
+void Traiettoria::set_pbc_wrap(bool p) {
+    wrap_pbc=p;
+}
 
 /**
   * Restituisce l'indirizzo allineato alla memoria.
@@ -374,6 +379,8 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
 #ifdef DEBUG
     std::cerr << "Imposto l'accesso della traiettoria dal timestep "<< timestep << " al timestep "<<timestep+timestep_finestra  << " (escluso).\n";
+    if (wrap_pbc)
+        std::cerr << "Applico le condizioni al contorno periodiche.\n";
 #endif
 
     if (timestep>timestep_indicizzato) {
@@ -499,12 +506,19 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         for (unsigned int iscatola=0;iscatola<6;iscatola++) {
             buffer_scatola[t*6+iscatola]=intestazione->scatola[iscatola];
         }
+        double l[3]={intestazione->scatola[1]-intestazione->scatola[0],
+                     intestazione->scatola[3]-intestazione->scatola[2],
+                     intestazione->scatola[5]-intestazione->scatola[4]};
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
                 int id=round(pezzi[ichunk].atomi[iatomo].id)-1;
                 int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
-                for (unsigned int icoord=0;icoord<3;icoord++)
-                    buffer_posizioni[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].posizione[icoord];
+                for (unsigned int icoord=0;icoord<3;icoord++){
+                    if (wrap_pbc)
+                        buffer_posizioni[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].posizione[icoord]-round(pezzi[ichunk].atomi[iatomo].posizione[icoord]/l[icoord])*l[icoord];
+                    else
+                        buffer_posizioni[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].posizione[icoord];
+                }
                 for (unsigned int icoord=0;icoord<3;icoord++)
                     buffer_velocita[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].velocita[icoord];
                 if (t==0) {
@@ -536,6 +550,18 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 #endif
 
     return Ok;
+}
+double Traiettoria::d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l){
+    double d2=0.0,x;
+    double *xi=posizioni(itimestep,i);
+    double *xj=posizioni(itimestep,j);
+    for (unsigned int idim=0;idim<3;idim++) {
+        x=xi[idim]-xj[idim];
+        if (x >   l[idim] * 0.5) x = x - l[idim];
+        if (x <= -l[idim] * 0.5) x = x + l[idim];
+        d2+=x*x;
+    }
+    return d2;
 }
 
 double * Traiettoria::posizioni(const int &timestep, const int &atomo){
