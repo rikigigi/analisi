@@ -61,7 +61,7 @@ void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
     //somma i vari risultati dei threads
     for (unsigned int i=0;i<nthreads;i++){
         for (unsigned int j=0;j<ntypes;j++)
-            for (auto it=histth[j]->begin();it!=histth[j]->end();++it){
+            for (auto it=histth[i][j].begin();it!=histth[i][j].end();++it){
                 (hist[j])[it->first]+=it->second;
             }
     }
