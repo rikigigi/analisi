@@ -123,7 +123,7 @@ template <class TFLOAT> unsigned int ReadLog<TFLOAT>::timestep(unsigned int inde
 }
 
 template <class TFLOAT> bool ReadLog<TFLOAT>::if_only_numbers(std::string str){
-    return str.find_first_not_of("e0123456789    .-+")==std::string::npos;
+    return str.find_first_not_of("Ee0123456789 \t.-+")==std::string::npos;
 }
 
 template <class TFLOAT> ReadLog<TFLOAT>::~ReadLog(){
