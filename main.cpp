@@ -394,7 +394,7 @@ int main(int argc, char ** argv)
                 h.reset(s);
                 test.imposta_dimensione_finestra_accesso(s);
                 for (unsigned int i=0;i<blocknumber;i++){
-                    unsigned int t=blocknumber*i;
+                    unsigned int t=s*i;
                     test.imposta_inizio_accesso(t);
                     h.calcola(t);
                 }
