@@ -74,7 +74,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
             istep -= 1
 
         # lettura posizioni
-        values = np.array(linepos.split())
+        values = linepos.split()
         #print linepos
         #print values, data['step'][istep]
         if len(values):
@@ -86,7 +86,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
                 data['pos'][istep,iatom,:] = values[:]
             
         #lettura velocità
-        values = np.array(linevel.split(), dtype=np.float64)
+        values = linevel.split()
         #print values,data[0][istep]
         if len(values):
             if (data['step'][istep] != int(values[0]) ):
@@ -97,7 +97,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
                 data['vel'][istep,iatom,:] = values[:]
         
         #lettura cella
-        values = np.array(linecel.split(), dtype=np.float64)
+        values = linecel.split()
         #print values, data['step'][istep]
         if len(values):
             if (data['step'][istep] != int(values[0]) ):
