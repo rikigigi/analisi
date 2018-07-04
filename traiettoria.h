@@ -43,6 +43,7 @@ public:
     double * posizioni (const int & timestep, const int & atomo);
     double * velocita (const int & timestep, const int & atomo);
     double * scatola (const int & timestep);
+    double * posizioni_cm(const int & timestep, const int & tipo);
     double *scatola_last();
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
@@ -64,6 +65,8 @@ public:
     void index_all();
     void set_pbc_wrap(bool);
     double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l);
+//    void set_calculate_center_of_mass(bool);
+//    bool get_calculate_center_of_mass();
 private:
     std::vector<unsigned int> types;
     std::map<unsigned int,unsigned int>type_map;
@@ -72,6 +75,7 @@ private:
     double * masse;
     double * cariche;
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
+    double * buffer_posizioni_cm; // posizioni del centro di massa
 
     int * buffer_tipi;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
@@ -86,6 +90,7 @@ private:
     int timestep_corrente,timestep_finestra,timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
     bool triclinic,wrap_pbc;
+    bool calculate_center_of_mass;
     int natoms,ntypes,min_type,max_type;
     long pagesize;
     size_t allinea_offset(const size_t & offset, size_t & differenza);

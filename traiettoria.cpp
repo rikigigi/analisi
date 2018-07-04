@@ -68,6 +68,8 @@ Traiettoria::Traiettoria(std::string filename)
     masse=0;
     cariche=0;
     wrap_pbc=false;
+    calculate_center_of_mass=false;
+    buffer_posizioni_cm=0;
 
     fd=open(filename.c_str(), O_RDONLY);
     if (fd==-1) {
@@ -118,8 +120,17 @@ Traiettoria::Traiettoria(std::string filename)
 
     ok=true;
 }
+/*
+void Traiettoria::set_calculate_center_of_mass(bool t){
+    calculate_center_of_mass=t;
+    //rialloca l'array se necessario
 
+}
 
+bool Traiettoria::get_calculate_center_of_mass(){
+
+}
+*/
 void Traiettoria::set_pbc_wrap(bool p) {
     wrap_pbc=p;
 }
@@ -142,10 +153,6 @@ size_t Traiettoria::allinea_offset(const size_t & offset /// memoria da allinear
 }
 
 Traiettoria::~Traiettoria(){
-    /*
-    delete [] buffer_posizioni;
-    delete [] buffer_velocita;
-    */
     delete [] timesteps;
     delete [] timesteps_lammps;
     delete [] buffer_tipi;
@@ -153,6 +160,7 @@ Traiettoria::~Traiettoria(){
     delete [] cariche;
     delete [] buffer_scatola;
     fftw_free(buffer_posizioni);
+    fftw_free(buffer_posizioni_cm);
     fftw_free(buffer_velocita);
 
     if (file != 0)
@@ -275,17 +283,13 @@ Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &
 
     dati_caricati=false;
     if (timestep_finestra!=Ntimesteps){
-        /*
-        delete [] buffer_posizioni;
-        delete [] buffer_velocita;
-        buffer_posizioni=new double [natoms*3*Ntimesteps];
-        buffer_velocita=new double [natoms*3*Ntimesteps];
-        */
 
         //questo alloca la memoria in modo corretto per permettere l'utilizzo delle istruzioni SIMD in fftw3
         fftw_free(buffer_posizioni);
+        fftw_free(buffer_posizioni_cm);
         fftw_free(buffer_velocita);
         buffer_posizioni= (double*) fftw_malloc(sizeof(double)*natoms*3*Ntimesteps);
+        buffer_posizioni_cm= (double*) fftw_malloc(sizeof(double)*3*Ntimesteps*ntypes);
         buffer_velocita=(double*) fftw_malloc(sizeof(double)*natoms*3*Ntimesteps);
         delete [] buffer_scatola;
         buffer_scatola= new double [6*Ntimesteps];
@@ -491,9 +495,18 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
             buffer_posizioni[(finestra_differenza+i)*3*natoms+idata]=
                     buffer_posizioni[i*3*natoms + idata];
         }
+
+        //anche la velocità del centro di massa
+        for (unsigned int itype=0;itype<ntypes*3;itype++)
+        buffer_posizioni_cm[(finestra_differenza+i)*3*ntypes+itype]=
+                buffer_posizioni_cm[i*3*ntypes + itype];
+
     }
 
     //leggi quelli che non sono già in memoria (tutti se necessario)
+
+    //contatore per calcolare la media del centro di massa
+    unsigned int *cont_cm=new unsigned int[ntypes];
 
     for (int i=timestep_read_start;i<timestep_read_end;i++){
         int t=i-timestep;
@@ -509,6 +522,12 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         double l[3]={intestazione->scatola[1]-intestazione->scatola[0],
                      intestazione->scatola[3]-intestazione->scatola[2],
                      intestazione->scatola[5]-intestazione->scatola[4]};
+        //calcola anche la posizione del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
+        //prima azzera la media, poi calcolala
+        for (unsigned int itype=0;itype<ntypes*3;itype++){
+            buffer_posizioni_cm[t*3*ntypes+itype]=0.0;
+            cont_cm[itype]=0;
+        }
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
                 int id=round(pezzi[ichunk].atomi[iatomo].id)-1;
@@ -529,6 +548,11 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                         buffer_tipi[id]=tipo;
                     }
                 }
+                //aggiorna la media delle posizioni del centro di massa
+                cont_cm[tipo]++;
+                for (unsigned int icoord=0;icoord<3;icoord++){
+                    buffer_posizioni_cm[t*3*ntypes+3*tipo+icoord]+=(pezzi[ichunk].atomi[iatomo].posizione[icoord]-buffer_posizioni_cm[t*3*ntypes+3*tipo+icoord])/(cont_cm[tipo]);
+                }
             }
         }
 
@@ -537,6 +561,8 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         if(i+1<n_timesteps) timesteps[i+1]=timesteps[i]+offset;
         if(i+1>timestep_indicizzato) timestep_indicizzato=i+1;
     }
+
+    delete [] cont_cm;
 
     dati_caricati=true;
 
@@ -595,6 +621,37 @@ double * Traiettoria::posizioni(const int &timestep, const int &atomo){
 
 }
 
+double * Traiettoria::posizioni_cm(const int &timestep, const int &tipo){
+
+    if (tipo<0 || tipo > ntypes) {
+        std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
+        return 0;
+    }
+
+    int t=timestep-timestep_corrente;
+
+    if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+        return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+
+    } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+#ifdef DEBUG
+        std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+        if(imposta_inizio_accesso(timestep)) {
+            t=timestep-timestep_corrente;
+            if (t>0 && t< timestep_finestra)
+                return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+            else
+                abort();
+        } else {
+            std::cerr << "Errore nel caricamento del file.\n";
+            return 0;
+        }
+    }
+
+}
+
 double * Traiettoria::velocita(const int &timestep, const int &atomo) {
     if (atomo<0 || atomo > natoms) {
         std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
@@ -616,7 +673,7 @@ double * Traiettoria::velocita(const int &timestep, const int &atomo) {
         if(imposta_inizio_accesso(timestep)){
             t=timestep-timestep_corrente;
             if (t>0 && t< timestep_finestra)
-                return &buffer_posizioni[t*3*natoms+atomo*3];
+                return &buffer_velocita[t*3*natoms+atomo*3];
             else
                 abort();
         } else {
