@@ -56,6 +56,7 @@ Traiettoria::Traiettoria(std::string filename)
     timesteps=0;
     timesteps_lammps=0;
     buffer_tipi=0;
+    buffer_tipi_id=0;
     buffer_posizioni=0;
     buffer_velocita=0;
     buffer_scatola=0;
@@ -103,6 +104,13 @@ Traiettoria::Traiettoria(std::string filename)
     natoms=t0->natoms;
 
     buffer_tipi=new int [natoms];
+    buffer_tipi_id=new int [natoms];
+
+    for (unsigned int i=0;i<natoms;i++) {
+        buffer_tipi[i]=buffer_tipi_id[i]=-1;
+    }
+
+    init_buffer_tipi();
 
     //stima del numero di timesteps
     n_timesteps=sb.st_size/dimensione_timestep -1;
@@ -120,6 +128,32 @@ Traiettoria::Traiettoria(std::string filename)
 
     ok=true;
 }
+
+
+void Traiettoria::init_buffer_tipi() {
+
+   Intestazione_timestep * intestazione=0;
+   Chunk * pezzi=0;
+   size_t offset = leggi_pezzo(0,intestazione,pezzi); 
+   natoms=intestazione->natoms;
+
+        for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
+            for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
+                int id=round(pezzi[ichunk].atomi[iatomo].id)-1;
+                int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
+                buffer_tipi[id]=tipo;
+            }
+        }
+
+   delete [] pezzi;
+   get_ntypes(); 
+
+   for (unsigned int i=0;i<natoms;i++) {
+       buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
+   }
+
+}
+
 /*
 void Traiettoria::set_calculate_center_of_mass(bool t){
     calculate_center_of_mass=t;
@@ -156,6 +190,7 @@ Traiettoria::~Traiettoria(){
     delete [] timesteps;
     delete [] timesteps_lammps;
     delete [] buffer_tipi;
+    delete [] buffer_tipi_id;
     delete [] masse;
     delete [] cariche;
     delete [] buffer_scatola;
@@ -526,6 +561,8 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         //prima azzera la media, poi calcolala
         for (unsigned int itype=0;itype<ntypes*3;itype++){
             buffer_posizioni_cm[t*3*ntypes+itype]=0.0;
+        }
+        for (unsigned int itype=0;itype<ntypes;itype++){
             cont_cm[itype]=0;
         }
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
@@ -540,7 +577,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 }
                 for (unsigned int icoord=0;icoord<3;icoord++)
                     buffer_velocita[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].velocita[icoord];
-                if (t==0) {
+                if (false) {
                     buffer_tipi[id]=tipo;
                 } else {
                     if (buffer_tipi[id]!= tipo) {
@@ -549,9 +586,10 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                     }
                 }
                 //aggiorna la media delle posizioni del centro di massa
-                cont_cm[tipo]++;
+                unsigned int tipo_id=buffer_tipi_id[id];
+                cont_cm[tipo_id]++;
                 for (unsigned int icoord=0;icoord<3;icoord++){
-                    buffer_posizioni_cm[t*3*ntypes+3*tipo+icoord]+=(pezzi[ichunk].atomi[iatomo].posizione[icoord]-buffer_posizioni_cm[t*3*ntypes+3*tipo+icoord])/(cont_cm[tipo]);
+                    buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord]+=(pezzi[ichunk].atomi[iatomo].posizione[icoord]-buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord])/(cont_cm[tipo_id]);
                 }
             }
         }
@@ -736,8 +774,8 @@ double * Traiettoria::scatola_last() {
 }
 
 unsigned int Traiettoria::get_type(const unsigned int &atomo) {
-    if (dati_caricati && atomo < natoms) {
-        return type_map.at(buffer_tipi[atomo]);
+    if (atomo < natoms) {
+        return buffer_tipi_id[atomo];
     } else {
         std::cerr << "Errore: tipo atomo fuori dal range! ("<< atomo <<" su un massimo di "<<natoms<<")\n";
         abort();
@@ -753,7 +791,7 @@ std::vector<unsigned int> Traiettoria::get_types(){
 ///conta il numero di tipi di atomi nel primo modo che mi è venuto in mente
 int Traiettoria::get_ntypes(){
 
-    if (dati_caricati && ntypes==0) {
+    if (ntypes==0) {
         ntypes=0;
         types.clear();
         min_type=buffer_tipi[0];

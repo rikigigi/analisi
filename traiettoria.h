@@ -77,13 +77,14 @@ private:
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
     double * buffer_posizioni_cm; // posizioni del centro di massa
 
-    int * buffer_tipi;
+    int * buffer_tipi,*buffer_tipi_id;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
     int64_t * timesteps_lammps; // timesteps secondo lammps
     void allunga_timesteps(unsigned int nuova_dimensione);
     int n_timesteps;
     size_t leggi_pezzo(const size_t & partenza,Intestazione_timestep * &timestep,Chunk * &chunk);
     size_t leggi_pezzo_intestazione(const size_t & partenza, Intestazione_timestep * &timestep);
+    void init_buffer_tipi();
     int fd;
     size_t fsize,tstep_size;
     char * file;
