@@ -2,8 +2,13 @@
 #include <fstream>
 #include <sstream>
 #include <limits>
+#include <cerrno>
+#include <cstdlib>
+#include <iterator>
 
-template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip):
+#include "chargefluxts.h"
+
+template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip, std::vector<std::string> req_headers):
     traiettoria(t),skip(skip)
 {
     unsigned int lcont=0;
@@ -42,9 +47,28 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
      }
 #endif
 
+     //determina il numero di colonne da allocare
+     unsigned int n_columns_from_binary=0;
+     data_size_from_binary=0;
+     if (req_headers.size()>0){
+         for (auto it = req_headers.begin();it!= req_headers.end();++it) {
+             if (*it == "Step"){
+                 std::cerr << "Errore: non puoi chiedere di fare un analisi con al posto della corrente i timestep (colonna Step)\n";
+                 abort();
+             }
+             if (qs(*it).first !="")
+                 n_columns_from_binary++;
+         }
+         data_size_from_binary=n_columns_from_binary*3;
+     }
+
     unsigned int cont=0;
-    data_size= (step_index==std::numeric_limits< unsigned int>::max())?headers.size():(headers.size()-1);
+    data_size= (step_index==std::numeric_limits< unsigned int>::max())?(headers.size()+data_size_from_binary):(headers.size()-1+data_size_from_binary);
+
+
     TFLOAT * reads=new TFLOAT[data_size];
+    for (unsigned int i=0;i<data_size;++i)
+        reads[i]=0.0;
     while (log.good()) {
 
         if(if_only_numbers(tmp)&&tmp.length()>1){
@@ -84,36 +108,75 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
 }
 
 //questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
-template <class TFLOAT> std::vector<double> ReadLog<TFLOAT>::qs(std::string header) {
+template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLOAT>::qs(std::string header) {
+    if (header.size()==0 || header[0] != '#')
+        return std::pair<std::string,std::vector<TFLOAT> >();
+    std::stringstream iss(header);
+    std::vector<std::string> t{std::istream_iterator<std::string>{iss},std::istream_iterator<std::string>{}};
+    if (t.size()<3){
+        std::cerr <<"Errore nel formato dell'header '"<<header<<"'. Deve essere nella forma '#traj:JZ N q1 ... qN'.\n";
+        abort();
+    }
+    int n_charges=std::strtol (t.at(1).c_str(),NULL,0);
+    if (n_charges<=0 || errno == ERANGE || t.size() != n_charges + 2) {
+        std::cerr << "Errore nel formato dell'header '"<<header<<"'. Deve essere nella forma '#traj:JZ N q1 ... qN'.\n";
+        abort();
+    }
+    std::vector <TFLOAT> c(n_charges);
+    for (unsigned int i=2;i<n_charges+2;i++){
+        c[i-2]=std::strtold(t.at(i).c_str(),NULL);
+        if (errno == ERANGE){
+            std::cerr << "Errore nel formato dell'header '"<<header<<"'. Deve essere nella forma '#traj:JZ N q1 ... qN'.\n";
+            abort();
+        }
+
+    }
+
+    return std::pair<std::string,std::vector<TFLOAT> > (t.at(0),c);
 
 }
 
-template <class TFLOAT> bool ReadLog<TFLOAT>::need_binary(std::vector<std::string> headers) {
+template <class TFLOAT> int ReadLog<TFLOAT>::need_binary(std::vector<std::string> headers) {
+    int res=0;
     for (auto it=headers.begin();it!=headers.end();++it) {
-        //usa la funzione qs per verificare se serve la traiettoria NOT IMPLEMENTED
+        if (qs(*it).first!="")
+            res++;
     }
 
-    return false;
+    return res;
 
 }
 
 template <class TFLOAT> void ReadLog<TFLOAT>::set_traj(Traiettoria * t){
     traiettoria=t;
+    ChargeFluxTs jq(traiettoria);
+    //calcola e legge la corrente partendo dal file binario (devo dividere la traiettoria in pezzi e farlo a tratti...)
+    for (unsigned int ts=0;ts<data.size()/data_size;ts++){
+        //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
+    }
 }
 
 template <class TFLOAT> std::pair<unsigned int, bool> ReadLog<TFLOAT>::get_index_of(std::string header) {
     //qui devo controllare la sintassi. Se "#traj:JZ N q1 ... qN", allora calcolo le correnti
-    //partendo dalla traiettoria binaria NOT IMPLEMENTED
+    //partendo dalla traiettoria binaria
 
     unsigned int idx=0;
-    for (unsigned int i=0;i<headers.size();i++){
-        if (headers.at(i)!="Step"){
-            if (headers.at(i)==header){
-                return std::pair<unsigned int,bool>(idx,true);
-            } else {
-                idx++;
+    if (header.size()==0) {
+        std::cerr << "Errore: header di lunghezza nulla! ("__FILE__<<":" <<__LINE__ <<")\n";
+    }
+    //TODO: questo va cambiato: l'header delle correnti calcolate è uno solo!
+    if (header[0]!='#'){
+        for (unsigned int i=0;i<headers.size();i++){
+            if (headers.at(i)!="Step"){
+                if (headers.at(i)==header){
+                    return std::pair<unsigned int,bool>(idx,true);
+                } else {
+                    idx++;
+                }
             }
         }
+    }else { // devo andare a vedere la traiettoria binaria
+
     }
     return std::pair<unsigned int ,bool>(idx,false);
 }
