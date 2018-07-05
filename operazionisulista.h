@@ -23,10 +23,10 @@
   * Definisce le operazioni, eseguite membro a membro, con uno scalare.
 **/
 
-template <class T> class OperazioniSuLista
+template <class T,class TFLOAT=double> class OperazioniSuLista
 {
 public:
-    OperazioniSuLista<T> &operator =(const OperazioniSuLista<T> &);
+    OperazioniSuLista<T,TFLOAT> &operator =(const OperazioniSuLista<T,TFLOAT> &);
     T & operator+= (const T&);
     T & operator-= (const T&);
     T & operator*= (const T&);
@@ -41,27 +41,27 @@ public:
     const T operator* (const T&) const ;
     const T operator/ (const T&) const ;
 
-    T & operator+= (const double&);
-    T & operator-= (const double&);
-    T & operator*= (const double&);
-    T & operator/= (const double&);
+    T & operator+= (const TFLOAT&);
+    T & operator-= (const TFLOAT&);
+    T & operator*= (const TFLOAT&);
+    T & operator/= (const TFLOAT&);
 
     /**TODO
      * QUESTI NON SONO MAI STATI TESTATI
      * E PROBABILMENTE NON FUNZIONANO
     **/
 
-    const T operator+ (const double &) const ;
-    const T operator- (const double&) const ;
-    const T operator* (const double&) const ;
-    const T operator/ (const double&) const ;
+    const T operator+ (const TFLOAT &) const ;
+    const T operator- (const TFLOAT&) const ;
+    const T operator* (const TFLOAT&) const ;
+    const T operator/ (const TFLOAT&) const ;
     unsigned int lunghezza() const;
-    double elemento(unsigned int i)const;
-    double * accesso_lista(){return lista;}
+    TFLOAT elemento(unsigned int i)const;
+    TFLOAT * accesso_lista(){return lista;}
     void azzera();
 protected:
-    OperazioniSuLista<T> (const OperazioniSuLista<T> & other);
-    double * lista;
+    OperazioniSuLista<T,TFLOAT> (const OperazioniSuLista<T,TFLOAT> & other);
+    TFLOAT * lista;
     OperazioniSuLista();
     ~OperazioniSuLista();
     unsigned int lunghezza_lista;

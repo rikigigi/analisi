@@ -18,6 +18,8 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#include <vector>
+#include <map>
 
 
 struct Intestazione_timestep;
@@ -41,10 +43,12 @@ public:
     double * posizioni (const int & timestep, const int & atomo);
     double * velocita (const int & timestep, const int & atomo);
     double * scatola (const int & timestep);
+    double * posizioni_cm(const int & timestep, const int & tipo);
     double *scatola_last();
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
     int get_ntypes();
+    std::vector<unsigned int> get_types();
     unsigned int get_type(const unsigned int &atomo);
     int get_type_min() {return min_type;}
     int get_type_max() {return max_type;}
@@ -59,25 +63,35 @@ public:
     void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; std::cerr<< "Errore: non posso ritornare una carica per un tipo che non esiste!\n";abort(); return 0.0;}
     void index_all();
+    void set_pbc_wrap(bool);
+    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l);
+//    void set_calculate_center_of_mass(bool);
+//    bool get_calculate_center_of_mass();
 private:
+    std::vector<unsigned int> types;
+    std::map<unsigned int,unsigned int>type_map;
     double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
     double * buffer_velocita;
     double * masse;
     double * cariche;
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
-    int * buffer_tipi;
+    double * buffer_posizioni_cm; // posizioni del centro di massa
+
+    int * buffer_tipi,*buffer_tipi_id;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
     int64_t * timesteps_lammps; // timesteps secondo lammps
     void allunga_timesteps(unsigned int nuova_dimensione);
     int n_timesteps;
     size_t leggi_pezzo(const size_t & partenza,Intestazione_timestep * &timestep,Chunk * &chunk);
     size_t leggi_pezzo_intestazione(const size_t & partenza, Intestazione_timestep * &timestep);
+    void init_buffer_tipi();
     int fd;
     size_t fsize,tstep_size;
     char * file;
     int timestep_corrente,timestep_finestra,timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
-    bool triclinic;
+    bool triclinic,wrap_pbc;
+    bool calculate_center_of_mass;
     int natoms,ntypes,min_type,max_type;
     long pagesize;
     size_t allinea_offset(const size_t & offset, size_t & differenza);

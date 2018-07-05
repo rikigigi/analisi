@@ -23,7 +23,7 @@
 class GreenKubo2ComponentIonicFluid : public OperazioniSuLista<GreenKubo2ComponentIonicFluid>
 {
 public:
-    GreenKubo2ComponentIonicFluid(ReadLog * traiettoria,
+    GreenKubo2ComponentIonicFluid(ReadLog<> * traiettoria,
                                   std::string log,
                                   double *cariche,
                                   unsigned int skip,
@@ -37,12 +37,12 @@ public:
     void reset(unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     GreenKubo2ComponentIonicFluid & operator =(const GreenKubo2ComponentIonicFluid &);
-    static const unsigned int narr;
+    static const unsigned int narr=14;
 private:
     bool scrivi_file;
     unsigned int idx_je,idx_j0,idx_j1,n_ris;
     std::string log;
-    ReadLog *traiettoria;
+    ReadLog<> *traiettoria;
     unsigned int ntimesteps,lmax,leff,nthread,skip;
     double carica[2];
     std::array<double,3>  jz(unsigned int ts);

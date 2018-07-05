@@ -27,8 +27,14 @@
 #include "convolution.h"
 #include "heatfluxts.h"
 #include "msd.h"
+#include "istogrammaatomiraggio.h"
 #include <functional>
+#ifdef HAVEfftw3
 #include <fftw3.h>
+#else
+#include <fftw.h>
+#endif
+#include "convertibinario.h"
 #ifdef DEBUG
 #include "readlog.h"
 #endif
@@ -37,11 +43,11 @@
 int main(int argc, char ** argv)
 {
     boost::program_options::options_description options("Riccardo Bertossa, 2017\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica tramite l'analisi a blocchi.\n\nOpzioni consentite");
-    std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile;
+    std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0;
-    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,bench=false;
-    double vmax_h=0,cariche[2],dt=5e-3;
+    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,bench=false;
+    double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
     std::vector<std::string> headers;
@@ -49,7 +55,7 @@ int main(int argc, char ** argv)
     options.add_options()
         #if BOOST_VERSION >= 105600
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
-            ("loginput,l",boost::program_options::value<std::string>(&log_input)->required(),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
+            ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
         #else
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
@@ -80,13 +86,16 @@ int main(int argc, char ** argv)
             ("dump-block-H,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"scrive in dei file (aggiungendo ogni volta alla fine) i calcoli di ogni signolo blocco per il calcolo del coefficiente di trasporto termico in un sale fuso")
             ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali o dello spostamento quadratico medio. Se posto a zero è pari alle dimensioni del blocco")
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
-            ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni specie atomica")
+            ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni atomo di ciascuna specie atomica")
+            ("mean-square-displacement-cm,Q",boost::program_options::bool_switch(&msd_cm)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per centro di massa di ciascuna specie atomica")
             ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti.")
             ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
             ("kk",boost::program_options::bool_switch(&bench)->default_value(false),"esegue un benchmark per il valore ottimale di k")
             ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"valore minimo e massimo del range in cui testare k")
+            ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input nel file qui specificato")
+            ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -106,7 +115,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (vm.count("help")|| vm.count("loginput")==0 || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
+        if ((output_conversion!="" && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && (output_conversion=="" && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -135,6 +144,13 @@ int main(int argc, char ** argv)
 
     try {
 
+        if (output_conversion!="") {
+
+            ConvertiBinario conv(input,output_conversion);
+            return 0;
+        }
+
+
 #ifdef FFTW3_THREADS
         fftw_init_threads();
         fftw_plan_with_nthreads(numero_thread);
@@ -149,7 +165,7 @@ int main(int argc, char ** argv)
 #ifdef DEBUG
         if (debug2){
 
-            ReadLog test(log_input);
+            ReadLog<> test(log_input);
             for (unsigned int i=0;i<test.n_timestep();i++){
                 std::cerr << i << " "<<test.timestep(i)<< " ";
                 for (unsigned int j=0;j<test.n_data();j++){
@@ -162,11 +178,18 @@ int main(int argc, char ** argv)
 #endif // DEBUG
             if (heat_coeff) {
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
-                ReadLog test(log_input);
+                ReadLog<> test(log_input);
+                Traiettoria * binary_traj=NULL;
+                //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità -- NOT IMPLEMENTED
+                if (test.need_binary(headers)>0) {
+                    binary_traj=new Traiettoria(input);
+                    binary_traj->imposta_dimensione_finestra_accesso(1);
+                    binary_traj->imposta_inizio_accesso(0);
+                }
 
-                double factor_conv;
-                double factor_conv2;
-                double factor_intToCorr;
+                double factor_conv=1.0;
+                double factor_conv2=1.0;
+                double factor_intToCorr=1.0;
 
                 //calcola velocemente la media a blocchi per la temperatura, se non sono specificati manualmente i fattori
                 const double const_charge=1.6021765,const_boltzmann=1.38064852;
@@ -223,7 +246,7 @@ int main(int argc, char ** argv)
 
                 if (headers.size()==0){
 
-                    MediaBlocchiG<ReadLog,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
+                    MediaBlocchiG<ReadLog<>,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
                             greenK_c(&test,blocknumber);
 
                     MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
@@ -244,7 +267,7 @@ int main(int argc, char ** argv)
                         factor_conv, //int_ein_ez
                         factor_conv, //int_ein_ze
                         factor_conv2, //int_ein_zz
-                        factor_conv, //lambda_einst
+                        factor_conv //lambda_einst
                     };
                     double *lambda_conv=new double[greenK.size()];
                     double *lambda_conv_var=new double[greenK.size()];
@@ -283,7 +306,7 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog,GreenKuboNComponentIonicFluid,
+                    MediaBlocchiG<ReadLog<>,GreenKuboNComponentIonicFluid<>,
                             std::string,
                             unsigned int,
                             std::vector<std::string>,
@@ -298,7 +321,7 @@ int main(int argc, char ** argv)
                             unsigned int>
                             greenK_c(&test,blocknumber);
                     unsigned int narr=headers.size()*headers.size()*3+2;
-                    MediaVarCovar<GreenKuboNComponentIonicFluid> greenK(narr,cvar);
+                    MediaVarCovar<GreenKuboNComponentIonicFluid<> > greenK(narr,cvar);
 
                     if(kk_l.size()==0){
                         kk_l.push_back(10);
@@ -345,21 +368,55 @@ int main(int argc, char ** argv)
                     delete [] factors;
                 }
 
-            }else if (msd){
+            }else if (msd || msd_cm){
+                std::cerr << "Inizio del calcolo dello spostamento quadratico medio ";
+                unsigned int f_cm=1;
+                if (msd_cm) {
+                     std::cerr << "per il centro di massa e per gli atomi...\n";
+                     f_cm=2;
+                }else{
+                     std::cerr << "per ciascun atomo...\n";
+                }
 
-                std::cerr << "Inizio del calcolo dello spostamento quadratico medio...\n";
                 Traiettoria test(input);
                 test.imposta_dimensione_finestra_accesso(1);
                 test.imposta_inizio_accesso(0);
 
-                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int> Msd(&test,blocknumber);
-                Msd.calcola(skip,stop_acf,numero_thread);
-                for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes();i++) {
-                    for (unsigned int j=0;j<test.get_ntypes();j++)
-                        std::cout << Msd.media()->elemento(i*test.get_ntypes()+j) << " " <<
-                                     Msd.varianza()->elemento(i*test.get_ntypes()+j) << " ";
+                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool> Msd(&test,blocknumber);
+                Msd.calcola(skip,stop_acf,numero_thread,msd_cm);
+                for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {
+                    for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)
+                        std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<
+                                     Msd.varianza()->elemento(i*test.get_ntypes()*f_cm+j) << " ";
                     std::cout << "\n";
                 }
+
+            }else if (vicini_r>0){
+                std::cerr << "Inizio del calcolo dell'istogramma del numero di vicini per tipo di tutti gli atomi\n";
+                Traiettoria test(input);
+                test.set_pbc_wrap(true);
+                test.imposta_dimensione_finestra_accesso(1);
+                test.imposta_inizio_accesso(0);
+
+                IstogrammaAtomiRaggio h(&test,vicini_r,skip,numero_thread);
+                unsigned int nt=test.get_ntimesteps(),
+                        s=(nt-1)/blocknumber;
+                h.reset(s);
+                test.imposta_dimensione_finestra_accesso(s);
+                for (unsigned int i=0;i<blocknumber;i++){
+                    unsigned int t=s*i;
+                    test.imposta_inizio_accesso(t);
+                    h.calcola(t);
+                }
+                std::map<unsigned int, unsigned int> *hist=h.get_hist();
+                for (unsigned int i=0;i<test.get_ntypes();i++){
+                    std::cout << "\""<<i<<"\"\n";
+                    for (auto it=hist[i].begin();it!=hist[i].end();++it){
+                        std::cout << it->first << " " << it->second << "\n";
+                    }
+                    std::cout << "\n\n";
+                }
+
 
             }else if (velocity_h) {
                 std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";

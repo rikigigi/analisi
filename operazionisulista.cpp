@@ -24,13 +24,13 @@
 #include "greenkuboNcomponentionicfluid.h"
 #include "msd.h"
 
-template <class T>  OperazioniSuLista<T>::OperazioniSuLista()
+template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT >::OperazioniSuLista()
 {
     lista=0;
     lunghezza_lista=0;
 }
 
-template <class T> double OperazioniSuLista<T>::elemento(unsigned int i) const{
+template < class T, class TFLOAT > TFLOAT OperazioniSuLista < T, TFLOAT >::elemento(unsigned int i) const{
     if (i<lunghezza_lista) {
         return lista[i];
     } else {
@@ -38,11 +38,11 @@ template <class T> double OperazioniSuLista<T>::elemento(unsigned int i) const{
         abort();
     }
 }
-template <class T> unsigned int  OperazioniSuLista<T>::lunghezza() const{
+template < class T, class TFLOAT > unsigned int OperazioniSuLista < T, TFLOAT >::lunghezza() const{
     return lunghezza_lista;
 }
 
-template <class T> T &  OperazioniSuLista<T>::operator += (const T & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator += (const T & destra) {
     if (destra.lunghezza()== lunghezza_lista) {
         for (unsigned int i=0;i<lunghezza_lista;i++) {
             lista[i]+=destra.elemento(i);
@@ -54,7 +54,7 @@ template <class T> T &  OperazioniSuLista<T>::operator += (const T & destra) {
     return static_cast<T&>(*this);
 }
 
-template <class T> T &  OperazioniSuLista<T>::operator -= (const T & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator -= (const T & destra) {
     if (destra.lunghezza()== lunghezza_lista) {
         for (unsigned int i=0;i<lunghezza_lista;i++) {
             lista[i]-=destra.elemento(i);
@@ -66,7 +66,7 @@ template <class T> T &  OperazioniSuLista<T>::operator -= (const T & destra) {
     return static_cast<T&>(*this);
 }
 
-template <class T> T &  OperazioniSuLista<T>::operator *= (const T & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator *= (const T & destra) {
     if (destra.lunghezza()== lunghezza_lista) {
 #ifdef DEBUG2
         std::cerr << "chiamato OperazioniSuLista<T>::operator *= " __FILE__ ":"<<__LINE__<<"\n";
@@ -82,7 +82,7 @@ template <class T> T &  OperazioniSuLista<T>::operator *= (const T & destra) {
     return static_cast<T&>(*this);
 }
 
-template <class T> T &  OperazioniSuLista<T>::operator /= (const T & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator /= (const T & destra) {
     if (destra.lunghezza()== lunghezza_lista) {
         for (unsigned int i=0;i<lunghezza_lista;i++) {
             lista[i]/=destra.elemento(i);
@@ -94,77 +94,77 @@ template <class T> T &  OperazioniSuLista<T>::operator /= (const T & destra) {
     return static_cast<T&>(*this);
 }
 
-template <class T> const T  OperazioniSuLista<T>::operator + (const T & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator + (const T & destra) const {
     T res = static_cast<const T&>(*this);
     res+=destra;
     return res;
 }
-template <class T> const T  OperazioniSuLista<T>::operator - (const T & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator - (const T & destra) const {
     T res =  static_cast<const T&>(*this);
     res-=destra;
     return res;
 }
-template <class T> const T  OperazioniSuLista<T>::operator * (const T & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator * (const T & destra) const {
     T res = static_cast<const T&>(*this);
     res*=destra;
     return res;
 }
-template <class T> const T  OperazioniSuLista<T>::operator / (const T & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator / (const T & destra) const {
     T res = static_cast<const T&>(*this);
     res/=destra;
     return res;
 }
 
-template <class T> T &  OperazioniSuLista<T>::operator += (const double & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator += (const TFLOAT & destra) {
     for (unsigned int i=0;i<lunghezza_lista;i++) {
         lista[i]+=destra;
     }
     return static_cast<T&>(*this);
 }
-template <class T> T &  OperazioniSuLista<T>::operator -= (const double & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator -= (const TFLOAT & destra) {
     for (unsigned int i=0;i<lunghezza_lista;i++) {
         lista[i]-=destra;
     }
     return static_cast<T&>(*this);
 }
-template <class T> T &  OperazioniSuLista<T>::operator *= (const double & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator *= (const TFLOAT & destra) {
     for (unsigned int i=0;i<lunghezza_lista;i++) {
         lista[i]*=destra;
     }
     return static_cast<T&>(*this);
 }
-template <class T> T &  OperazioniSuLista<T>::operator /= (const double & destra) {
+template < class T, class TFLOAT > T &   OperazioniSuLista < T, TFLOAT >::operator /= (const TFLOAT & destra) {
     for (unsigned int i=0;i<lunghezza_lista;i++) {
         lista[i]/=destra;
     }
     return static_cast<T&>(*this);
 }
 
-template <class T> const T  OperazioniSuLista<T>::operator + (const double & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator + (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res+=destra;
     return res;
 }
-template <class T> const T  OperazioniSuLista<T>::operator - (const double & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator - (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res-=destra;
     return res;
 }
-template <class T> const T  OperazioniSuLista<T>::operator * (const double & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator * (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res*=destra;
     return res;
 }
-template <class T> const T  OperazioniSuLista<T>::operator / (const double & destra) const {
+template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator / (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res/=destra;
     return res;
 }
 
 
-template <class T> OperazioniSuLista<T> & OperazioniSuLista<T>::operator =(const OperazioniSuLista<T> &destra) {
+template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT > & OperazioniSuLista<T, TFLOAT>::operator =(const OperazioniSuLista<T, TFLOAT> &destra) {
 #ifdef DEBUG2
-    std::cerr << "chiamato OperazioniSuLista<T>::operator = " __FILE__ ":"<<__LINE__<<"\n";
+    std::cerr << "chiamato OperazioniSuLista<T, TFLOAT>::operator = " __FILE__ ":"<<__LINE__<<"\n";
 #endif
     if (lunghezza_lista!=destra.lunghezza_lista) { //rialloca la memoria
 #ifdef DEBUG2
@@ -172,9 +172,9 @@ template <class T> OperazioniSuLista<T> & OperazioniSuLista<T>::operator =(const
 #endif
         delete  [] lista;
         lunghezza_lista=destra.lunghezza_lista;
-        lista = new double[lunghezza_lista];
+        lista = new TFLOAT[lunghezza_lista];
 #ifdef DEBUG2
-    std::cerr << "new double [] "<<lista<<"\n";
+    std::cerr << "new TFLOAT [] "<<lista<<"\n";
 #endif
     }
     if (lunghezza_lista==destra.lunghezza_lista){
@@ -188,25 +188,25 @@ template <class T> OperazioniSuLista<T> & OperazioniSuLista<T>::operator =(const
     return *this;
 }
 
-template <class T> OperazioniSuLista<T>::OperazioniSuLista(const OperazioniSuLista<T> & copiare) {
+template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT >::OperazioniSuLista(const OperazioniSuLista<T, TFLOAT> & copiare) {
     lista=0;
     lunghezza_lista=0;
     operator=(copiare);
 #ifdef DEBUG
-    std::cerr << "OperazioniSuLista<T>::OperazioniSuLista(const OperazioniSuLista<T> & copiare) "<<lista<<"\n";
+    std::cerr << "OperazioniSuLista<T, TFLOAT>::OperazioniSuLista(const OperazioniSuLista<T, TFLOAT> & copiare) "<<lista<<"\n";
 #endif
 }
 
-template <class T> OperazioniSuLista<T>::~OperazioniSuLista() {
+template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT >::~OperazioniSuLista() {
 #ifdef DEBUG2
-    std::cerr << "chiamato OperazioniSuLista<T>::~OperazioniSuLista " __FILE__ ":"<<__LINE__<<"\n";
+    std::cerr << "chiamato OperazioniSuLista<T, TFLOAT>::~OperazioniSuLista " __FILE__ ":"<<__LINE__<<"\n";
     std::cerr << "delete [] "<<lista<<"\n";
 #endif
     delete [] lista;
 
 }
 
-template <class T> void OperazioniSuLista<T>::azzera() {
+template < class T, class TFLOAT > void OperazioniSuLista < T, TFLOAT >::azzera() {
     for (unsigned int i=0;i<lunghezza_lista;i++) {
         lista[i]=0;
     }
@@ -217,5 +217,7 @@ template class OperazioniSuLista<PosizioniEquilibrio>;
 template class OperazioniSuLista<ModiVibrazionali>;
 template class OperazioniSuLista<IstogrammaVelocita>;
 template class OperazioniSuLista<GreenKubo2ComponentIonicFluid>;
-template class OperazioniSuLista<GreenKuboNComponentIonicFluid>;
+template class OperazioniSuLista<GreenKuboNComponentIonicFluid<> >;
+template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,double>,long double >;
+template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,long double>,long double >;
 template class OperazioniSuLista<MSD>;

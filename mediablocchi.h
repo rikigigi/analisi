@@ -51,15 +51,29 @@ static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
 };
 
 
-template <> class TraiettoriaF<ReadLog> {
+template <> class TraiettoriaF<ReadLog<> > {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog* traiettoria ){
+static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog<>* traiettoria ){
 
 }
-static void imposta_inizio_accesso(unsigned int s_,ReadLog* traiettoria  ){
+static void imposta_inizio_accesso(unsigned int s_,ReadLog<>* traiettoria  ){
 
 }
-static unsigned int get_ntimesteps(ReadLog* traiettoria ){
+static unsigned int get_ntimesteps(ReadLog<>* traiettoria ){
+    return traiettoria->n_timestep();
+}
+
+};
+
+template <> class TraiettoriaF<ReadLog<long double> > {
+public:
+static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog<long double>* traiettoria ){
+
+}
+static void imposta_inizio_accesso(unsigned int s_,ReadLog<long double>* traiettoria  ){
+
+}
+static unsigned int get_ntimesteps(ReadLog<long double>* traiettoria ){
     return traiettoria->n_timestep();
 }
 

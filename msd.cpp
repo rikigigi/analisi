@@ -3,9 +3,13 @@
 #include<thread>
 #include <vector>
 
-MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads) :
-    traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads)
+MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa) :
+    traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa)
 {
+    if (calcola_msd_centro_di_massa)
+        f_cm=2;
+    else
+        f_cm=1;
 }
 
 unsigned int MSD::numeroTimestepsOltreFineBlocco(unsigned int n_b){
@@ -15,7 +19,9 @@ unsigned int MSD::numeroTimestepsOltreFineBlocco(unsigned int n_b){
 void MSD::reset(const unsigned int numeroTimestepsPerBlocco) {
 
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
-    lunghezza_lista=leff*traiettoria->get_ntypes();
+
+    lunghezza_lista=leff*traiettoria->get_ntypes()*f_cm;
+
     ntimesteps=numeroTimestepsPerBlocco;
     delete [] lista;
     lista=new double [lunghezza_lista];
@@ -26,12 +32,13 @@ void MSD::calcola(unsigned int primo) {
 
 
 
+
     if (nthread<1) {
-        unsigned int *cont=new unsigned int [traiettoria->get_ntypes()];
+        unsigned int *cont=new unsigned int [traiettoria->get_ntypes()*f_cm];
 
         for (unsigned int t=0;t<leff;t++) {
-            for (unsigned int i=0;i<traiettoria->get_ntypes();i++){
-                lista[traiettoria->get_ntypes()*t+i]=0.0;
+            for (unsigned int i=0;i<traiettoria->get_ntypes()*f_cm;i++){
+                lista[traiettoria->get_ntypes()*t*f_cm+i]=0.0;
                 cont[i]=0;
             }
             for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
@@ -39,8 +46,8 @@ void MSD::calcola(unsigned int primo) {
                     double delta=(pow(traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0],2)+
                             pow(traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1],2)+
                             pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))/3.0
-                            -lista[traiettoria->get_ntypes()*t+traiettoria->get_type(iatom)];
-                    lista[traiettoria->get_ntypes()*t+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                            -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)];
+                    lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
                 }
             }
@@ -60,12 +67,12 @@ void MSD::calcola(unsigned int primo) {
 
         for (unsigned int ith=0;ith<nthread;ith++) {
             threads.push_back(std::thread([&,ith](){
-                unsigned int *cont=new unsigned int [traiettoria->get_ntypes()];
+                unsigned int *cont=new unsigned int [traiettoria->get_ntypes()*f_cm];
                 unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
 
                 for (unsigned int t=npassith*ith;t<ultimo;t++) {
-                    for (unsigned int i=0;i<traiettoria->get_ntypes();i++){
-                        lista[traiettoria->get_ntypes()*t+i]=0.0;
+                    for (unsigned int i=0;i<traiettoria->get_ntypes()*f_cm;i++){
+                        lista[traiettoria->get_ntypes()*t*f_cm+i]=0.0;
                         cont[i]=0;
                     }
                     for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
@@ -73,9 +80,19 @@ void MSD::calcola(unsigned int primo) {
                             double delta=(pow(traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0],2)+
                                     pow(traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1],2)+
                                     pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))/3.0
-                                    -lista[traiettoria->get_ntypes()*t+traiettoria->get_type(iatom)];
-                            lista[traiettoria->get_ntypes()*t+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                                    -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)];
+                            lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
+                        }
+                        if (cm_msd) {
+                            for (unsigned int itype=0; itype < traiettoria->get_ntypes(); itype++) {
+                            double delta=(pow(traiettoria->posizioni_cm(primo+imedia,itype)[0]-traiettoria->posizioni_cm(primo+imedia+t,itype)[0],2)+
+                                    pow(traiettoria->posizioni_cm(primo+imedia,itype)[1]-traiettoria->posizioni_cm(primo+imedia+t,itype)[1],2)+
+                                    pow(traiettoria->posizioni_cm(primo+imedia,itype)[2]-traiettoria->posizioni_cm(primo+imedia+t,itype)[2],2))/3.0
+                                    -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_ntypes()+itype];
+                                
+                                lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_ntypes()+itype]+=delta/(++cont[traiettoria->get_ntypes()+itype]);
+                           }
                         }
                     }
                 }
