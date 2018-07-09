@@ -47,7 +47,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
      }
 #endif
 
-     //determina il numero di colonne da allocare
+     //determina il numero di colonne da allocare, e comprende le eventuali cariche
      unsigned int n_columns_from_binary=0;
      data_size_from_binary=0;
      if (req_headers.size()>0){
@@ -56,8 +56,11 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
                  std::cerr << "Errore: non puoi chiedere di fare un analisi con al posto della corrente i timestep (colonna Step)\n";
                  abort();
              }
-             if (qs(*it).first !="")
-                 n_columns_from_binary++;
+             auto Qs=qs(*it);
+             if (Qs.first !=""){
+                 n_columns_from_binary++; //aggiungi i valori delle cariche letti
+                 q_current_type.push_back(Qs.second);
+             }
          }
          data_size_from_binary=n_columns_from_binary*3;
      }
@@ -147,12 +150,34 @@ template <class TFLOAT> int ReadLog<TFLOAT>::need_binary(std::vector<std::string
 
 }
 
-template <class TFLOAT> void ReadLog<TFLOAT>::set_traj(Traiettoria * t){
+template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsigned int n_b){
     traiettoria=t;
-    ChargeFluxTs jq(traiettoria);
-    //calcola e legge la corrente partendo dal file binario (devo dividere la traiettoria in pezzi e farlo a tratti...)
-    for (unsigned int ts=0;ts<data.size()/data_size;ts++){
-        //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
+    //calcola e legge la corrente partendo dal file binario (nella classe traiettoria sono già presenti le velocità dei centri di massa)
+    unsigned int timesteps_tot=data.size()/data_size;
+    unsigned int n_data_b=timesteps_tot/n_b;
+    unsigned int ntypes=t->get_ntypes();
+    //controlla che il numero di correnti corrisponda al numero di coefficienti forniti
+    for (auto it = q_current_type.begin();it!=q_current_type.end();++it) {
+        if ((*it).size()!=ntypes) {
+            std::cerr << "Errore: il numero di coefficienti specificati deve corrispondere al numero di tipi di atomi nella traiettoria!\n";
+            abort();
+        }
+    }
+    for (unsigned int ib=0;ib<n_b;ib++){
+        for (unsigned int ts=ib*n_data_b;ts<(ib+1)*n_data_b;ts++){
+            //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
+            for (unsigned int i=0;i<q_current_type.size();i++) {
+                double * v_cm=t->velocita_cm(ts,0);
+                for (unsigned int icoord=0;icoord<3;icoord++)
+                    data[ts*data_size+(data_size-data_size_from_binary)+i*3+icoord]=0.0;
+                for (unsigned int icm=0;icm<ntypes;icm++) {
+                    for (unsigned int icoord=0;icoord<3;icoord++) {
+                        data[ts*data_size+(data_size-data_size_from_binary)+i*3+icoord]+=
+                                v_cm[icm*3+icoord]*q_current_type[i][icm];
+                    }
+                }
+            }
+        }
     }
 }
 

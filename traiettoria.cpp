@@ -71,6 +71,7 @@ Traiettoria::Traiettoria(std::string filename)
     wrap_pbc=false;
     calculate_center_of_mass=false;
     buffer_posizioni_cm=0;
+    buffer_velocita_cm=0;
 
     fd=open(filename.c_str(), O_RDONLY);
     if (fd==-1) {
@@ -134,7 +135,7 @@ void Traiettoria::init_buffer_tipi() {
 
    Intestazione_timestep * intestazione=0;
    Chunk * pezzi=0;
-   size_t offset = leggi_pezzo(0,intestazione,pezzi); 
+   size_t offset = leggi_pezzo(0,intestazione,pezzi);
    natoms=intestazione->natoms;
 
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
@@ -146,7 +147,7 @@ void Traiettoria::init_buffer_tipi() {
         }
 
    delete [] pezzi;
-   get_ntypes(); 
+   get_ntypes();
 
    for (unsigned int i=0;i<natoms;i++) {
        buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
@@ -196,6 +197,7 @@ Traiettoria::~Traiettoria(){
     delete [] buffer_scatola;
     fftw_free(buffer_posizioni);
     fftw_free(buffer_posizioni_cm);
+    fftw_free(buffer_velocita_cm);
     fftw_free(buffer_velocita);
 
     if (file != 0)
@@ -322,9 +324,11 @@ Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &
         //questo alloca la memoria in modo corretto per permettere l'utilizzo delle istruzioni SIMD in fftw3
         fftw_free(buffer_posizioni);
         fftw_free(buffer_posizioni_cm);
+        fftw_free(buffer_velocita_cm);
         fftw_free(buffer_velocita);
         buffer_posizioni= (double*) fftw_malloc(sizeof(double)*natoms*3*Ntimesteps);
         buffer_posizioni_cm= (double*) fftw_malloc(sizeof(double)*3*Ntimesteps*ntypes);
+        buffer_velocita_cm= (double*) fftw_malloc(sizeof(double)*3*Ntimesteps*ntypes);
         buffer_velocita=(double*) fftw_malloc(sizeof(double)*natoms*3*Ntimesteps);
         delete [] buffer_scatola;
         buffer_scatola= new double [6*Ntimesteps];
@@ -535,6 +539,10 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         for (unsigned int itype=0;itype<ntypes*3;itype++)
         buffer_posizioni_cm[(finestra_differenza+i)*3*ntypes+itype]=
                 buffer_posizioni_cm[i*3*ntypes + itype];
+        //anche la velocità del centro di massa
+        for (unsigned int itype=0;itype<ntypes*3;itype++)
+        buffer_velocita_cm[(finestra_differenza+i)*3*ntypes+itype]=
+                buffer_velocita_cm[i*3*ntypes + itype];
 
     }
 
@@ -557,10 +565,11 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         double l[3]={intestazione->scatola[1]-intestazione->scatola[0],
                      intestazione->scatola[3]-intestazione->scatola[2],
                      intestazione->scatola[5]-intestazione->scatola[4]};
-        //calcola anche la posizione del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
+        //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
         for (unsigned int itype=0;itype<ntypes*3;itype++){
             buffer_posizioni_cm[t*3*ntypes+itype]=0.0;
+            buffer_velocita_cm[t*3*ntypes+itype]=0.0;
         }
         for (unsigned int itype=0;itype<ntypes;itype++){
             cont_cm[itype]=0;
@@ -585,11 +594,16 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                         buffer_tipi[id]=tipo;
                     }
                 }
-                //aggiorna la media delle posizioni del centro di massa
+                //aggiorna la media delle posizioni e delle velocità del centro di massa
                 unsigned int tipo_id=buffer_tipi_id[id];
                 cont_cm[tipo_id]++;
                 for (unsigned int icoord=0;icoord<3;icoord++){
-                    buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord]+=(pezzi[ichunk].atomi[iatomo].posizione[icoord]-buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord])/(cont_cm[tipo_id]);
+                    buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord]+=
+                            (pezzi[ichunk].atomi[iatomo].posizione[icoord]
+                             -buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord])   /(cont_cm[tipo_id]);
+                    buffer_velocita_cm[t*3*ntypes+3*tipo_id+icoord]+=
+                            (pezzi[ichunk].atomi[iatomo].velocita[icoord]-
+                             buffer_velocita_cm[t*3*ntypes+3*tipo_id+icoord])     /(cont_cm[tipo_id]);
                 }
             }
         }
@@ -680,6 +694,37 @@ double * Traiettoria::posizioni_cm(const int &timestep, const int &tipo){
             t=timestep-timestep_corrente;
             if (t>0 && t< timestep_finestra)
                 return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+            else
+                abort();
+        } else {
+            std::cerr << "Errore nel caricamento del file.\n";
+            return 0;
+        }
+    }
+
+}
+
+double * Traiettoria::velocita_cm(const int &timestep, const int &tipo){
+
+    if (tipo<0 || tipo > ntypes) {
+        std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
+        return 0;
+    }
+
+    int t=timestep-timestep_corrente;
+
+    if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+        return &buffer_velocita_cm[t*3*ntypes+tipo*3];
+
+    } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+#ifdef DEBUG
+        std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+        if(imposta_inizio_accesso(timestep)) {
+            t=timestep-timestep_corrente;
+            if (t>0 && t< timestep_finestra)
+                return &buffer_velocita_cm[t*3*ntypes+tipo*3];
             else
                 abort();
         } else {

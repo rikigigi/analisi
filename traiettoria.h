@@ -44,6 +44,7 @@ public:
     double * velocita (const int & timestep, const int & atomo);
     double * scatola (const int & timestep);
     double * posizioni_cm(const int & timestep, const int & tipo);
+    double * velocita_cm(const int & timestep, const int & tipo);
     double *scatola_last();
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
@@ -76,6 +77,7 @@ private:
     double * cariche;
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
     double * buffer_posizioni_cm; // posizioni del centro di massa
+    double * buffer_velocita_cm; // velocità del centro di massa
 
     int * buffer_tipi,*buffer_tipi_id;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps

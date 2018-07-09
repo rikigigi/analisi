@@ -24,7 +24,7 @@ public:
     **/
     std::pair<unsigned int,bool> get_index_of(std::string header);
     int need_binary(std::vector<std::string> headers);
-    void set_traj(Traiettoria * t);
+    void calc_currents(Traiettoria * t,unsigned int blocks);
 private:
     Traiettoria * traiettoria;
     std::vector<std::string> headers;
@@ -34,6 +34,7 @@ private:
     size_t data_size,data_size_from_binary;
     bool if_only_numbers(std::string str);
     unsigned int natoms;
+    std::vector< std::vector<TFLOAT> > q_current_type;
     std::pair<std::string,std::vector<TFLOAT> >qs(std::string header);
 
 };

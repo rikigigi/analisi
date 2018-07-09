@@ -180,11 +180,10 @@ int main(int argc, char ** argv)
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
                 ReadLog<> test(log_input);
                 Traiettoria * binary_traj=NULL;
-                //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità -- NOT IMPLEMENTED
+                //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
                 if (test.need_binary(headers)>0) {
                     binary_traj=new Traiettoria(input);
-                    binary_traj->imposta_dimensione_finestra_accesso(1);
-                    binary_traj->imposta_inizio_accesso(0);
+                    test.calc_currents(binary_traj,blocknumber);
                 }
 
                 double factor_conv=1.0;
@@ -379,8 +378,6 @@ int main(int argc, char ** argv)
                 }
 
                 Traiettoria test(input);
-                test.imposta_dimensione_finestra_accesso(1);
-                test.imposta_inizio_accesso(0);
 
                 MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool> Msd(&test,blocknumber);
                 Msd.calcola(skip,stop_acf,numero_thread,msd_cm);
@@ -395,8 +392,6 @@ int main(int argc, char ** argv)
                 std::cerr << "Inizio del calcolo dell'istogramma del numero di vicini per tipo di tutti gli atomi\n";
                 Traiettoria test(input);
                 test.set_pbc_wrap(true);
-                test.imposta_dimensione_finestra_accesso(1);
-                test.imposta_inizio_accesso(0);
 
                 IstogrammaAtomiRaggio h(&test,vicini_r,skip,numero_thread);
                 unsigned int nt=test.get_ntimesteps(),
@@ -421,8 +416,6 @@ int main(int argc, char ** argv)
             }else if (velocity_h) {
                 std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";
                 Traiettoria test(input);
-                test.imposta_dimensione_finestra_accesso(1);
-                test.imposta_inizio_accesso(0);
                 MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
                 istogramma_vel.calcola(nbins,vmax_h);
 
@@ -439,8 +432,6 @@ int main(int argc, char ** argv)
             } else if (fononefile != "") {
                 std::cerr << "Inizio analisi dei modi normale di vibrazione del cristallo...\n";
                 Traiettoria test(input);
-                test.imposta_dimensione_finestra_accesso(1);
-                test.imposta_inizio_accesso(0);
                 ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
                 test_normali.reset(numero_frame);
                 test_normali.calcola(0);
@@ -449,8 +440,6 @@ int main(int argc, char ** argv)
             } else if (spettro_vibraz) {
                 std::cerr << "Inizio del calcolo dello spettro vibrazionale...\n";
                 Traiettoria test(input);
-                test.imposta_dimensione_finestra_accesso(1);
-                test.imposta_inizio_accesso(0);
                 //            SpettroVibrazionale test_spettro(&test);
                 MediaBlocchi<SpettroVibrazionale> test_spettro_blocchi(&test,blocknumber);
 
