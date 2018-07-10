@@ -83,7 +83,7 @@ int main(int argc, char ** argv)
             ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"carica in unità elementari del tipo 2")
             ("conv_n,C",boost::program_options::value<int>(&conv_n)->default_value(10),"sigma della gaussiana con cui viene fatta la convoluzione del coefficiente di trasporto termico al variare del tempo di integrazione (in numero di frame)")
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"numero di frame a cui estrarre il risultato finale")
-            ("dump-block-H,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"scrive in dei file (aggiungendo ogni volta alla fine) i calcoli di ogni signolo blocco per il calcolo del coefficiente di trasporto termico in un sale fuso")
+            ("dump-block,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"scrive in dei file (aggiungendo ogni volta alla fine) i calcoli di ogni signolo blocco per il calcolo del coefficiente di trasporto termico e dello spostamento quadratico medio")
             ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"lunghezza massima, in frame, di tutte le funzioni di correlazione e relativi integrali o dello spostamento quadratico medio. Se posto a zero è pari alle dimensioni del blocco")
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni atomo di ciascuna specie atomica")
@@ -379,8 +379,8 @@ int main(int argc, char ** argv)
 
                 Traiettoria test(input);
 
-                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool> Msd(&test,blocknumber);
-                Msd.calcola(skip,stop_acf,numero_thread,msd_cm);
+                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool> Msd(&test,blocknumber);
+                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,dumpGK);
                 for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {
                     for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)
                         std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<

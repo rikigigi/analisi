@@ -11,7 +11,8 @@ public:
         unsigned int skip=1,
         unsigned int tmax=0,
         unsigned int nthreads=0,
-        bool calcola_msd_centro_di_massa=false
+        bool calcola_msd_centro_di_massa=false,
+        bool debug=false
             );
 
     void reset(const unsigned int numeroTimestepsPerBlocco);
@@ -21,7 +22,7 @@ public:
 private:
     Traiettoria * traiettoria;
     unsigned int ntimesteps,skip,lmax,leff,nthread,f_cm;
-    bool cm_msd;
+    bool cm_msd,debug;
 };
 
 #endif // MSD_H

@@ -2,9 +2,10 @@
 #include <cmath>
 #include<thread>
 #include <vector>
+#include <fstream>
 
-MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa) :
-    traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa)
+MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa,bool debug) :
+    traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa),debug(debug)
 {
     if (calcola_msd_centro_di_massa)
         f_cm=2;
@@ -90,7 +91,7 @@ void MSD::calcola(unsigned int primo) {
                                     pow(traiettoria->posizioni_cm(primo+imedia,itype)[1]-traiettoria->posizioni_cm(primo+imedia+t,itype)[1],2)+
                                     pow(traiettoria->posizioni_cm(primo+imedia,itype)[2]-traiettoria->posizioni_cm(primo+imedia+t,itype)[2],2))/3.0
                                     -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_ntypes()+itype];
-                                
+
                                 lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_ntypes()+itype]+=delta/(++cont[traiettoria->get_ntypes()+itype]);
                            }
                         }
@@ -105,6 +106,17 @@ void MSD::calcola(unsigned int primo) {
 
         threads.clear();
 
+        if (debug) {
+            std::ofstream out ("analisi_msd.debug",std::fstream::app);
+            for (unsigned int ts=0;ts<leff;ts++) {
+                out << ts;
+                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*f_cm;itype++){
+                    out <<" "<<lista[traiettoria->get_ntypes()*ts*f_cm+itype];
+                }
+                out << "\n";
+            }
+            out << "\n\n";
+        }
 
 
     }
