@@ -22,6 +22,7 @@
 #include "config.h"
 #include "greenkubo2componentionicfluid.h"
 #include "greenkuboNcomponentionicfluid.h"
+#include "gofrt.h"
 #include "msd.h"
 
 template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT >::OperazioniSuLista()
@@ -221,3 +222,4 @@ template class OperazioniSuLista<GreenKuboNComponentIonicFluid<> >;
 template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,double>,long double >;
 template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,long double>,long double >;
 template class OperazioniSuLista<MSD>;
+template class OperazioniSuLista<Gofrt>;
