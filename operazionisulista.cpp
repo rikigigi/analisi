@@ -222,4 +222,5 @@ template class OperazioniSuLista<GreenKuboNComponentIonicFluid<> >;
 template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,double>,long double >;
 template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,long double>,long double >;
 template class OperazioniSuLista<MSD>;
-template class OperazioniSuLista<Gofrt>;
+template class OperazioniSuLista<Gofrt<double>,double>;
+template class OperazioniSuLista<Gofrt<long double>,long double>;

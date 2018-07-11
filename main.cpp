@@ -28,6 +28,7 @@
 #include "heatfluxts.h"
 #include "msd.h"
 #include "istogrammaatomiraggio.h"
+#include "gofrt.h"
 #include <functional>
 #ifdef HAVEfftw3
 #include <fftw3.h>
@@ -42,10 +43,10 @@
 
 int main(int argc, char ** argv)
 {
-    boost::program_options::options_description options("Riccardo Bertossa, 2017\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica tramite l'analisi a blocchi.\n\nOpzioni consentite");
+    boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    unsigned int n_seg=0;
+    unsigned int n_seg=0,gofrt=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::vector<unsigned int > cvar_list,kk_l;
@@ -88,7 +89,7 @@ int main(int argc, char ** argv)
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni atomo di ciascuna specie atomica")
             ("mean-square-displacement-cm,Q",boost::program_options::bool_switch(&msd_cm)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per centro di massa di ciascuna specie atomica")
-            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti.")
+            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti. Se è impostato il calcolo della g(r,t), indica gli estremi dell'istogramma.")
             ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
@@ -96,6 +97,7 @@ int main(int argc, char ** argv)
             ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"valore minimo e massimo del range in cui testare k")
             ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input nel file qui specificato")
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
+            ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -387,6 +389,37 @@ int main(int argc, char ** argv)
                                      Msd.varianza()->elemento(i*test.get_ntypes()*f_cm+j) << " ";
                     std::cout << "\n";
                 }
+
+            }else if (gofrt>0) {
+                if (factors_input.size()!=2){
+                    std::cerr << "Errore: specificare il valore minimo è masimo delle distanze da utilizzare per costruire l'istogramma con l'opzione -F.\n";
+                    abort();
+                }
+                std::cerr << "Inizio del calcolo di g(r,t) -- parte distintiva del correlatore di van Hove...\n";
+                Traiettoria tr(input);
+                tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
+
+                MediaBlocchi<Gofrt<double>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                        gofr(&tr,blocknumber);
+                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,dumpGK);
+
+                unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1)/2;
+                unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
+
+                for (unsigned int t=0;t<tmax;t++) {
+                    for (unsigned int r=0;r<gofrt;r++) {
+                        std::cout << t << " " << r;
+                        for (unsigned int itype=0;itype<ntyp;itype++) {
+                            std::cout << " "<< gofr.media()->elemento(
+                                             t*ntyp*gofrt+
+                                             ntyp*itype+
+                                             r);
+                        }
+                        std::cout << "\n";
+                    }
+                    std::cout << "\n\n";
+                }
+
 
             }else if (vicini_r>0){
                 std::cerr << "Inizio del calcolo dell'istogramma del numero di vicini per tipo di tutti gli atomi\n";

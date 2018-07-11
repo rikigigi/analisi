@@ -66,6 +66,7 @@ public:
     void index_all();
     void set_pbc_wrap(bool);
     double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l);
+    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l);
 //    void set_calculate_center_of_mass(bool);
 //    bool get_calculate_center_of_mass();
 private:

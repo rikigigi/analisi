@@ -5,12 +5,13 @@
 
 class Traiettoria;
 
-class Gofrt : public OperazioniSuLista<Gofrt>
+template <class TFLOAT>
+class Gofrt : public OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT>
 {
 public:
     Gofrt(Traiettoria *t,
-          double rmin,
-          double rmax,
+          TFLOAT rmin,
+          TFLOAT rmax,
           unsigned int nbin,
           unsigned int tmax=0,
           unsigned int nthreads=0,
@@ -23,11 +24,13 @@ public:
     Gofrt & operator =(const Gofrt & destra);
 
 private:
-    double rmin,rmax;
+    using OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT>::lista;
+    using OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT>::lunghezza_lista;
+    TFLOAT rmin,rmax,dr;
     bool debug;
     Traiettoria * traiettoria;
     unsigned int nbin,ntimesteps,lmax,leff,skip,nthreads;
-    double * gofr(unsigned int ts,unsigned int itype);
+    TFLOAT * gofr(unsigned int ts, unsigned int itype=0, unsigned int r=0);
 
 };
 
