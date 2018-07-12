@@ -412,7 +412,7 @@ int main(int argc, char ** argv)
                         for (unsigned int itype=0;itype<ntyp;itype++) {
                             std::cout << " "<< gofr.media()->elemento(
                                              t*ntyp*gofrt+
-                                             ntyp*itype+
+                                             gofrt*itype+
                                              r);
                         }
                         std::cout << "\n";

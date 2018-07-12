@@ -34,9 +34,9 @@ template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimes
 }
 
 template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {
-    unsigned int idx=ts    * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2*nbin
-            +nbin * itype
-            +r;
+    unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2*nbin
+                     +nbin * itype
+                     +r;
     if (idx >= lunghezza_lista) {
         std::cerr << "Errore: indice fuori dal range!\n";
         abort();
@@ -76,13 +76,13 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
                         for (unsigned int jatom=0;jatom<iatom;jatom++) {
                             unsigned int type1=traiettoria->get_type(iatom);
                             unsigned int type2=traiettoria->get_type(jatom);
-                            if (type2>type1) {
+                            if (type2<type1) {
                                 unsigned int tmp=type2;
                                 type2=type1;
                                 type1=tmp;
                             }
                             /*
-                             * xxxxx  ntypes*(ntypes+1)/2 - (ntypes-m)*(ntypes-m+1)/2 +
+                             * xxxxx  ntypes*(ntypes+1)/2 - (m+2)*(m+1)/2 +
                              * xxxxo  + altra coordinata (che deve essere la più grande)
                              * xxxoo  = indice della coppia nella memoria
                              * xxooo
@@ -92,7 +92,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
                              * x
                             */
                             unsigned int itype=traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2
-                                    -(traiettoria->get_ntypes()-type2)*(traiettoria->get_ntypes()-type2-1)/2 +type1 -type2 -1;
+                                    -(type2+1)*(type2+2)/2 +type1;
 
                             //calcola il quadrato della distanza della minima immagine
                             double d=sqrt(traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l));
@@ -123,7 +123,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
         for (unsigned int ts=0;ts<leff;ts++) {
             for (unsigned int r=0;r<nbin;r++){
                 out << ts<< " "<< r;
-                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(itype<traiettoria->get_ntypes()+1)/2;itype++){
+                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;itype++){
                     out << " "<< *gofr(ts,itype,r);
                 }
                 out << "\n";

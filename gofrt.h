@@ -21,7 +21,7 @@ public:
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int);
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
-    Gofrt & operator =(const Gofrt & destra);
+    Gofrt<TFLOAT> & operator =(const Gofrt<TFLOAT> & destra);
 
 private:
     using OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT>::lista;

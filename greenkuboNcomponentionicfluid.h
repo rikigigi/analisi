@@ -49,6 +49,7 @@ public:
     unsigned int get_narr();
     unsigned int get_indexOfKappa();
     unsigned int n_seg_bench();
+
     private:
     using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT>::lista;
     using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT>::lunghezza_lista;
