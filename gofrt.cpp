@@ -25,7 +25,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimes
     leff =(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     //numero di timestep su cui fare la media
     ntimesteps=numeroTimestepsPerBlocco;
-    lunghezza_lista=leff*traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2*nbin;
+    lunghezza_lista=leff*traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin;
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
@@ -34,7 +34,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimes
 }
 
 template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {
-    unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2*nbin
+    unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin
                      +nbin * itype
                      +r;
     if (idx >= lunghezza_lista) {
@@ -65,15 +65,15 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
             for (unsigned int t=npassith*ith;t<ultimo;t++){
 
                 //azzera g(r) per tutti i tipi
-                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;itype++) {
+                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1);itype++) {
                     for (unsigned int r=0;r<nbin;r++){
                         *gofr(t,itype,r)=0.0;
                     }
                 }
-
+                TFLOAT incr=1.0/int(ntimesteps/skip);
                 for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
                     for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                        for (unsigned int jatom=0;jatom<iatom;jatom++) {
+                        for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
                             unsigned int type1=traiettoria->get_type(iatom);
                             unsigned int type2=traiettoria->get_type(jatom);
                             if (type2<type1) {
@@ -93,6 +93,9 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
                             */
                             unsigned int itype=traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2
                                     -(type2+1)*(type2+2)/2 +type1;
+                            if (iatom==jatom){
+                                itype=itype+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;
+                            }
 
                             //calcola il quadrato della distanza della minima immagine
                             double d=sqrt(traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l));
@@ -100,7 +103,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
                             int idx=(int)floorf((d-rmin)/dr);
 
                             if (idx<nbin && idx >= 0)
-                                (*gofr(t,itype,idx))+=1.0;
+                                (*gofr(t,itype,idx))+=incr;
 
 
                         }
@@ -123,7 +126,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
         for (unsigned int ts=0;ts<leff;ts++) {
             for (unsigned int r=0;r<nbin;r++){
                 out << ts<< " "<< r;
-                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;itype++){
+                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1);itype++){
                     out << " "<< *gofr(ts,itype,r);
                 }
                 out << "\n";

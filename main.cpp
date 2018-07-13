@@ -395,7 +395,7 @@ int main(int argc, char ** argv)
                     std::cerr << "Errore: specificare il valore minimo è masimo delle distanze da utilizzare per costruire l'istogramma con l'opzione -F.\n";
                     abort();
                 }
-                std::cerr << "Inizio del calcolo di g(r,t) -- parte distintiva del correlatore di van Hove...\n";
+                std::cerr << "Inizio del calcolo di g(r,t) -- parte distintiva e parte non distintiva del correlatore di van Hove...\n";
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
@@ -403,7 +403,7 @@ int main(int argc, char ** argv)
                         gofr(&tr,blocknumber);
                 gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,dumpGK);
 
-                unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1)/2;
+                unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
                 unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
 
                 for (unsigned int t=0;t<tmax;t++) {
@@ -411,6 +411,10 @@ int main(int argc, char ** argv)
                         std::cout << t << " " << r;
                         for (unsigned int itype=0;itype<ntyp;itype++) {
                             std::cout << " "<< gofr.media()->elemento(
+                                             t*ntyp*gofrt+
+                                             gofrt*itype+
+                                             r)
+                                      << " "<< gofr.varianza()->elemento(
                                              t*ntyp*gofrt+
                                              gofrt*itype+
                                              r);
