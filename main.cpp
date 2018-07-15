@@ -39,10 +39,19 @@
 #ifdef DEBUG
 #include "readlog.h"
 #endif
+#ifdef MPI
+#include "mp.h"
+#endif
 
 
 int main(int argc, char ** argv)
 {
+
+#ifdef MPI
+    Mpi::mpi(&argc,&argv);
+#endif
+
+
     boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;

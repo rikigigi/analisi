@@ -25,8 +25,9 @@
 #include <vector>
 #include <functional>
 #include "calcoliblocchi.h"
-#include "Mpi.h"
-
+#ifdef MPI
+#include "mp.h"
+#endif
 
 
 
@@ -126,6 +127,7 @@ public:
         calc->calcola_begin(s,calcolo);
 
         TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
+#ifndef MPI
 
         cronometro cron;
         cron.set_expected(1.0/double(n_b));
@@ -147,6 +149,27 @@ public:
                          "s. Tempo trascorso e rimanente: "<<cron.time()<<"s "<<cron.expected()<<"s.\n";
 #endif
         }
+#else // MPI
+        int mpime=Mpi::mpi().me(),mpisize=Mpi::mpi().size();
+        for (unsigned int iblock=0;iblock<n_b;iblock+=mpisize) {
+            calcolo->reset(s);
+            unsigned int ib=iblock+mpime;
+            TraiettoriaF<TR>::imposta_inizio_accesso(ib*s,traiettoria);
+            calcolo->calcola(ib*s);
+            if (mpime==0){
+                //ricevi i risultati degli altri e calcola ciò che è da calcolare.
+                calc->calcola(calcolo);
+                for (unsigned int i=1;i<mpisize;i++) {
+                    Mpi::mpi().recv_root(calcolo,i);
+                    calc->calcola(calcolo);
+                }
+
+            } else {
+                Mpi::mpi().send_to_root(calcolo);
+            }
+        }
+
+#endif // MPI
         calc->calcola_end(n_b);
     }
 
