@@ -1,3 +1,4 @@
+#ifdef USE_MPI
 #ifndef MPI_H
 #define MPI_H
 
@@ -35,3 +36,4 @@ private:
 };
 
 #endif // MPI_H
+#endif

@@ -1,3 +1,4 @@
+#ifdef USE_MPI
 
 #include "mp.h"
 
@@ -52,3 +53,5 @@ bool Mp::ionode() {
         return true;
     return false;
 }
+
+#endif

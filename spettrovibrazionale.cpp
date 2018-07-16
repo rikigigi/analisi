@@ -80,11 +80,12 @@ void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'iniz
         fftw_free(trasformata);
         trasformata = (fftw_complex *) fftw_malloc(sizeof(fftw_complex)*(size/2+1)*3*traiettoria->get_natoms());
         trasformata_size=size;
+        double * dummy= (double*) fftw_malloc(sizeof(double)*3*traiettoria->get_natoms()*size);
     fftw3 = fftw_plan_many_dft_r2c(1, // rango della trasformata (1D)
                                    (int*)&size, // lunghezza di ciascuna trasformata
                                    3*traiettoria->get_natoms(), // numero di trasformate
                                    /*  ****** input ******  */
-                                   traiettoria->velocita_inizio(), // puntatore ai dati
+                                   dummy,//traiettoria->velocita_inizio(), // puntatore ai dati
                                    NULL, // i dati sono tutti compatti, non fanno parte di array più grandi
                                    3*traiettoria->get_natoms(), // la distanza fra due dati successivi
                                    1, // la distanza fra due serie di dati adiacenti
@@ -97,11 +98,11 @@ void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'iniz
                                    );
     fplan_natoms=traiettoria->get_natoms();
     fplan_size=size;
-
+    delete [] dummy;
     //devo fare la trasformata della velocità per ogni atomo
     }
 
-    fftw_execute(fftw3);
+    fftw_execute_dft_r2c(fftw3,traiettoria->velocita_inizio(),trasformata);
     // adesso bisogna fare la media del modulo quadro, una per ogni tipo di atomo
 
     double * media = new double[tipi_atomi];
