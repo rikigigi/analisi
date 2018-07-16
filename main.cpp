@@ -39,7 +39,7 @@
 #ifdef DEBUG
 #include "readlog.h"
 #endif
-#ifdef MPI
+#ifdef USE_MPI
 #include "mp.h"
 #endif
 
@@ -47,8 +47,8 @@
 int main(int argc, char ** argv)
 {
 
-#ifdef MPI
-    Mpi::mpi(&argc,&argv);
+#ifdef USE_MPI
+    Mp::mpi(&argc,&argv);
 #endif
 
 

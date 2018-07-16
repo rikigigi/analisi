@@ -5,16 +5,16 @@
 #include "operazionisulista.h"
 #include <iostream>
 
-bool Mpi::initialized=false;
+bool Mp::initialized=false;
 
-Mpi & Mpi::mpi(int *argc, char ***argv) {
+Mp & Mp::mpi(int *argc, char ***argv) {
 
-    static Mpi istanza(argc,argv);
+    static Mp istanza(argc,argv);
     return istanza;
 
 }
 
-Mpi::Mpi(int *argc, char ***argv)
+Mp::Mp(int *argc, char ***argv)
 {
 
     int provided_thread=0;
@@ -35,19 +35,19 @@ Mpi::Mpi(int *argc, char ***argv)
 
 }
 
-Mpi::~Mpi() {
+Mp::~Mp() {
     MPI_Finalize();
 }
 
 
 
-int Mpi::me(){
+int Mp::me(){
     return world_rank;
 }
-int Mpi::size(){
+int Mp::size(){
     return world_size;
 }
-bool Mpi::ionode() {
+bool Mp::ionode() {
     if (world_rank==0)
         return true;
     return false;

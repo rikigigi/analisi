@@ -4,13 +4,13 @@
 //#include "operazionisulista.h"
 
 template <class T,class TFLOAT> class OperazioniSuLista;
-#define OMPI_SKIP_MPICXX
+//#define OMPI_SKIP_MPICXX
 #include <mpi.h>
 
-class Mpi
+class Mp
 {
 public:
-    static Mpi & mpi(int *argc=0, char ***argv=0);
+    static Mp & mpi(int *argc=0, char ***argv=0);
     int me();
     int size();
     bool ionode();
@@ -23,12 +23,12 @@ public:
     MPI_Recv(l->accesso_lista(),l->lunghezza(),MPI_DOUBLE,source,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 }
 
-    ~Mpi();
+    ~Mp();
 
 private:
-    Mpi(Mpi const &) = delete;
-    void operator=(Mpi const&) = delete;
-    Mpi(int *argc, char ***argv);
+    Mp(Mp const &) = delete;
+    void operator=(Mp const&) = delete;
+    Mp(int *argc, char ***argv);
     static bool initialized;
     int world_rank,world_size;
 

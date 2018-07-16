@@ -25,7 +25,7 @@
 #include <vector>
 #include <functional>
 #include "calcoliblocchi.h"
-#ifdef MPI
+#ifdef USE_MPI
 #include "mp.h"
 #endif
 
@@ -128,7 +128,7 @@ public:
 
         TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
         cronometro cron;
-#ifndef MPI
+#ifndef USE_MPI
         cron.set_expected(1.0/double(n_b));
         cron.start();
         for (unsigned int iblock=0;iblock<n_b;iblock++){
@@ -149,7 +149,7 @@ public:
 #endif
         }
 #else // MPI
-        int mpime=Mpi::mpi().me(),mpisize=Mpi::mpi().size();
+        int mpime=Mp::mpi().me(),mpisize=Mp::mpi().size();
         std::cerr << "Inizio del calcolo con " << mpisize << " processi mpi...\n";
         if (mpisize%n_b!=0)
             cron.set_expected(1.0/double(n_b/mpisize+1));
@@ -167,12 +167,12 @@ public:
                 calc->calcola(calcolo);
                 for (unsigned int i=1;i<mpisize;i++) {
                     cronmpi.start();
-                    Mpi::mpi().recv_root(calcolo,i);
+                    Mp::mpi().recv_root(calcolo,i);
                     cronmpi.stop();
                     calc->calcola(calcolo);
                 }
             } else {
-                Mpi::mpi().send_to_root(calcolo);
+                Mp::mpi().send_to_root(calcolo);
             }
             cron.stop();
             std::cerr << "Tempo trascorso: "<<cron.time()<<"s ;  Tempo rimanente: "<<cron.expected()<<"s.\nTempo mpi recv: "<<cronmpi.time()<<"s\n";
