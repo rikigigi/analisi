@@ -35,7 +35,7 @@ SISSA
 
     (mpi, in una cartella separata dai sorgenti)
     
-      cmake [cartella sorgenti] -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DMPI=ON
+      cmake [cartella sorgenti] -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DUSE_MPI=ON
       make
     
     

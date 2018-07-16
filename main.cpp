@@ -487,9 +487,9 @@ int main(int argc, char ** argv)
                 std::cerr << "Inizio del calcolo dello spettro vibrazionale...\n";
                 Traiettoria test(input);
                 //            SpettroVibrazionale test_spettro(&test);
-                MediaBlocchi<SpettroVibrazionale> test_spettro_blocchi(&test,blocknumber);
+                MediaBlocchi<SpettroVibrazionale,bool> test_spettro_blocchi(&test,blocknumber);
 
-                test_spettro_blocchi.calcola();
+                test_spettro_blocchi.calcola(dumpGK);
                 for (unsigned int i=0;i<test_spettro_blocchi.media()->lunghezza()/(3*test.get_ntypes());i++) {
                     std::cout << i << " ";
                     for (unsigned int itipo=0;itipo<test.get_ntypes();itipo++)

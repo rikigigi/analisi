@@ -14,11 +14,12 @@
 
 #include "spettrovibrazionale.h"
 #include "traiettoria.h"
+#include <fstream>
 
-SpettroVibrazionale::SpettroVibrazionale(Traiettoria * t):OperazioniSuLista<SpettroVibrazionale>()
+SpettroVibrazionale::SpettroVibrazionale(Traiettoria * t, bool dump_):OperazioniSuLista<SpettroVibrazionale>()
 {
     traiettoria=t;
-
+    dump=dump_;
     size=0;
     trasformata=0;
     trasformata_size=0;
@@ -148,6 +149,19 @@ void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'iniz
     }
     delete [] media;
     delete [] cont;
+
+    if (dump) {
+       std::ofstream out("analisi_vibr.debug",std::fstream::app);
+       for (unsigned int iomega=0;iomega<lunghezza_lista/(tipi_atomi*3);iomega++){
+           out << iomega;
+           for (unsigned int itype=0;itype<tipi_atomi;itype++) {
+               for (unsigned int idim=0;idim<3;idim++)
+                    out << " " << spettro(iomega,idim,itype);
+           }
+           out << "\n";
+       }
+       out << "\n\n";
+    }
 }
 
 double SpettroVibrazionale::spettro(unsigned int frequenza, unsigned int dim,unsigned int tipo_atomo) {
