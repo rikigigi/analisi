@@ -150,7 +150,7 @@ public:
         }
 #else // MPI
         int mpime=Mpi::mpi().me(),mpisize=Mpi::mpi().size();
-        std::cerr << "Inizio del calcolo con " << mpisize << "processi mpi...\n";
+        std::cerr << "Inizio del calcolo con " << mpisize << " processi mpi...\n";
         if (mpisize%n_b!=0)
             cron.set_expected(1.0/double(n_b/mpisize+1));
         else
@@ -171,14 +171,12 @@ public:
                     cronmpi.stop();
                     calc->calcola(calcolo);
                 }
-                
-
-
             } else {
                 Mpi::mpi().send_to_root(calcolo);
             }
             cron.stop();
             std::cerr << "Tempo trascorso: "<<cron.time()<<"s ;  Tempo rimanente: "<<cron.expected()<<"s.\nTempo mpi recv: "<<cronmpi.time()<<"s\n";
+            std::cerr.flush();
         }
 
 #endif // MPI
