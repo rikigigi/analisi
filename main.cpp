@@ -161,12 +161,13 @@ int main(int argc, char ** argv)
             return 0;
         }
 
+        std::cerr << "Uso " << numero_thread << " threads\n";
+
 
 #ifdef FFTW3_THREADS
         fftw_init_threads();
         fftw_plan_with_nthreads(numero_thread);
 #ifdef DEBUG
-        std::cerr << "fftw_plan_with_nthreads("<<numero_thread<<")\n";
         if (debug) {
             TestTraiettoria ttest(input);
             return 0;
@@ -176,20 +177,20 @@ int main(int argc, char ** argv)
 #ifdef DEBUG
         if (debug2){
 
-            ReadLog<> test(log_input);
+            ReadLog<> test(log_input,0,1,numero_thread);
             for (unsigned int i=0;i<test.n_timestep();i++){
-                std::cerr << i << " "<<test.timestep(i)<< " ";
+                std::cout << i << " "<<test.timestep(i)<< " ";
                 for (unsigned int j=0;j<test.n_data();j++){
-                    std::cerr << test.line(i)[j] << " ";
+                    std::cout << test.line(i)[j] << " ";
                 }
-                std::cerr << "\n";
+                std::cout << "\n";
             }
 
         } else
 #endif // DEBUG
             if (heat_coeff) {
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
-                ReadLog<> test(log_input);
+                ReadLog<> test(log_input,0,1,numero_thread);
                 Traiettoria * binary_traj=NULL;
                 //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
                 if (test.need_binary(headers)>0) {
