@@ -30,6 +30,11 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
             break;
     }
 
+    if (header.size()==0) {
+        std::cerr << "Errore: non riesco a trovare l'intestazione delle colonne!\n";
+        abort();
+    }
+
     //trova i nomi delle colonne e la colonna del timestep
     std::string delim = " ";
 
