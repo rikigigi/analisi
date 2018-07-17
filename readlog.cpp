@@ -7,12 +7,16 @@
 #include <iterator>
 #include <vector>
 #include <thread>
+#include "cronometro.h"
 
 #include "chargefluxts.h"
 
-template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip, unsigned int nthreads, std::vector<std::string> req_headers):
-    traiettoria(t),skip(skip),nthreads(nthreads)
+template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip, unsigned int nthreads, unsigned int nbatch, std::vector<std::string> req_headers):
+    traiettoria(t),skip(skip),nthreads(nthreads),nbatch(nbatch)
 {
+    cronometro cron;
+    cron.start();
+
     if (nthreads<0)
         nthreads=1;
     unsigned int lcont=0;
@@ -78,8 +82,6 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     data_size= (step_index==std::numeric_limits< unsigned int>::max())?(headers.size()+data_size_from_binary):(headers.size()-1+data_size_from_binary);
 
 
-
-    const unsigned int nbatch=50;
 
     TFLOAT * reads=new TFLOAT[data_size*nbatch*nthreads];
     unsigned int *TS=new unsigned int [nbatch*nthreads];
@@ -170,6 +172,8 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     delete [] readok;
     delete [] TS;
     delete [] buffer;
+    cron.stop();
+    std::cerr << "Tempo per la lettura dei dati: " << cron.time() << "s\n";
 #ifdef DEBUG
     std::cerr << "Numero di dati letti dal file '"<<filename<<"': "<<data.size()/data_size<<"\n";
 #endif

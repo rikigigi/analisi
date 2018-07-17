@@ -8,7 +8,7 @@ template <class TFLOAT=double>
 class ReadLog
 {
 public:
-    ReadLog(std::string filename, Traiettoria * t=0, unsigned int skip=1,unsigned int nthreads=0,
+    ReadLog(std::string filename, Traiettoria * t=0, unsigned int skip=1,unsigned int nthreads=0, unsigned int nbatch=200,
             std::vector<std::string> req_headers=std::vector<std::string>());
     ~ReadLog();
     TFLOAT * line(unsigned int index);
@@ -30,7 +30,7 @@ private:
     std::vector<std::string> headers;
     std::vector<TFLOAT > data;
     std::vector<unsigned int > timesteps;
-    unsigned int skip,size,step_index;
+    unsigned int skip,size,step_index,nbatch;
     size_t data_size,data_size_from_binary;
     bool if_only_numbers(std::string str);
     unsigned int natoms,nthreads;

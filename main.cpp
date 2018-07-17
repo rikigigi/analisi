@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    unsigned int n_seg=0,gofrt=0;
+    unsigned int n_seg=0,gofrt=0,read_lines_thread=200;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::vector<unsigned int > cvar_list,kk_l;
@@ -107,6 +107,7 @@ int main(int argc, char ** argv)
             ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input nel file qui specificato")
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
+            ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
@@ -177,7 +178,7 @@ int main(int argc, char ** argv)
 #ifdef DEBUG
         if (debug2){
 
-            ReadLog<> test(log_input,0,1,numero_thread);
+            ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread);
             for (unsigned int i=0;i<test.n_timestep();i++){
                 std::cout << i << " "<<test.timestep(i)<< " ";
                 for (unsigned int j=0;j<test.n_data();j++){
@@ -190,7 +191,7 @@ int main(int argc, char ** argv)
 #endif // DEBUG
             if (heat_coeff) {
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
-                ReadLog<> test(log_input,0,1,numero_thread);
+                ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread);
                 Traiettoria * binary_traj=NULL;
                 //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
                 if (test.need_binary(headers)>0) {
