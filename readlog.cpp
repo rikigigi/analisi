@@ -72,7 +72,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
              auto Qs=qs(*it);
              if (Qs.first !=""){
                  n_columns_from_binary++; //aggiungi i valori delle cariche letti
-                 q_current_type.push_back(Qs.second);
+                 q_current_type.push_back(Qs);
              }
          }
          data_size_from_binary=n_columns_from_binary*3;
@@ -180,6 +180,22 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
 
 }
 
+template <class TFLOAT> unsigned int ReadLog<TFLOAT>::get_calc_j_index(std::string header) {
+
+    for (unsigned int i=0;i<q_current_type.size();i++) {
+        if (q_current_type[i].first==header) {
+            return i;
+        }
+    }
+    std::cerr << "Errore: impossibile trovare l'header "<< header<<" nella lista '";
+    for (unsigned int i=0;i<q_current_type.size();i++) std::cerr << " '" << q_current_type[i].first<<"'";
+    std::cerr << "\n";
+    abort();
+
+    return q_current_type.size();
+}
+
+
 //questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
 template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLOAT>::qs(std::string header) {
     if (header.size()==0 || header[0] != '#')
@@ -205,7 +221,7 @@ template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLO
 
     }
 
-    return std::pair<std::string,std::vector<TFLOAT> > (t.at(0),c);
+    return std::pair<std::string,std::vector<TFLOAT> > (header,c);
 
 }
 
@@ -228,13 +244,20 @@ template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsi
     unsigned int ntypes=t->get_ntypes();
     //controlla che il numero di correnti corrisponda al numero di coefficienti forniti
     for (auto it = q_current_type.begin();it!=q_current_type.end();++it) {
-        if ((*it).size()!=ntypes) {
+        if ((*it).second.size()!=ntypes) {
             std::cerr << "Errore: il numero di coefficienti specificati deve corrispondere al numero di tipi di atomi nella traiettoria!\n";
             abort();
         }
     }
+    traiettoria->imposta_dimensione_finestra_accesso(n_data_b);
     for (unsigned int ib=0;ib<n_b;ib++){
-        for (unsigned int ts=ib*n_data_b;ts<(ib+1)*n_data_b;ts++){
+        unsigned int ultimo=(ib+1)*n_data_b;
+        if (ib==n_b-1){
+            ultimo=timesteps_tot;
+            traiettoria->imposta_dimensione_finestra_accesso(ultimo-ib*n_data_b);
+        }
+        traiettoria->imposta_inizio_accesso(n_data_b*ib);
+        for (unsigned int ts=ib*n_data_b;ts<ultimo;ts++){
             //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
             for (unsigned int i=0;i<q_current_type.size();i++) {
                 double * v_cm=t->velocita_cm(ts,0);
@@ -243,7 +266,7 @@ template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsi
                 for (unsigned int icm=0;icm<ntypes;icm++) {
                     for (unsigned int icoord=0;icoord<3;icoord++) {
                         data[ts*data_size+(data_size-data_size_from_binary)+i*3+icoord]+=
-                                v_cm[icm*3+icoord]*q_current_type[i][icm];
+                                v_cm[icm*3+icoord]*q_current_type[i].second[icm];
                     }
                 }
             }
@@ -257,7 +280,7 @@ template <class TFLOAT> std::pair<unsigned int, bool> ReadLog<TFLOAT>::get_index
 
     unsigned int idx=0;
     if (header.size()==0) {
-        std::cerr << "Errore: header di lunghezza nulla! ("__FILE__<<":" <<__LINE__ <<")\n";
+        std::cerr << "Errore: header di lunghezza nulla! (" __FILE__ <<":" <<__LINE__ <<")\n";
     }
     //TODO: questo va cambiato: l'header delle correnti calcolate è uno solo!
     if (header[0]!='#'){
@@ -271,6 +294,9 @@ template <class TFLOAT> std::pair<unsigned int, bool> ReadLog<TFLOAT>::get_index
             }
         }
     }else { // devo andare a vedere la traiettoria binaria
+
+        idx=get_calc_j_index(header);
+        return std::pair<unsigned int, bool>(data_size-data_size_from_binary+idx*3,true);
 
     }
     return std::pair<unsigned int ,bool>(idx,false);

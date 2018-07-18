@@ -178,7 +178,7 @@ int main(int argc, char ** argv)
 #ifdef DEBUG
         if (debug2){
 
-            ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread);
+            ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
             for (unsigned int i=0;i<test.n_timestep();i++){
                 std::cout << i << " "<<test.timestep(i)<< " ";
                 for (unsigned int j=0;j<test.n_data();j++){
@@ -191,7 +191,7 @@ int main(int argc, char ** argv)
 #endif // DEBUG
             if (heat_coeff) {
                 std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
-                ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread);
+                ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
                 Traiettoria * binary_traj=NULL;
                 //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
                 if (test.need_binary(headers)>0) {

@@ -4,10 +4,10 @@
 #include "mp.h"
 
 #ifdef USE_MPI
-
-#include <mpi.h>
 #include "operazionisulista.h"
 #include <iostream>
+#include <string>
+#include <mpi.h>
 
 bool Mp::initialized=false;
 
@@ -60,7 +60,7 @@ bool Mp::ionode() {
 
 
 std::string Mp::outname(std::string s) {
-    return s + std::string(".")+ std::to_string(me);
+    return s + "."+ std::to_string(world_rank);
 }
 
 #endif

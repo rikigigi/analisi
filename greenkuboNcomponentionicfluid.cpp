@@ -25,6 +25,11 @@
 #include <Eigen/Dense>
 #endif
 
+#ifdef USE_MPI
+#include "mp.h"
+#endif
+
+
 template< class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::GreenKuboNComponentIonicFluid(ReadLog<TFLOAT_READ> *traiettoria,
                                                              std::string log,
                                                              unsigned int skip,
@@ -330,7 +335,11 @@ template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TF
 
 
     if (scrivi_file) {
+#ifndef USE_MPI
         std::ofstream outfile(log+".greekdump",std::ios::app);
+#else
+        std::ofstream outfile(Mp::mpi().outname(log+".gkdump"));
+#endif
         for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
             for (unsigned int j=0;j<narr;j++){
                 outfile << lista[(itimestep)*narr+j] << " ";

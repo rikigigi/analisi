@@ -34,8 +34,13 @@ private:
     size_t data_size,data_size_from_binary;
     bool if_only_numbers(std::string str);
     unsigned int natoms,nthreads;
-    std::vector< std::vector<TFLOAT> > q_current_type;
+
+    ///qui vengono memorizzati le stringhe delle correnti da calcolare e le cariche da utilizzare per calcolarle
+    std::vector< std::pair<std::string,std::vector<TFLOAT> > > q_current_type;
+    /// analizza la stringa che definisce la corrente da calcolare
     std::pair<std::string,std::vector<TFLOAT> >qs(std::string header);
+    /// ritorna l'indice della corrente calcolata (da 0 a #correnti calcolate dalla traiettoria binaria)
+    unsigned int get_calc_j_index(std::string header);
 
 };
 

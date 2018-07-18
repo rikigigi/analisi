@@ -4,6 +4,10 @@
 #include <vector>
 #include <fstream>
 
+#ifdef USE_MPI
+#include "mp.h"
+#endif
+
 MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa,bool debug) :
     traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa),debug(debug)
 {
@@ -107,7 +111,11 @@ void MSD::calcola(unsigned int primo) {
         threads.clear();
 
         if (debug) {
-            std::ofstream out ("analisi_msd.debug",std::fstream::app);
+#ifndef USE_MPI
+            std::ofstream out("msd.dump",std::ios::app);
+#else
+            std::ofstream out(Mp::mpi().outname("msd.dump"));
+#endif
             for (unsigned int ts=0;ts<leff;ts++) {
                 out << ts;
                 for (unsigned int itype=0;itype<traiettoria->get_ntypes()*f_cm;itype++){

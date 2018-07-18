@@ -4,6 +4,10 @@
 #include <vector>
 #include <fstream>
 
+#ifdef USE_MPI
+#include "mp.h"
+#endif
+
 template <class TFLOAT> Gofrt<TFLOAT>::Gofrt(Traiettoria *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip, bool debug) :
     traiettoria(t),rmin(rmin),rmax(rmax),nbin(nbin), skip(skip), lmax(tmax), nthreads(nthreads), debug(debug)
 {
@@ -122,7 +126,11 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
     threads.clear();
 
     if (debug) {
-        std::ofstream out ("analisi_gofrt.debug",std::fstream::app);
+#ifndef USE_MPI
+        std::ofstream out("gofrt.dump",std::ios::app);
+#else
+        std::ofstream out(Mp::mpi().outname("gofrt.dump"));
+#endif
         for (unsigned int ts=0;ts<leff;ts++) {
             for (unsigned int r=0;r<nbin;r++){
                 out << ts<< " "<< r;

@@ -114,7 +114,7 @@ Traiettoria::Traiettoria(std::string filename)
     init_buffer_tipi();
 
     //stima del numero di timesteps
-    n_timesteps=sb.st_size/dimensione_timestep -1;
+    n_timesteps=sb.st_size/dimensione_timestep;
 
     //alloco la memoria per l'indice
     timesteps=new size_t [n_timesteps];
@@ -425,23 +425,21 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     if (wrap_pbc)
         std::cerr << "Applico le condizioni al contorno periodiche.\n";
 #endif
+    //se timestep+timestep_finestra e' oltre il numero di timesteps permessi, alloca un nuovo array
+    //solo se effettivamente c'e' la possibilita' che nella traiettoria ci siano ancora nuovi timesteps
+    //(vuol dire che la stima del numero di timesteps svolta all'inizio era sbagliata)
+
+    if (timestep+timestep_finestra>n_timesteps) {
+        if (fsize-timesteps[timestep_corrente]<(timestep-timestep_corrente + timestep_finestra)*tstep_size) {
+            allunga_timesteps(timestep+timestep_finestra+1);
+        } else {
+            std::cerr << "Non posso utilizzare timesteps oltre la fine del file! (forse le dimensioni della finestra sono troppo grandi oppure si e' andati troppo oltre)\n";
+//            return oltre_fine_file;
+        }
+    }
 
     if (timestep>timestep_indicizzato) {
 
-
-
-        //se timesteps e' oltre il numero di timesteps permessi, alloca un nuovo array
-        //solo se effettivamente c'e' la possibilita' che nella traiettoria ci siano ancora nuovi timesteps
-        //(vuol dire che la stima del numero di timesteps svolta all'inizio era sbagliata)
-
-        if (timestep>=n_timesteps) {
-            if (fsize-timesteps[timestep_corrente]<(timestep-timestep_corrente + timestep_finestra)*tstep_size) {
-                allunga_timesteps(timestep+timestep_finestra+1);
-            } else {
-                std::cerr << "Non posso utilizzare timesteps oltre la fine del file! (forse le dimensioni della finestra sono troppo grandi oppure si e' andati troppo oltre)\n";
-                return oltre_fine_file;
-            }
-        }
 #ifdef DEBUG
         std::cerr << "Indicizzo i timesteps da "<< timestep_indicizzato+1 << " a " << timestep << "\n";
 #endif

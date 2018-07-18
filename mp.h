@@ -2,10 +2,12 @@
 #ifndef MPI_H
 #define MPI_H
 
+#include "config.h"
+
 #ifdef USE_MPI
 
-#include <mpi.h>
 #include <string>
+#include <mpi.h>
 
 template <class T,class TFLOAT> class OperazioniSuLista;
 
@@ -16,7 +18,8 @@ public:
     int me();
     int size();
     bool ionode();
-    std::string outname(std::string);
+    std::string outname(std::string s);
+
      template <class T,class T2> void send_to_root(OperazioniSuLista<T,T2> * l) {
         MPI_Send( l->accesso_lista(),l->lunghezza(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
