@@ -150,22 +150,34 @@ public:
         }
 #else // MPI
         int mpime=Mp::mpi().me(),mpisize=Mp::mpi().size();
-        std::cerr << "Inizio del calcolo con " << mpisize << " processi mpi...\n";
-        if (mpisize%n_b!=0)
+        std::cerr << "Inizio del calcolo con " << mpisize << " processi MPI...\n";
+
+        if (n_b%mpisize!=0){
             cron.set_expected(1.0/double(n_b/mpisize+1));
-        else
+            std::cerr << "Attenzione: sto usando un numero di blocchi che non è multiplo del numero di processi MPI. Dei processi saranno inattivi per un certo periodo di tempo.\n";
+        } else
             cron.set_expected(1.0/double(n_b/mpisize));
         cron.start();
         for (unsigned int iblock=0;iblock<n_b;iblock+=mpisize) {
-            calcolo->reset(s);
             unsigned int ib=iblock+mpime;
+            if (ib>=n_b){
+                break;
+            }
+            calcolo->reset(s);
             TraiettoriaF<TR>::imposta_inizio_accesso(ib*s,traiettoria);
             calcolo->calcola(ib*s);
             cronometro cronmpi;
+            unsigned int mpirecv=1;
             if (mpime==0){
                 //ricevi i risultati degli altri e calcola ciò che è da calcolare.
                 calc->calcola(calcolo);
-                for (unsigned int i=1;i<mpisize;i++) {
+                if (iblock+mpisize<n_b){
+                    mpirecv=mpisize;
+                }else{
+                    mpirecv=n_b-iblock;
+                    std::cerr << mpisize-mpirecv << " processi MPI inattivi per questa iterazione.\n";
+                }
+                for (unsigned int i=1;i<mpirecv;i++) {
                     cronmpi.start();
                     Mp::mpi().recv_root(calcolo,i);
                     cronmpi.stop();
@@ -175,7 +187,7 @@ public:
                 Mp::mpi().send_to_root(calcolo);
             }
             cron.stop();
-            std::cerr << "Tempo trascorso: "<<cron.time()<<"s ;  Tempo rimanente: "<<cron.expected()<<"s.\nTempo mpi recv: "<<cronmpi.time()<<"s\n";
+            std::cerr << "Tempo trascorso per i blocchi "<<iblock<<"-"<<iblock+mpirecv-1<<": "<<cron.time()<<"s ;  Tempo rimanente: "<<cron.expected()<<"s.\nTempo mpi recv: "<<cronmpi.time()<<"s\n";
             std::cerr.flush();
         }
 

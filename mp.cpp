@@ -1,8 +1,9 @@
 #include "config.h"
 
-#ifdef USE_MPI
 
 #include "mp.h"
+
+#ifdef USE_MPI
 
 #include <mpi.h>
 #include "operazionisulista.h"
@@ -54,6 +55,12 @@ bool Mp::ionode() {
     if (world_rank==0)
         return true;
     return false;
+}
+
+
+
+std::string Mp::outname(std::string s) {
+    return s + std::string(".")+ std::to_string(me);
 }
 
 #endif

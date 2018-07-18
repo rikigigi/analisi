@@ -1,12 +1,13 @@
-#ifdef USE_MPI
+
 #ifndef MPI_H
 #define MPI_H
 
-//#include "operazionisulista.h"
+#ifdef USE_MPI
+
+#include <mpi.h>
+#include <string>
 
 template <class T,class TFLOAT> class OperazioniSuLista;
-//#define OMPI_SKIP_MPICXX
-#include <mpi.h>
 
 class Mp
 {
@@ -15,7 +16,7 @@ public:
     int me();
     int size();
     bool ionode();
-
+    std::string outname(std::string);
      template <class T,class T2> void send_to_root(OperazioniSuLista<T,T2> * l) {
         MPI_Send( l->accesso_lista(),l->lunghezza(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
@@ -35,5 +36,5 @@ private:
 
 };
 
-#endif // MPI_H
 #endif
+#endif // MPI_H
