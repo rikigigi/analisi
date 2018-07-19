@@ -1,6 +1,6 @@
 project(analisi)
 include(CheckIncludeFileCXX)
-
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 cmake_minimum_required(VERSION 2.8)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -75,4 +75,4 @@ endif()
 
 
 
-CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h )
+CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h )

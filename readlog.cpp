@@ -194,7 +194,22 @@ template <class TFLOAT> unsigned int ReadLog<TFLOAT>::get_calc_j_index(std::stri
 
     return q_current_type.size();
 }
+/*
+template <class TFLOAT> void ReadLog<TFLOAT>::write_currents(std::string filename) {
+    if (data_size_from_binary<=0) {
+        std::cerr << "Attenzione: non posso scrivere le correnti calcolate quando non ci sono!\n";
+        return;
+    }
 
+    std::ofstream out(filename);
+    for (unsigned int i=0;i<timesteps.size();i++) {
+        out << timesteps[i];
+        for (unsigned int j=0;j<data_size_from_binary;j++)
+            out <<" "<< data[i*data_size+data_size-data_size_from_binary+j];
+        out << "\n";
+    }
+}
+*/
 
 //questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
 template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLOAT>::qs(std::string header) {
