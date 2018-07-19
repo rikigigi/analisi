@@ -179,6 +179,11 @@ int main(int argc, char ** argv)
         if (debug2){
 
             ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
+            Traiettoria * binary_traj=NULL;
+            if (test.need_binary(headers)>0) {
+                binary_traj=new Traiettoria(input);
+                test.calc_currents(binary_traj,blocknumber);
+            }
             for (unsigned int i=0;i<test.n_timestep();i++){
                 std::cout << i << " "<<test.timestep(i)<< " ";
                 for (unsigned int j=0;j<test.n_data();j++){
@@ -186,6 +191,7 @@ int main(int argc, char ** argv)
                 }
                 std::cout << "\n";
             }
+            delete binary_traj;
 
         } else
 #endif // DEBUG
@@ -379,6 +385,7 @@ int main(int argc, char ** argv)
                     }
                     delete [] factors;
                 }
+                delete binary_traj;
 
             }else if (msd || msd_cm){
                 std::cerr << "Inizio del calcolo dello spostamento quadratico medio ";
