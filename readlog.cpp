@@ -40,18 +40,25 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     }
 
     //trova i nomi delle colonne e la colonna del timestep
-    std::string delim = " ";
+    std::string delim = " \t";
 
      size_t start = 0;
-     size_t end = header.find(delim);
+     size_t end = header.find_first_of(delim);
      while (end != std::string::npos)
      {
-         if (end!=start&& start<header.length()) headers.push_back(header.substr(start, end - start));
-         start = end + delim.length();
-         end = header.find(delim, start);
-         if (headers.back()=="Step") step_index=headers.size()-1;
+         if (end!=start&& start<header.length()) {
+             headers.push_back(header.substr(start, end - start));
+             if (headers.back().find_first_of(delim)!=std::string::npos) headers.pop_back();
+         }
+         start = end + 1;
+         end = header.find_first_of(delim, start);
+         if (headers.size()>0 && headers.back()=="Step") step_index=headers.size()-1;
      }
      if (end!=start && start<header.length()) headers.push_back(header.substr(start, end - start));
+     if (headers.size()<=0) {
+         std::cerr << "Errore: non ho trovato nessun header nel file '"<<filename<< "'\n";
+         abort();
+     }
      if (headers.back()=="Step") step_index=headers.size()-1;
 #ifdef DEBUG
      std::cerr << "Indice degli header:\n";
