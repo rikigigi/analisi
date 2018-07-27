@@ -50,6 +50,8 @@ public:
     unsigned int get_indexOfKappa();
     unsigned int n_seg_bench();
 
+    std::string get_columns_description();
+
     private:
     using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT>::lista;
     using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT>::lunghezza_lista;
@@ -58,7 +60,7 @@ public:
     bool scrivi_file,subtract_mean,bench;
     unsigned int idx_je,idx_j0,idx_j1;
     std::vector<unsigned int> idx_j;
-    std::string log;
+    std::string log,c_descr;
     ReadLog<TFLOAT_READ> *traiettoria;
     unsigned int ntimesteps,lmax,leff,nthread,skip;
     TFLOAT_READ*  jN(unsigned int N,unsigned int ts);

@@ -110,7 +110,7 @@ int main(int argc, char ** argv)
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
-            ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"test vari 2")
+            ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"scrive nello standard output le colonne lette dal file di log specificato. Se viene specificato anche il calcolo delle correnti con l'opzione -a ( per esempio, se ho due componenti, -a '#J 1 1.0 0.0' calcola la velocità del centro di massa della prima specie), scrive anche le correnti calcolate nell'ordine in cui sono state specificate. In questo caso è necessario fornire anche il file binario della traiettoria con -i")
         #endif
             ;
 
@@ -370,6 +370,7 @@ int main(int argc, char ** argv)
 
                     std::cout << "# factor integral, factor correlation\n#"
                               << factor_conv << " " << factor_intToCorr <<  "\n";
+                    std::cout << greenK_c.media()->get_columns_description();
 
                     for (unsigned int i=0;i<greenK.size();i++) {
                         for (unsigned int j=0;j<narr;j++) {

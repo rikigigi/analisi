@@ -14,6 +14,7 @@
 #include "chargefluxts.h"
 #include "heatfluxts.h"
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <thread>
 #include <vector>
@@ -78,6 +79,32 @@ template< class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIonicFluid<TFLOAT,
     N_corr=idx_j.size()*idx_j.size();
 #endif
     narr=3*N_corr+2;
+
+
+    unsigned int c=0;
+    std::stringstream descr;
+    for (unsigned int i=0;i<idx_j.size();i++) {
+#ifdef HALF_CORR
+        for (unsigned int j=i;j<idx_j.size();j++) {
+#else
+        for (unsigned int j=0;j<idx_j.size();j++) {
+#endif
+            descr<<"#"<<++c<<": c("<<i<<", "<<j<<")\n#"<<++c<<": var[c("<<i<<", "<<j<<")]\n";
+        }
+    }
+    for (unsigned int i=0;i<idx_j.size();i++) {
+#ifdef HALF_CORR
+        for (unsigned int j=i;j<idx_j.size();j++) {
+#else
+        for (unsigned int j=0;j<idx_j.size();j++) {
+#endif
+            descr<<"#"<<++c<<": L("<<i<<", "<<j<<")\n#"<<++c<<": var[L("<<i<<", "<<j<<")]\n";
+            descr<<"#"<<++c<<": L*("<<i<<", "<<j<<")\n#"<<++c<<": var[L*("<<i<<", "<<j<<")]\n";
+        }
+    }
+    descr<<"#"<<++c<<": k_gk\n#"<<++c<<": var[k_gk]\n";
+    descr<<"#"<<++c<<": k_einst\n#"<<++c<<": var[k_einst]\n";
+    c_descr=descr.str();
 }
 
 template< class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::~GreenKuboNComponentIonicFluid(){
@@ -386,6 +413,10 @@ template< class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonic
     n_seg=orig_n_seg;
     ntimesteps=orig_ntimesteps;
     return ris;
+}
+
+template< class TFLOAT, class TFLOAT_READ> std::string GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::get_columns_description() {
+    return c_descr;
 }
 
 template class GreenKuboNComponentIonicFluid<double,double>;
