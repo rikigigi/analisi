@@ -338,7 +338,7 @@ template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TF
 #ifndef USE_MPI
         std::ofstream outfile(log+".greekdump",std::ios::app);
 #else
-        std::ofstream outfile(Mp::mpi().outname(log+".gkdump"));
+        std::ofstream outfile(Mp::mpi().outname(log+".gkdump"),std::ios::app);
 #endif
         for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
             for (unsigned int j=0;j<narr;j++){
