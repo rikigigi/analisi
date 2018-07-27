@@ -370,7 +370,7 @@ int main(int argc, char ** argv)
 
                     std::cout << "# factor integral, factor correlation\n#"
                               << factor_conv << " " << factor_intToCorr <<  "\n";
-                    std::cout << greenK_c.media()->get_columns_description();
+                    std::cout << greenK_c.puntatoreCalcolo()->get_columns_description();
 
                     for (unsigned int i=0;i<greenK.size();i++) {
                         for (unsigned int j=0;j<narr;j++) {
