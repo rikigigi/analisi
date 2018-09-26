@@ -6,7 +6,7 @@
 #include "lammps_struct.h"
 #include "config.h"
 
-#define XDR_FILE
+//#define XDR_FILE
 
 #ifdef XDR_FILE
 
@@ -71,7 +71,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
         vv=new rvec[natoms_xdr];
         ff=0;
 
-#elif
+#else
         std::cerr << "Non implementato!\n";
         abort();
 #endif
@@ -121,7 +121,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
             head.timestep=step;
 
 
-#elif
+#else
             std::cerr << "Non implementato!\n";
             abort();
 #endif
@@ -165,7 +165,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
                 data[6]=vv[i][0];
                 data[5]=vv[i][1];
                 data[7]=vv[i][2];
-#elif
+#else
                 std::cerr << "Non implementato!\n";
                 abort();
 #endif
@@ -173,9 +173,11 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
             out.write((char*) data,sizeof(double)*8);
         }
     }
+#ifdef XDR_FILE
 
     if(tipo==gromax_trr) {
         delete [] xx;
         delete [] vv;
     }
+#endif
 }
