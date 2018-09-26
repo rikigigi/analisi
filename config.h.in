@@ -29,6 +29,10 @@
 #cmakedefine CMAKE_SYSTEM "${CMAKE_SYSTEM}"
 #cmakedefine CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR}"
 #cmakedefine USE_MPI
+#cmakedefine HAVE_XDRFILE
+#ifdef HAVE_XDRFILE
+#define XDR_FILE
+#endif
 
 
 

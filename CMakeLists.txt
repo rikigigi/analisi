@@ -18,14 +18,24 @@ if(COMPILER_SUPPORTS_CXX11)
 elseif(COMPILER_SUPPORTS_CXX0X)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 else()
-        message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+        message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-find_library( BPO boost_program_options)
+find_library( BPO NAMES boost_program_options)
+
+if (BPO)
+    message (STATUS "boost_program_options library found.")
+else()
+    message (FATAL_ERROR "boost_program_options library not found!")
+endif()
+
 #fftw3
 find_library (FFTW NAMES "fftw3")
 find_library (FFTW_TH NAMES "fftw3_threads")
 find_library (FFTW_OMP NAMES "fftw3_omp")
+
+#xdrfile
+find_library (XDRFILE NAMES "xdrfile" )
 
 aux_source_directory(. SRC_LIST)
 add_executable(${PROJECT_NAME} ${SRC_LIST})
@@ -36,20 +46,31 @@ elseif (FFTW_TH)
 else()
     set (FFTW_MT "" )
 endif()
-target_link_libraries(${PROJECT_NAME} "${BPO}" "${FFTW}" "${FFTW_MT}")
+
+
+if (XDRFILE)
+    set (XDR_FILE "${XDRFILE}")
+    message(STATUS "xdrfile library found!")
+    set (HAVE_XDRFILE "")
+else ()
+    set (XDR_FILE "")
+    message(STATUS "WARNING: xdrfile library not found (conversion from gromacs file disabled)")
+endif()
+
+target_link_libraries(${PROJECT_NAME} "${BPO}" "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)
 #add_definitions(-DANALISI)
 
 # look for environment variables like $FFTW_INCLUDE and $BOOST_INCLUDE (found in cineca's cluster nodes) and add to the include path
 
 if(DEFINED ENV{FFTW_INCLUDE})
-    message("Found FFTW_INCLUDE=" $ENV{FFTW_INCLUDE})
+    message(STATUS "Found FFTW_INCLUDE=$ENV{FFTW_INCLUDE}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I $ENV{FFTW_INCLUDE}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I $ENV{FFTW_INCLUDE}")
 endif()
 
 if(DEFINED ENV{BOOST_INCLUDE})
-    message("Found BOOST_INCLUDE=" $ENV{BOOST_INCLUDE})
+    message(STATUS "Found BOOST_INCLUDE=$ENV{BOOST_INCLUDE}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I $ENV{BOOST_INCLUDE}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I $ENV{BOOST_INCLUDE}")
 endif()

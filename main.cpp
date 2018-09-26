@@ -60,7 +60,7 @@ int main(int argc, char ** argv)
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
-    std::vector<std::string> headers;
+    std::vector<std::string> headers,output_conversion_gro;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
     options.add_options()
         #if BOOST_VERSION >= 105600
@@ -104,7 +104,8 @@ int main(int argc, char ** argv)
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
             ("kk",boost::program_options::bool_switch(&bench)->default_value(false),"esegue un benchmark per il valore ottimale di k")
             ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"valore minimo e massimo del range in cui testare k")
-            ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input nel file qui specificato")
+            ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"esegui la conversione nel formato binario di lammps del file specificato come input scrivendo nel file di output qui specificato")
+            ("binary-convert-gromacs",boost::program_options::value<std::vector<std::string>>(&output_conversion_gro)->multitoken(),"esegui la conversione nel formato binario di lammps del file trr specificato come input. Qui specificare il nome del file di output e il file dei tipi con formato:\n id0 type0\n ...\nidN typeN\nnello stesso ordine degli atomi del file trr.")
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
@@ -127,7 +128,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if ((output_conversion!="" && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && (output_conversion=="" && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
+        if (( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( (output_conversion==""&& output_conversion_gro.size()==0) && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
@@ -160,6 +161,16 @@ int main(int argc, char ** argv)
 
             ConvertiBinario conv(input,output_conversion);
             return 0;
+        }
+        if (output_conversion_gro.size()>0) {
+            if (output_conversion_gro.size() !=2) {
+                std::cerr << "Errore: specificare due file per la conversione dal formato di gromacs!\n";
+                std::cerr << options;
+                return -1;
+            } else {
+                ConvertiBinario conv(input,output_conversion_gro[0],ConvertiBinario::gromax_trr,output_conversion_gro[1]);
+                return 0;
+            }
         }
 
         std::cerr << "Uso " << numero_thread << " threads\n";
