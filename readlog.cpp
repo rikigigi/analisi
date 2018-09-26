@@ -181,9 +181,10 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     delete [] buffer;
     cron.stop();
     std::cerr << "Tempo per la lettura dei dati: " << cron.time() << "s\n";
-#ifdef DEBUG
     std::cerr << "Numero di dati letti dal file '"<<filename<<"': "<<data.size()/data_size<<"\n";
-#endif
+    if (data.size()==0) {
+        std::cerr << "Attenzione: non sono riuscito a leggere alcun dato. (l'intestazione ha lo stesso numero di colonne dei dati?)\n";
+    }
 
 }
 

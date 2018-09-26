@@ -74,6 +74,8 @@ private:
     std::map<unsigned int,unsigned int>type_map;
     double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
     double * buffer_velocita;
+ //TODO
+ //   short int * buffer_pbc; // indice dell'immagine della cella dove si trova l'atomo
     double * masse;
     double * cariche;
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
