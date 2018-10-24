@@ -8,6 +8,31 @@
 #include <Eigen/Dense>
 #endif
 
+template <int D>
+class QuadraticForm : public Function <Eigen::Matrix<double,D,1>, double> {
+  public:
+    virtual double operator () (const Eigen::Matrix<double,D,1> & x) final {
+        return (0.5*x.transpose()*A*x-b.transpose()*x)(0,0);
+    }
+
+    virtual Eigen::Matrix<double,D,1> deriv (const Eigen::Matrix<double,D,1> & x) final {
+        return (A*x - b).eval();
+    }
+
+    void set_A_b(const Eigen::Matrix<double,D,D> & A_, const Eigen::Matrix<double,D,1> &b_) {
+        A=A_;
+        b=b_;
+        x0=A.colPivHouseholderQr().solve(b);
+        std::cout<<"sol:" << x0<<"\n";
+    }
+    double get_solution_distance(const Eigen::Matrix<double,D,1> & x) {
+        return (x-x0).norm();
+    }
+protected:
+    Eigen::Matrix<double,D,D> A;
+    Eigen::Matrix<double,D,1> b,x0;
+};
+
 
 template <int N,int DIM,int flags >
 class MultiPair : public Function <Eigen::Matrix<double,N*DIM,1>, double, Eigen::Matrix<double,N*DIM,N*DIM> > {
@@ -131,7 +156,23 @@ protected:
 };
 
 int main() {
-    ///... testare il cj
+    /// test con una forma quadratica:
+
+    Eigen::Matrix4d m=Eigen::Matrix4d::Random();
+    m = Eigen::Matrix4d::Random();
+    Eigen::Matrix<double,4,1> xq=2*Eigen::Matrix<double,4,1>::Random(), b=Eigen::Matrix<double,4,1>::Random();
+
+    QuadraticForm<4> testq;
+    testq.set_A_b(0.5*(m.transpose()+m)+Eigen::Matrix4d::Identity()*4,b);
+    ParabolaLineMinimization <Eigen::Matrix<double,4,1>,double,QuadraticForm<4> > lineMinq(5,4,20,3);
+    Cg<Eigen::Matrix<double,4,1>,double,QuadraticForm<4> > testcgq(testq,xq,testq(xq),lineMinq,8);
+    std::cout << 0 << " " << testq.get_solution_distance(testcgq.get_x())<< "\n";
+    for (unsigned int i=0;i<4;i++){
+        testcgq.iteration();
+        std::cout << i+1 << " " << testq.get_solution_distance(testcgq.get_x())<< "\n";
+    }
+
+    std::cout << "======================\n";
 
     LJPair<25,3> test;
     Eigen::Matrix3d cel;
@@ -145,7 +186,8 @@ int main() {
     Cg<Eigen::Matrix<double,25*3,1>,double,LJPair<25,3> > testcg(test,x,test(x),lineMin,8);
     for (unsigned int i=0;i<2000;i++) {
         std::cout << i << " " << testcg.get_fx()<< "\n";
-        testcg.iteration();
+        if (!testcg.iteration())
+            break;
     }
     std::cout <<  "Final: " << testcg.get_fx()<< "\n";
 

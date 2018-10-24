@@ -8,7 +8,7 @@
 
 template <class X, class K,class F, class XX = void> class LineMinimization {
   public:
-    enum Result {MissedMinimum,MinimumFound,MaximumIterationsExceeded};
+    enum Result {MissingMinimum,MinimumFound,MaximumIterationsExceeded,SubstitutedMinimum};
     /**
       * Minimizza la funzione f nella direzione di d:  Min_a f(x + a*d)
       * Deve aggiornare x al valore del minimo trovato
@@ -41,6 +41,11 @@ public:
     }
     virtual Result operator () (F f,X & x0, const X & d, K & f_a) override {
         Result res=Result::MinimumFound;
+        X x_min=x0;
+        X x_orig=x0;
+        K f_min=f_a;
+        K f_a_orig=f_a;
+        bool fail=false;
         if (calls_without_fail%raise_rate==0 && calls_without_fail>0 &&tot_iter<stop_raise_epoch ){
             dx=dx*raise_coeff ;
             std::cout << "Setting new dx_0="<<dx<<"\n";
@@ -56,13 +61,14 @@ public:
         unsigned int retries=0;
 
         for (int i1=0;i1<outer_iter;i1++){
+            res=Result::MinimumFound;
             K f_b,f_c,b,c,a_min; //a=0.0
             X x1,x2;
             b=dx;
             x1=x0+du*b;
             f_b=f(x1);
             for (unsigned int i=0;i<max_search && f_b>=f_a;i++){
-                b=b*(i+1);
+                b=dx*(i+2);
                 x1=x0+du*b;
                 f_b=f(x1);
             }
@@ -74,8 +80,8 @@ public:
                     i1--;
                 } else {
                     x0=x1;
+                    std::cout << "Failed to find a minimum\ndx="<<dx<< " b=" << b << " i1=" <<i1<<" f(a)="<<f_a<<" f(b)="<<f_b<<"\n";
                     f_a=f_b;
-                    std::cout << "Failed to find a minimum\ndx="<<dx<< " b=" << b << " i1=" <<i1<<"\n";
                     calls_without_fail=0;
                     fail_count++;
                     if (fail_count%max_search==0 && fail_count>0) {
@@ -83,13 +89,21 @@ public:
                         std::cout << "Setting new dx_0="<<dx_o<<"\n";
                     }
                 }
+                if (i1==outer_iter-1) fail=true;
                 continue;
             }
+            f_min=f_b;
+            x_min=x1;
             c=b+dx;
             x2=x0+du*c;
             f_c=f(x2);
-            for (unsigned int i=0;i<max_search && f_c<=f_b;i++){
-                c=b+dx*(i+1);
+            //&& conc(f_a,f_b,f_c,0,b,c) <= 1.0e-8
+            for (unsigned int i=0;i<max_search && f_c<=f_b*(1.0+1.0e-8);i++){
+                if (f_c<f_min) {
+                    f_min=f_c;
+                    x_min=x2;
+                }
+                c=b+dx*(i+2);
                 x2=x0+du*c;
                 f_c=f(x2);
             }
@@ -99,6 +113,8 @@ public:
 
             if (res==Result::MaximumIterationsExceeded){
                 x0=x2;
+                std::cout << "Failed to find third point: dx="<<dx<< " b=" << b << " i1=" <<i1<<" f(a)="<<f_a<<" f(b)="<<f_b<<" f(c)="<<f_c<<"\n";
+                if (i1==outer_iter-1) fail=true;
                 f_a=f_c;
             } else {
                 a_min=    b     +  0.5  *     (   (f_a-f_b)*(c-b)*(c-b)  -  (f_c-f_b)*b*b   )
@@ -106,15 +122,44 @@ public:
         /                                     (   (f_a-f_b)*(c-b)        +  (f_c-f_b)*b     )        ;
                 x0=x0+du*a_min;
                 f_a=f(x0);
+                if (f_a<f_min) {
+                    f_min=f_a;
+                    x_min=x0;
+                }
             }
         }
 
         dx=dx_o;
+        if (fail) {
+            if (f_min<f_a) {
+                x0=x_min;
+                f_a=f_min;
+                return Result::MaximumIterationsExceeded;
+            } else if (f_min==f_a){
+                if (f_a_orig=!f_a){
+                    x0=x_orig;
+                    f_a=f_a_orig;
+                }
+                std::cout << "Line minimization failed.\n";
+                return Result::MissingMinimum;
+            }
+        }
+        if (f_min<f_a) {
+            x0=x_min;
+            f_a=f_min;
+        }
 
-        return res;
+
+        return Result::MinimumFound;
 
     }
 private:
+    K pend(K f_a,K f_b, K a,K b) {
+        return (f_a-f_b)/(a-b);
+    }
+    K conc(K f_a,K f_b, K f_c, K a, K b, K c ) {
+        return pend(f_b,f_c,b,c)-pend(f_a,f_b,a,b);
+    }
     K dx,xmax;
     unsigned int max_search,outer_iter,fail_count,calls_without_fail,
     raise_rate,stop_raise_epoch,tot_iter;
