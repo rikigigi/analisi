@@ -71,7 +71,8 @@ public:
 //    bool get_calculate_center_of_mass();
 private:
     std::vector<unsigned int> types;
-    std::map<unsigned int,unsigned int>type_map;
+    std::map<int,unsigned int>type_map;
+    std::map<int,unsigned int>id_map;
     double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
     double * buffer_velocita;
  //TODO

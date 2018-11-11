@@ -137,12 +137,31 @@ void Traiettoria::init_buffer_tipi() {
    Chunk * pezzi=0;
    size_t offset = leggi_pezzo(0,intestazione,pezzi);
    natoms=intestazione->natoms;
+   id_map.clear();
+   // controlla che gli id degli atomi siano consistenti e crea una mappa
+   unsigned int id_=0;
+   for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
+       for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
+           if (id_>=natoms) {
+               std::cerr << "Errore: la dichiarazione del numero di atomi non corrisponde alla somma degli atomi letti in ciascun chunk!\n";
+               abort();
+           }
+           int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
+           if (id_map.find(id)==id_map.end()){
+               id_map[id]=id_;
+               id_++;
+           }else {
+               std::cerr << "Errore nella lettura degli id degli atomi: ho trovato un id doppio! ("<<id<<")\n";
+               abort();
+           }
+       }
+   }
 
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
-                int id=round(pezzi[ichunk].atomi[iatomo].id)-1;
+                int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
                 int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
-                buffer_tipi[id]=tipo;
+                buffer_tipi[id_map[id]]=tipo;
             }
         }
 
@@ -574,7 +593,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         }
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
-                int id=round(pezzi[ichunk].atomi[iatomo].id)-1;
+                int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
                 int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
                 for (unsigned int icoord=0;icoord<3;icoord++){
                     if (wrap_pbc)
