@@ -146,7 +146,7 @@ void Traiettoria::init_buffer_tipi() {
                std::cerr << "Errore: la dichiarazione del numero di atomi non corrisponde alla somma degli atomi letti in ciascun chunk!\n";
                abort();
            }
-           int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
+           int id=round(pezzi[ichunk].atomi[iatomo].id);
            if (id_map.find(id)==id_map.end()){
                id_map[id]=id_;
                id_++;
