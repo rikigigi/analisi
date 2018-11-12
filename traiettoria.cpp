@@ -157,20 +157,31 @@ void Traiettoria::init_buffer_tipi() {
        }
    }
 
+   std::cerr << "Tipi e id degli atomi letti:\n";
+
         for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
                 int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
                 int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
-                buffer_tipi[id_map[id]]=tipo;
+                buffer_tipi[id]=tipo;
             }
         }
 
    delete [] pezzi;
    get_ntypes();
-
    for (unsigned int i=0;i<natoms;i++) {
        buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
    }
+
+   for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
+       for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
+           int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
+           int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
+           std::cerr << id<<":\tid = " <<round(pezzi[ichunk].atomi[iatomo].id)<<
+                              "\ttipo = "<<tipo<<"\titipo ="<< buffer_tipi[id] <<"\n";
+       }
+   }
+
 
 }
 
