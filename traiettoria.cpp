@@ -177,7 +177,7 @@ void Traiettoria::init_buffer_tipi() {
            int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
            int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
            std::cerr << id<<":\tid = " <<round(pezzi[ichunk].atomi[iatomo].id)<<
-                              "\ttipo = "<<tipo<<"\titipo ="<< buffer_tipi[id] <<"\n";
+                              "\ttipo = "<<tipo<<"\titipo ="<< buffer_tipi_id[id] <<"\n";
        }
    }
    delete [] pezzi;
