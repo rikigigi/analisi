@@ -167,7 +167,6 @@ void Traiettoria::init_buffer_tipi() {
             }
         }
 
-   delete [] pezzi;
    get_ntypes();
    for (unsigned int i=0;i<natoms;i++) {
        buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
@@ -181,6 +180,7 @@ void Traiettoria::init_buffer_tipi() {
                               "\ttipo = "<<tipo<<"\titipo ="<< buffer_tipi[id] <<"\n";
        }
    }
+   delete [] pezzi;
 
 
 }
