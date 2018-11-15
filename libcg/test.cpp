@@ -111,17 +111,39 @@ public:
                             sub[d0*DIM+d1]+=f2*dx(d0)*dx(d1);
                         }
                     }
-                    //matrix is symmetric
+
+                    //add the matrix contribution to diagonal and off diagonal term (matrix is symmetric)
                     for (unsigned int d0=0;d0<DIM;d0++) {
-                        for (unsigned int d1=0;d1<d0;d1++) {
-                            sub[d0*DIM+d1]=sub[d1*DIM+d0];
+                        //off diagonal
+                        res(i1*DIM+d0,i2*DIM+d0)=sub[d0*DIM+d0];
+                        //off diagonal symmetric
+                        res(i2*DIM+d0,i1*DIM+d0)=sub[d0*DIM+d0];
+                        //diagonal 1
+                        res(i1*DIM+d0,i1*DIM+d0)+=sub[d0*DIM+d0];
+                        //diagonal 2
+                        res(i2*DIM+d0,i2*DIM+d0)+=sub[d0*DIM+d0];
+                        for (unsigned int d1=d0+1;d1<DIM;d1++) {
+                            // sub[d0*DIM+d1]=sub[d1*DIM+d0];
+
+                            //off diagonal
+                            res(i1*DIM+d0,i2*DIM+d1)=sub[d1*DIM+d0];
+                            res(i1*DIM+d1,i2*DIM+d0)=sub[d1*DIM+d0];
+
+                            //off diagonal symmetric
+                            res(i2*DIM+d0,i1*DIM+d1)=sub[d1*DIM+d0];
+                            res(i2*DIM+d1,i1*DIM+d0)=sub[d1*DIM+d0];
+
+                            //diagonal 1
+                            res(i1*DIM+d0,i1*DIM+d1)=sub[d1*DIM+d0];
+                            res(i1*DIM+d1,i1*DIM+d0)=sub[d1*DIM+d0];
+                            //diagonal 2
+                            res(i2*DIM+d0,i2*DIM+d1)=sub[d1*DIM+d0];
+                            res(i2*DIM+d1,i2*DIM+d0)=sub[d1*DIM+d0];
                         }
                     }
-
-                    //add the matrix contribution to diagonal and off diagonal term
-
                 }
             }
+            return res;
         } else {
             throw std::runtime_error("Not implemented!");
         }
