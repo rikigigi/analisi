@@ -83,12 +83,43 @@ public:
         Eigen::Matrix<double,N*DIM,N*DIM> res;
         if (has_deriv2()) {
             for (unsigned int i1=0;i1<N;i1++) {
-                for (unsigned int i2=0;i2<N;i2++) {
-                    for (unsigned int d0=0;d0<DIM;d0++) {
-                        for (unsigned int d1=0;d1<DIM;d1++) {
+                for (unsigned int i2=i1+1;i2<N;i2++) { //hessian is symmetric
+                    // note: here I calculate also the diagonal term, that has a different form with one more sum
+                    // If one makes the calculation,
+                    // the diagonal term is simply the sum of the other terms in the row. Because the matrix is symmetric, at the end of the day,
+                    // for every out of diagonal term (i1,i2) that I calculate, I add the same quantity to the diagonal terms (i1,i1) and (i2,i2)
+                    // the factor in front of the 3x3 matrix is the same because of the symmetry of the potential
 
+                    //get pbc distance
+                    Eigen::Matrix<double,DIM,1> dx;
+                    double r2;
+                    if (want_pbc()){
+                        dx=pbc(x.template segment<DIM>(i*DIM,DIM),x.template segment<DIM>(j*DIM,DIM),r2);
+                    }
+                    else {
+                        dx=(x.template segment<DIM>(i*DIM,DIM)-x.template segment<DIM>(j*DIM,DIM));
+                        r2=dx.squaredNorm();
+                    }
+
+                    double f2=4*pair_deriv2_r2(r2); //second derivative with respect to r^2_ij
+                    double f1=2*pair_deriv_r2(r2); //first derivative with respect to r^2_ij
+                    double sub[DIM*DIM]={0.0};
+                    for (unsigned int d0=0;d0<DIM;d0++) {
+                        // diagonal only term
+                        sub[d0*DIM+d0]+=f1;
+                        for (unsigned int d1=d0;d1<DIM;d1++) {
+                            sub[d0*DIM+d1]+=f2*dx(d0)*dx(d1);
                         }
                     }
+                    //matrix is symmetric
+                    for (unsigned int d0=0;d0<DIM;d0++) {
+                        for (unsigned int d1=0;d1<d0;d1++) {
+                            sub[d0*DIM+d1]=sub[d1*DIM+d0];
+                        }
+                    }
+
+                    //add the matrix contribution to diagonal and off diagonal term
+
                 }
             }
         } else {
