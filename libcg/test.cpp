@@ -58,7 +58,7 @@ public:
     virtual Eigen::Matrix<double,N*DIM,1> deriv(const Eigen::Matrix<double,N*DIM,1> & x) final {
         Eigen::Matrix<double,N*DIM,1> res=Eigen::Matrix<double,N*DIM,1>::Zero();
         for (unsigned int i=0;i<N;i++) {
-            for (unsigned int j=0;j<N;j++) {
+            for (unsigned int j=i+1;j<N;j++) {
                 if (i==j)
                     continue;
                 double r2;
@@ -73,6 +73,7 @@ public:
                 double dp_dr=pair_deriv_r2(r2);
                 for (unsigned int i0=0;i0<DIM;i0++) {
                     res(i*DIM+i0)+=dp_dr*dx(i0)*2;
+                    res(j*DIM+i0)-=dp_dr*dx(i0)*2;
                 }
             }
         }
@@ -81,6 +82,7 @@ public:
 
     virtual Eigen::Matrix<double,N*DIM,N*DIM> hessian(const Eigen::Matrix<double,N*DIM,1> & x) final {
         Eigen::Matrix<double,N*DIM,N*DIM> res;
+        Eigen::Matrix<double,N*DIM,N*DIM> res1;
         if (has_deriv2()) {
             for (unsigned int i1=0;i1<N;i1++) {
                 for (unsigned int i2=i1+1;i2<N;i2++) { //hessian is symmetric
@@ -94,10 +96,10 @@ public:
                     Eigen::Matrix<double,DIM,1> dx;
                     double r2;
                     if (want_pbc()){
-                        dx=pbc(x.template segment<DIM>(i*DIM,DIM),x.template segment<DIM>(j*DIM,DIM),r2);
+                        dx=pbc(x.template segment<DIM>(i1*DIM,DIM),x.template segment<DIM>(i2*DIM,DIM),r2);
                     }
                     else {
-                        dx=(x.template segment<DIM>(i*DIM,DIM)-x.template segment<DIM>(j*DIM,DIM));
+                        dx=(x.template segment<DIM>(i1*DIM,DIM)-x.template segment<DIM>(i2*DIM,DIM));
                         r2=dx.squaredNorm();
                     }
 
@@ -105,6 +107,10 @@ public:
                     double f1=2*pair_deriv_r2(r2); //first derivative with respect to r^2_ij
                     double sub[DIM*DIM]={0.0};
                     for (unsigned int d0=0;d0<DIM;d0++) {
+                        // calculate also force (it is free, at this point)
+                        res1(i1*DIM+d0)+=f1*dx(d0);
+                        res1(i2*DIM+d0)-=f1*dx(d0);
+
                         // diagonal only term
                         sub[d0*DIM+d0]+=f1;
                         for (unsigned int d1=d0;d1<DIM;d1++) {
