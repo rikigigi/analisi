@@ -35,9 +35,10 @@ protected:
 
 
 template <int N,int DIM,int flags >
-class MultiPair : public Function <Eigen::Matrix<double,N*DIM,1>, double, Eigen::Matrix<double,N*DIM,N*DIM> > {
+class MultiPair : public Function <Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> >, double,  Eigen::Matrix<double,N*DIM,N*DIM>,  Eigen::Matrix<double,N*DIM,1>,
+       Eigen::Ref<Eigen::Matrix<double,N*DIM,1> > > {
 public:
-    virtual double operator() (const Eigen::Matrix<double,N*DIM,1> & x ) final {
+    virtual double operator() (const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x ) final {
         double res=0.0;
         for (unsigned int i=0;i<N;i++) {
             for (unsigned int j=i+1;j<N;j++) {
@@ -55,7 +56,7 @@ public:
         }
         return res;
     }
-    virtual Eigen::Matrix<double,N*DIM,1> deriv(const Eigen::Matrix<double,N*DIM,1> & x) final {
+    virtual Eigen::Matrix<double,N*DIM,1> deriv(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x) final {
         Eigen::Matrix<double,N*DIM,1> res=Eigen::Matrix<double,N*DIM,1>::Zero();
         for (unsigned int i=0;i<N;i++) {
             for (unsigned int j=i+1;j<N;j++) {
@@ -80,9 +81,9 @@ public:
         return res;
     }
 
-    virtual Eigen::Matrix<double,N*DIM,N*DIM> hessian(const Eigen::Matrix<double,N*DIM,1> & x) final {
+    virtual Eigen::Matrix<double,N*DIM,N*DIM> hessian_deriv(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > res1 ) final {
         Eigen::Matrix<double,N*DIM,N*DIM> res;
-        Eigen::Matrix<double,N*DIM,N*DIM> res1;
+//        Eigen::Matrix<double,N*DIM,N*DIM> res1;
         if (has_deriv2()) {
             for (unsigned int i1=0;i1<N;i1++) {
                 for (unsigned int i2=i1+1;i2<N;i2++) { //hessian is symmetric

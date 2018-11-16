@@ -12,7 +12,8 @@ SISSA
     utilizzano le correnti (calcolo dei coefficienti di Green-Kubo). Sono presenti
     nella cartella dei sorgenti degli script python che convertono l'output del
     programma cp.x di Quantum Espresso nel formato convertibile nel formato
-    binario di LAMMPS (vedi help del programma).
+    binario di LAMMPS (vedi help del programma). Il programma può convertire anche in
+    questo formato le traiettorie di gromacs.
     
     Per compilare utilizzare cmake.
     Il programma presenta una parallelizzazione con i thread e con mpi (solo per
@@ -29,6 +30,7 @@ SISSA
     Eigen3
     Boost (program_options)
     Mpi (opzionale)
+    libxdrfile (formato file di gromacs -- opzionale )
 
 
 2) Compilazione

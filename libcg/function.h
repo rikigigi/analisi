@@ -6,8 +6,8 @@
   * K deve avere funzionare con < 0 e = 0, e deve essere restituito da X::transpose() * X
 **/
 template <class X, class K, class XX = void,
-          class K2=K,class X2=X,class X3=X,
-          class X4=X,class X5=X, class X6=X
+          class X6=X,class X7=const X & ,class X2=X,
+          class X3=X,class X4=X,class X5=X,class K2=K
           > class Function {
   public:
     /**
@@ -28,7 +28,15 @@ template <class X, class K, class XX = void,
     /**
       * Restituisce la matrice hessiana calcolata nel punto x
     **/
-    virtual XX hessian(const X5 & x) {}
+    virtual XX hessian(const X5 & x) {
+        X6 x2;
+        return hessian_deriv(x,x2);
+    }
+    /**
+      * Calcola la matrice hessiana e la derivata prima assiem
+      *  (la derivata prima a questo punto è gratis)
+    **/
+    virtual XX hessian_deriv(const X5 & x, X7 x2) {}
 };
 
 #endif // FUNCTION_H
