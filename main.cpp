@@ -30,6 +30,7 @@
 #include "istogrammaatomiraggio.h"
 #include "gofrt.h"
 #include <functional>
+#include "correlatorespaziale.h"
 #ifdef HAVEfftw3
 #include <fftw3.h>
 #else
@@ -54,7 +55,7 @@ int main(int argc, char ** argv)
 
     boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
-    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
+    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0,nk=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
@@ -109,6 +110,7 @@ int main(int argc, char ** argv)
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
+            ("spatial-correlator,A",boost::program_options::value<int> (&nk)->default_value(0),"Numero di punti della griglia ...")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"scrive nello standard output le colonne lette dal file di log specificato. Se viene specificato anche il calcolo delle correnti con l'opzione -a ( per esempio, se ho due specie atomiche, -a '#J 2 1.0 0.0' '#J 2 0.0 1.0' calcola la velocità del centro di massa della prima specie e della seconda specie), scrive anche le correnti calcolate nell'ordine in cui sono state specificate. In questo caso è necessario fornire anche il file binario della traiettoria con -i")
@@ -144,6 +146,8 @@ int main(int argc, char ** argv)
                 cvar.push_back( std::pair<unsigned int, unsigned int> (cvar_list.at(i*2),cvar_list.at(i*2+1)));
             }
         }
+
+
 
     }
 
@@ -519,6 +523,23 @@ int main(int argc, char ** argv)
                                   << test_spettro_blocchi.media()->spettro(i,2,itipo) << " " << test_spettro_blocchi.varianza()->spettro(i,2,itipo) << " ";
                     std::cout << "\n";
                 }
+
+            } else if (nk>0) {
+                std::cerr << "Inizio del calcolo delle correlazioni spaziali delle velocità...\n";
+                Traiettoria t(input);
+                MediaBlocchi<CorrelatoreSpaziale,unsigned int, double, unsigned int, unsigned int, bool> blocchi_corr_spaziale(&t,blocknumber);
+                blocchi_corr_spaziale.calcola(nk,0,0,0,false);
+
+                for (unsigned int rx=0;rx<nk;rx++)
+                    for (unsigned int ry=0;ry<nk;ry++)
+                        for (unsigned int rz=0;rz<nk;rz++){
+                            for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
+                                std::cout << blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype)<< " ";
+                            }
+                            std::cout << "\n";
+                        }
+
+
 
             }
 

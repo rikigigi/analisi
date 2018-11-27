@@ -179,6 +179,8 @@ SpettroVibrazionale & SpettroVibrazionale::operator = (const SpettroVibrazionale
     std::cerr << "chiamato SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
 #endif
     OperazioniSuLista<SpettroVibrazionale>::operator =(destra);
+
+    //TODO: cos'è sta roba?????
     fftw_free(trasformata);
 //    deallocate_plan();
     trasformata=0;

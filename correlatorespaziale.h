@@ -12,13 +12,12 @@
 class Traiettoria;
 
 
-template <class TFLOAT>
-class CorrelatoreSpaziale : public OperazioniSuLista<CorrelatoreSpaziale<TFLOAT>, TFLOAT>
+class CorrelatoreSpaziale : public OperazioniSuLista<CorrelatoreSpaziale, double>
 {
 public:
     CorrelatoreSpaziale(Traiettoria *t,
                         unsigned int n,
-                        TFLOAT sigma2,
+                        double sigma2,
                         unsigned int nthreads=0,
                         unsigned int skip=1,
                         bool debug=false
@@ -26,15 +25,17 @@ public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 0;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
-    void s_fac_k(TFLOAT  k[3], unsigned int i_t,fftw_complex * out );
-    CorrelatoreSpaziale<TFLOAT> & operator = (const CorrelatoreSpaziale<TFLOAT> &);
+    void s_fac_k(double  k[3], unsigned int i_t,fftw_complex * out );
+    double corr(unsigned int rx, unsigned int ry, unsigned int rz, unsigned int itype);
+    CorrelatoreSpaziale & operator = (const CorrelatoreSpaziale &);
     ~CorrelatoreSpaziale();
 private:
-    using OperazioniSuLista<CorrelatoreSpaziale<TFLOAT>, TFLOAT>::lista;
-    using OperazioniSuLista<CorrelatoreSpaziale<TFLOAT>, TFLOAT>::lunghezza_lista;
+    using OperazioniSuLista<CorrelatoreSpaziale, double>::lista;
+    using OperazioniSuLista<CorrelatoreSpaziale, double>::lunghezza_lista;
 
     fftw_complex * sfac;
-    TFLOAT sigma2;
+    double sigma2;
+    unsigned int size;
     unsigned int nthreads,nk,skip,tipi_atomi,ntimesteps;
     bool debug;
     Traiettoria *t;
