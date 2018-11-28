@@ -98,7 +98,7 @@ void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'iniz
                                    );
     fplan_natoms=traiettoria->get_natoms();
     fplan_size=size;
-    delete [] dummy;
+    fftw_free( dummy);
     //devo fare la trasformata della velocità per ogni atomo
     }
 
