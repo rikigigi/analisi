@@ -26,7 +26,7 @@ public:
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     void s_fac_k(double  k[3], unsigned int i_t,fftw_complex * out );
-    double corr(unsigned int rx, unsigned int ry, unsigned int rz, unsigned int itype);
+    double corr(unsigned int rx, unsigned int ry, unsigned int rz, unsigned int itype, unsigned int idim=0);
     CorrelatoreSpaziale & operator = (const CorrelatoreSpaziale &);
     ~CorrelatoreSpaziale();
 private:

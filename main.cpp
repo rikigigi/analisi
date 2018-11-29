@@ -530,19 +530,35 @@ int main(int argc, char ** argv)
                 MediaBlocchi<CorrelatoreSpaziale,unsigned int, double, unsigned int, unsigned int, bool> blocchi_corr_spaziale(&t,blocknumber);
                 blocchi_corr_spaziale.calcola(nk,0,0,0,false);
 
+                unsigned int col=3;
+                std::cout << "#Colonna di output: descrizione; \n# ";
+                std::cout << "1: rx; 2: ry; 3: rz; ";
+                for (unsigned int i=0;i<t.get_ntypes();i++)
+                    for (unsigned int j=0;j<=i;j++){
+                        col++;
+                        std::cout << col <<": ("<<i<<", "<<j<<") x; ";
+                        col++;
+                        std::cout << col <<": ("<<i<<", "<<j<<") x_var; ";
+                        col++;
+                        std::cout << col <<": ("<<i<<", "<<j<<") y; ";
+                        col++;
+                        std::cout << col <<": ("<<i<<", "<<j<<") y_var; ";
+                        col++;
+                        std::cout << col <<": ("<<i<<", "<<j<<") z; ";
+                        col++;
+                        std::cout << col <<": ("<<i<<", "<<j<<") z_var; ";
+                    }
+
                 for (unsigned int rx=0;rx<nk;rx++)
                     for (unsigned int ry=0;ry<nk;ry++)
                         for (unsigned int rz=0;rz<nk;rz++){
                             for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
-                                std::cout << blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype)<< " ";
+                                for (unsigned int idim=0;idim<3;idim++)
+                                    std::cout << blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
                             }
                             std::cout << "\n";
                         }
-
-
-
             }
-
     }
 
     catch (const std::exception& e) {

@@ -33,6 +33,7 @@ void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
         sfac = (fftw_complex *) fftw_malloc(sizeof(fftw_complex)*3*nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2);
         //lista = new double[nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2*3];
         lista = new double[nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3];
+        //lista = (double *) fftw_malloc(sizeof(double)*nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3);
     }
     ntimesteps=numeroTimestepsPerBlocco;
 }
@@ -103,9 +104,10 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                     k[2]=PI/(box[1]-box[0])*ky;
                   //  sfac_t[0][0]=0.1 ;/////// TOGLIERE
                     s_fac_k(k,itimestep,sfac_t);
+                    unsigned int m=0;
                     for (unsigned int i=0;i<tipi_atomi;i++)
                         for (unsigned int j=0;j<=i;j++){
-                            unsigned int m = (tipi_atomi+1)*tipi_atomi/2 - (i+1)*(i+2)/2 + j;
+                            //unsigned int m = (tipi_atomi+1)*tipi_atomi/2 - (i+1)*(i+2)/2 + j;
 
                             sfac[ik+m][0]+=       ( sfac_t[i*3][0]*  sfac_t[j*3][0]  -sfac_t[i*3][1]*  sfac_t[j*3][1] -sfac[ik+m][0])/(itime);
                             sfac[ik+m][1]+=       (-sfac_t[i*3][0]*  sfac_t[j*3][1] + sfac_t[i*3][1]*  sfac_t[j*3][0] -sfac[ik+m][1])/(itime);
@@ -113,6 +115,7 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                             sfac[size_half  +ik+m][1]+=  (-sfac_t[i*3+1][0]*sfac_t[j*3+1][1]+sfac_t[i*3+1][1]*sfac_t[j*3+1][0] -  sfac[  size_half+ik+m][1])/(itime);
                             sfac[2*size_half+ik+m][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0]- sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+m][0])/(itime);
                             sfac[2*size_half+ik+m][1]+=(-sfac_t[i*3+2][0]*sfac_t[j*3+2][1]+sfac_t[i*3+2][1]*sfac_t[j*3+2][0]-     sfac[2*size_half+ik+m][1])/(itime);
+                            m++;
                         }
                 }
 
@@ -148,16 +151,19 @@ CorrelatoreSpaziale & CorrelatoreSpaziale::operator =(const CorrelatoreSpaziale 
 }
 
 
-double CorrelatoreSpaziale::corr(unsigned int rx, unsigned int ry, unsigned int rz, unsigned int itype) {
+double CorrelatoreSpaziale::corr(unsigned int rx, unsigned int ry, unsigned int rz, unsigned int itype,unsigned int idim) {
     if (itype >=tipi_atomi*(tipi_atomi+1)/2) {
-            std::cerr << "Errore: indice dei tipi fuori dal range in "__FILE__"\n";
+            std::cerr << "Errore: indice dei tipi fuori dal range in " __FILE__ "\n";
             abort();
     }
     if (rx>=nk || ry>=nk || rz>=nk) {
-            std::cerr << "Errore: indice spaziale fuori dal range in "__FILE__"\n";
+            std::cerr << "Errore: indice spaziale fuori dal range in " __FILE__ "\n";
             abort();
     }
-    return lista[ rx*nk*nk*tipi_atomi*(tipi_atomi+1)/2+
+    if (idim >= 3) {
+        std::cerr << "Errore: indice della coordinata fuori dal range in " __FILE__ "\n";
+    }
+    return lista[idim*nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2+ rx*nk*nk*tipi_atomi*(tipi_atomi+1)/2+
             ry*nk*tipi_atomi*(tipi_atomi+1)/2+
             rz*tipi_atomi*(tipi_atomi+1)/2+
             itype
