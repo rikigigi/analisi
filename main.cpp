@@ -177,12 +177,12 @@ int main(int argc, char ** argv)
             }
         }
 
-        std::cerr << "Uso " << numero_thread << " threads\n";
 
 
 #ifdef FFTW3_THREADS
         fftw_init_threads();
         fftw_plan_with_nthreads(numero_thread);
+        std::cerr << "Uso " << numero_thread << " threads\n";
 #ifdef DEBUG
         if (debug) {
             TestTraiettoria ttest(input);
@@ -549,12 +549,14 @@ int main(int argc, char ** argv)
                         std::cout << col <<": ("<<i<<", "<<j<<") z_var; ";
                     }
 
+                std::cout << "\n";
+
                 for (unsigned int rx=0;rx<nk;rx++)
                     for (unsigned int ry=0;ry<nk;ry++)
                         for (unsigned int rz=0;rz<nk;rz++){
                             for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
                                 for (unsigned int idim=0;idim<3;idim++)
-                                    std::cout << blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
+                                    std::cout<< rx<<" "<<ry<<" "<<rz<< " " << blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
                             }
                             std::cout << "\n";
                         }
