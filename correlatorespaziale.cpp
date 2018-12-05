@@ -32,7 +32,8 @@ void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
     if (sfac==0){
         sfac = (fftw_complex *) fftw_malloc(sizeof(fftw_complex)*3*nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2);
         //lista = new double[nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2*3];
-        lista = new double[nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3];
+        lunghezza_lista=nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3;
+        lista = new double[lunghezza_lista];
        // lista = (double *) fftw_malloc(sizeof(double)*nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3);
     }
     ntimesteps=numeroTimestepsPerBlocco;
@@ -63,10 +64,6 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
     int size_half=nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2;
     int itime = 0;
 
-    for (unsigned int i=0;i<3*nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2;i++) {
-        sfac[i][0]=0.0;
-        sfac[i][1]=0.0;
-    }
     fftw_complex * sfac_t=(fftw_complex *) fftw_malloc(sizeof(fftw_complex) * tipi_atomi*3);
     int n[]={nk,nk,nk};
     //int n[]={1,1,1};
@@ -87,6 +84,10 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                                    FFTW_DESTROY_INPUT
                                    );
 
+    for (unsigned int i=0;i<3*nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2;i++) {
+        sfac[i][0]=0.0;
+        sfac[i][1]=0.0;
+    }
     for (unsigned int itimestep=primo;itimestep<ntimesteps+primo;itimestep++){
         itime += 1;
         double * box=t->scatola(itimestep);

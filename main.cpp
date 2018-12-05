@@ -554,9 +554,10 @@ int main(int argc, char ** argv)
                 for (unsigned int rx=0;rx<nk;rx++)
                     for (unsigned int ry=0;ry<nk;ry++)
                         for (unsigned int rz=0;rz<nk;rz++){
+                            std::cout<< rx<<" "<<ry<<" "<<rz<< " ";
                             for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
                                 for (unsigned int idim=0;idim<3;idim++)
-                                    std::cout<< rx<<" "<<ry<<" "<<rz<< " " << blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
+                                    std::cout<< blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
                             }
                             std::cout << "\n";
                         }
