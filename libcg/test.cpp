@@ -73,8 +73,8 @@ public:
                 }
                 double dp_dr=pair_deriv_r2(r2);
                 for (unsigned int i0=0;i0<DIM;i0++) {
-                    res(i*DIM+i0)+=dp_dr*dx(i0)*2;
-                    res(j*DIM+i0)-=dp_dr*dx(i0)*2;
+                    res(i*DIM+i0)+=dp_dr*dx(i0);
+                    res(j*DIM+i0)-=dp_dr*dx(i0);
                 }
             }
         }
@@ -118,27 +118,33 @@ public:
                             sub[d0*DIM+d1]+=f2*dx(d0)*dx(d1);
                         }
                     }
+                    for (unsigned int d0=0;d0<DIM;d0++) {
+                        for (unsigned int d1=0;d1<DIM;d1++)
+                            std::cout << sub[d0*DIM+d1]<<" ";
+                        std::cout << "\n";
+                    }
+                    std::cout << "\n\n";
 
                     //add the matrix contribution to diagonal and off diagonal term (matrix is symmetric)
                     for (unsigned int d0=0;d0<DIM;d0++) {
                         //off diagonal
-                        res(i1*DIM+d0,i2*DIM+d0)=sub[d0*DIM+d0];
+                        res(i1*DIM+d0,i2*DIM+d0)=-sub[d0*DIM+d0];
                         //off diagonal symmetric
-                        res(i2*DIM+d0,i1*DIM+d0)=sub[d0*DIM+d0];
+                        res(i2*DIM+d0,i1*DIM+d0)=-sub[d0*DIM+d0];
                         //diagonal 1
                         res(i1*DIM+d0,i1*DIM+d0)+=sub[d0*DIM+d0];
                         //diagonal 2
                         res(i2*DIM+d0,i2*DIM+d0)+=sub[d0*DIM+d0];
-                        for (unsigned int d1=d0+1;d1<DIM;d1++) {
+                        for (unsigned int d1=0;d1<d0;d1++) {
                             // sub[d0*DIM+d1]=sub[d1*DIM+d0];
 
                             //off diagonal
-                            res(i1*DIM+d0,i2*DIM+d1)=sub[d1*DIM+d0];
-                            res(i1*DIM+d1,i2*DIM+d0)=sub[d1*DIM+d0];
+                            res(i1*DIM+d0,i2*DIM+d1)=-sub[d1*DIM+d0];
+                            res(i1*DIM+d1,i2*DIM+d0)=-sub[d1*DIM+d0];
 
                             //off diagonal symmetric
-                            res(i2*DIM+d0,i1*DIM+d1)=sub[d1*DIM+d0];
-                            res(i2*DIM+d1,i1*DIM+d0)=sub[d1*DIM+d0];
+                            res(i2*DIM+d0,i1*DIM+d1)=-sub[d1*DIM+d0];
+                            res(i2*DIM+d1,i1*DIM+d0)=-sub[d1*DIM+d0];
 
                             //diagonal 1
                             res(i1*DIM+d0,i1*DIM+d1)=sub[d1*DIM+d0];
@@ -150,6 +156,7 @@ public:
                     }
                 }
             }
+            res1=res1/2.0;
             return res;
         } else {
             throw std::runtime_error("Not implemented!");
@@ -161,10 +168,81 @@ public:
         Tinv=t.inverse();
     }
 
+    bool check_forces(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
+        Eigen::Matrix<double,N*DIM,1> force=deriv(x),x_;
+        double res=true;
+        for (unsigned int i=0;i<N*DIM;i++) {
+            double dvdr=0.0;
+            x_=x;
+            x_(i)=x_(i)+x_(i)*dx_over_x;
+            double vp=operator ()(x_);
+            x_(i)=x_(i)-x_(i)*dx_over_x;
+            double vm=operator ()(x_);
+            dvdr=(vp-vm)/(2*x(i)*dx_over_x);
+            std::cerr << "Index "<< i<< ": \tnumerical = " << dvdr << " calculated = "<< force(i)<<"\n";
+            if (fabs((dvdr-force(i)))/force(i)>max_error) {
+                res=false;
+            }
+        }
+    }
+    bool check_hessian_forces(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
+        double res=false;
+        Eigen::Matrix<double,N*DIM,1> force,x_;
+        Eigen::Matrix<double,N*DIM,N*DIM> H=hessian_deriv(x,force);
+        for (unsigned int i=0;i<N*DIM;i++) {
+            {
+                double dvdr=0.0;
+                x_=x;
+                x_(i)=x_(i)+x_(i)*dx_over_x;
+                double vp=operator ()(x_);
+                x_(i)=x_(i)-x_(i)*dx_over_x;
+                double vm=operator ()(x_);
+                dvdr=(vp-vm)/(2*x(i)*dx_over_x);
+                std::cerr << "Force "<< i<< ": \t numerical = " << dvdr << " calculated = "<< force(i)<<"\n";
+                if (fabs((dvdr-force(i)))/force(i)>max_error) {
+                    res=false;
+                }
+            }
+            for (unsigned int j=0;j<N*DIM;j++) {
+                double dp,dm,d1p,d1m;
+                x_=x;
+                x_(j)=x_(j)+x_(j)*dx_over_x;
+                x_(i)=x_(i)+x_(i)*dx_over_x;
+                dp=operator ()(x_);
+                x_=x;
+                x_(j)=x_(j)+x_(j)*dx_over_x;
+                x_(i)=x_(i)-x_(i)*dx_over_x;
+                dm=operator ()(x_);
+                d1p=(dp-dm)/(2*x(i)*dx_over_x);
+
+                x_=x;
+                x_(j)=x_(j)-x_(j)*dx_over_x;
+                x_(i)=x_(i)+x_(i)*dx_over_x;
+                dp=operator ()(x_);
+                x_=x;
+                x_(j)=x_(j)-x_(j)*dx_over_x;
+                x_(i)=x_(i)-x_(i)*dx_over_x;
+                dm=operator ()(x_);
+                d1m=(dp-dm)/(2*x(i)*dx_over_x);
+
+                double d2=(d1p-d1m)/(2*x(j)*dx_over_x);
+
+                std::cerr << i << " "<<j << " " << d2 << " " << H(i,j) << "\n";
+                if (fabs((d2-H(i,j)))/H(i,j)>max_error) {
+                    res=false;
+                }
+            }
+
+        }
+
+        std::cout << "\n\n\n"<<H<<"\n";
+    }
+
 private:
     constexpr bool want_pbc()       {return (flags & 1) == 1;}
     constexpr bool has_deriv2()     {return (flags & 2) == 2;}
     constexpr bool newton_forces()  {return (flags & 4) == 4;}
+    constexpr bool square_box() {return (flags & 8) == 8;}
     Eigen::Matrix<double,DIM,DIM> T,Tinv;
     template <typename D1,typename D2>
     inline
@@ -245,10 +323,15 @@ int main() {
     ParabolaLineMinimization <Eigen::Matrix<double,25*3,1>,double,LJPair<25,3> > lineMin(0.02,0.1,4,3);
     Cg<Eigen::Matrix<double,25*3,1>,double,LJPair<25,3> > testcg(test,x,test(x),lineMin,8);
     for (unsigned int i=0;i<2000;i++) {
-        std::cout << i << " " << testcg.get_fx()<< "\n";
+        if (i%100==0)
+            std::cout << i << " " << testcg.get_fx()<< "\n";
         if (!testcg.iteration())
             break;
     }
     std::cout <<  "Final: " << testcg.get_fx()<< "\n";
+
+    std::cout << "Test delle forze: " << test.check_forces(x,0.001,0.001)<<"\n";
+    std::cout << "Test dell'hessiana: " << test.check_hessian_forces(x,0.001,0.001)<<"\n";
+
 
 }
