@@ -528,11 +528,11 @@ int main(int argc, char ** argv)
                 std::cerr << "Inizio del calcolo delle correlazioni spaziali delle velocità...\n";
                 Traiettoria t(input);
                 MediaBlocchi<CorrelatoreSpaziale,unsigned int, double, unsigned int, unsigned int, bool> blocchi_corr_spaziale(&t,blocknumber);
-                blocchi_corr_spaziale.calcola(nk,0,0,0,false);
+                blocchi_corr_spaziale.calcola(nk,0,numero_thread,skip,false);
 
-                unsigned int col=3;
+                unsigned int col=4;
                 std::cout << "#Colonna di output: descrizione; \n# ";
-                std::cout << "1: rx; 2: ry; 3: rz; ";
+                std::cout << "1: rx; 2: ry; 3: rz; 4: r**2; ";
                 for (unsigned int i=0;i<t.get_ntypes();i++)
                     for (unsigned int j=0;j<=i;j++){
                         col++;
@@ -554,7 +554,7 @@ int main(int argc, char ** argv)
                 for (unsigned int rx=0;rx<nk;rx++)
                     for (unsigned int ry=0;ry<nk;ry++)
                         for (unsigned int rz=0;rz<nk;rz++){
-                            std::cout<< rx<<" "<<ry<<" "<<rz<< " ";
+                            std::cout<< rx<<" "<<ry<<" "<<rz<< " "<<rx*rx+ry*ry+rz*rz<<" ";
                             for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
                                 for (unsigned int idim=0;idim<3;idim++)
                                     std::cout<< blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";

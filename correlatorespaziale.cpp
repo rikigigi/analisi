@@ -37,7 +37,7 @@ void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
        // lista = (double *) fftw_malloc(sizeof(double)*nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3);
     }
     ntimesteps=numeroTimestepsPerBlocco;
-    std::cerr<< "Sto usando il CorrSpaziale Davide"<<std::endl;
+   // std::cerr<< "Sto usando il CorrSpaziale Davide"<<std::endl;
 }
 
 
@@ -88,7 +88,7 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
         sfac[i][0]=0.0;
         sfac[i][1]=0.0;
     }
-    for (unsigned int itimestep=primo;itimestep<ntimesteps+primo;itimestep++){
+    for (unsigned int itimestep=primo;itimestep<ntimesteps+primo;itimestep+=skip){
         itime += 1;
         double * box=t->scatola(itimestep);
         //ciclo su kx,ky e kz. kz va da 0 a kz/2+1
@@ -152,11 +152,11 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                         for (unsigned int j=0;j<=i;j++){
                             //unsigned int m = (tipi_atomi+1)*tipi_atomi/2 - (i+1)*(i+2)/2 + j;
 
-                            sfac[ik+m][0]+=       ( sfac_t[i*3][0]*  sfac_t[j*3][0]  -sfac_t[i*3][1]*  sfac_t[j*3][1] -sfac[ik+m][0])/(itime);
+                            sfac[ik+m][0]+=       ( sfac_t[i*3][0]*  sfac_t[j*3][0]  +sfac_t[i*3][1]*  sfac_t[j*3][1] -sfac[ik+m][0])/(itime);
                             sfac[ik+m][1]+=       (-sfac_t[i*3][0]*  sfac_t[j*3][1] + sfac_t[i*3][1]*  sfac_t[j*3][0] -sfac[ik+m][1])/(itime);
-                            sfac[size_half  +ik+m][0]+=  ( sfac_t[i*3+1][0]*sfac_t[j*3+1][0]-sfac_t[i*3+1][1]*sfac_t[j*3+1][1]  - sfac[  size_half+ik+m][0])/(itime);
+                            sfac[size_half  +ik+m][0]+=  ( sfac_t[i*3+1][0]*sfac_t[j*3+1][0]+sfac_t[i*3+1][1]*sfac_t[j*3+1][1]  - sfac[  size_half+ik+m][0])/(itime);
                             sfac[size_half  +ik+m][1]+=  (-sfac_t[i*3+1][0]*sfac_t[j*3+1][1]+sfac_t[i*3+1][1]*sfac_t[j*3+1][0] -  sfac[  size_half+ik+m][1])/(itime);
-                            sfac[2*size_half+ik+m][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0]- sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+m][0])/(itime);
+                            sfac[2*size_half+ik+m][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0]+ sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+m][0])/(itime);
                             sfac[2*size_half+ik+m][1]+=(-sfac_t[i*3+2][0]*sfac_t[j*3+2][1]+sfac_t[i*3+2][1]*sfac_t[j*3+2][0]-     sfac[2*size_half+ik+m][1])/(itime);
                             m++;
                         }
