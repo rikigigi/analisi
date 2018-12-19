@@ -37,7 +37,7 @@ void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
        // lista = (double *) fftw_malloc(sizeof(double)*nk*nk*nk*tipi_atomi*(tipi_atomi+1)/2*3);
     }
     ntimesteps=numeroTimestepsPerBlocco;
-    std::cerr<< "Sto usando il CorrSpaziale Davide"<<std::endl;
+   // std::cerr<< "Sto usando il CorrSpaziale Davide"<<std::endl;
 }
 
 
@@ -64,10 +64,6 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
     int size_half=nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2;
     int itime = 0;
 
-    for (unsigned int i=0;i<3*nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2;i++) {
-        sfac[i][0]=0.0;
-        sfac[i][1]=0.0;
-    }
     fftw_complex * sfac_t=(fftw_complex *) fftw_malloc(sizeof(fftw_complex) * tipi_atomi*3);
     int n[]={nk,nk,nk};
     //int n[]={1,1,1};
@@ -78,56 +74,65 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                                    /*  ****** input ******  */
                                    sfac,//traiettoria->velocita_inizio(), // puntatore ai dati
                                    NULL, // i dati sono tutti compatti, non fanno parte di array più grandi
-                                   1, // la distanza fra due dati successivi
-                                   nk*nk*nk, // la distanza fra due serie di dati adiacenti
+                                   tipi_atomi*(tipi_atomi+1)/2, // la distanza fra due dati successivi
+                                   1, // la distanza fra due serie di dati adiacenti
                                    /*  ****** output ******  */
                                    lista, // puntatore all'array di output
                                    NULL,
-                                   1, // la distanza fra due dati successivi
-                                   nk*nk*nk, // la distanza fra due serie di dati adiacenti
+                                   tipi_atomi*(tipi_atomi+1)/2, // la distanza fra due dati successivi
+                                   1, // la distanza fra due serie di dati adiacenti
                                    FFTW_DESTROY_INPUT
                                    );
 
+    for (unsigned int i=0;i<3*nk*nk*(nk/2+1)*tipi_atomi*(tipi_atomi+1)/2;i++) {
+        sfac[i][0]=0.0;
+        sfac[i][1]=0.0;
+    }
     for (unsigned int itimestep=primo;itimestep<ntimesteps+primo;itimestep+=skip){
         itime += 1;
         double * box=t->scatola(itimestep);
         //ciclo su kx,ky e kz. kz va da 0 a kz/2+1
         double k[3]={0.0};
-        unsigned int ii_tipi=0;
-        for (unsigned int i=0;i<tipi_atomi;i++){
-            for (unsigned int j=0;j<=i;j++){
-                int ii_tipi_matrix=ii_tipi*nk*nk*(nk/2+1);
-                for (int kx=0;kx<nk;kx++){
-                    unsigned int ikx=ii_tipi_matrix+kx*nk*(nk/2+1);  
-                    k[0]=PI/(box[1]-box[0])*kx;
-                    for (int ky=0;ky<nk;ky++) {
-                        unsigned int iky=ikx+ky*(nk/2+1);  
-                        k[1]=PI/(box[1]-box[0])*ky;
-                        for (int kz=0;kz<nk/2+1;kz++) {
-                            for (unsigned int i=0;i<tipi_atomi*3;i++) {
-                                sfac_t[i][0]=0.0;
-                                sfac_t[i][1]=0.0;
-                            }
-                            unsigned int ik=iky+kz;
-                            //k[2]=PI/(box[1]-box[0])*ky; ///// MERDA IL COPIA/INCOLLA
-                            k[2]=PI/(box[1]-box[0])*kz;
-                          //  sfac_t[0][0]=0.1 ;/////// TOGLIERE
-                            s_fac_k(k,itimestep,sfac_t);
-
-                            sfac[ik+ii_tipi_matrix][0]+=       ( sfac_t[i*3][0]*  sfac_t[j*3][0]  + sfac_t[i*3][1]*  sfac_t[j*3][1] -sfac[ik+ii_tipi_matrix][0])/(itime);
-                            sfac[ik+ii_tipi_matrix][1]+=       (-sfac_t[i*3][0]*  sfac_t[j*3][1] + sfac_t[i*3][1]*  sfac_t[j*3][0] -sfac[ik+ii_tipi_matrix][1])/(itime);
-                            sfac[size_half  +ik+ii_tipi_matrix][0]+=  ( sfac_t[i*3+1][0]*sfac_t[j*3+1][0] + sfac_t[i*3+1][1]*sfac_t[j*3+1][1]  - sfac[  size_half+ik+ii_tipi_matrix][0])/(itime);
-                            sfac[size_half  +ik+ii_tipi_matrix][1]+=  (-sfac_t[i*3+1][0]*sfac_t[j*3+1][1] + sfac_t[i*3+1][1]*sfac_t[j*3+1][0] -  sfac[  size_half+ik+ii_tipi_matrix][1])/(itime);
-                            sfac[2*size_half+ik+ii_tipi_matrix][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0] + sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+ii_tipi_matrix][0])/(itime);
-                            sfac[2*size_half+ik+ii_tipi_matrix][1]+=(-sfac_t[i*3+2][0]*sfac_t[j*3+2][1] + sfac_t[i*3+2][1]*sfac_t[j*3+2][0]-     sfac[2*size_half+ik+ii_tipi_matrix][1])/(itime);
-                        }
+        for (int kx=0;kx<nk;kx++){
+            unsigned int ikx=kx*nk*(nk/2+1)*(tipi_atomi+1)*tipi_atomi/2;
+            k[0]=PI/(box[1]-box[0])*kx;
+            for (int ky=0;ky<nk;ky++) {
+                unsigned int iky=ky*(nk/2+1)*(tipi_atomi+1)*tipi_atomi/2;
+                k[1]=PI/(box[1]-box[0])*ky;
+                for (int kz=0;kz<nk/2+1;kz++) {
+                    for (unsigned int i=0;i<tipi_atomi*3;i++) {
+                        sfac_t[i][0]=0.0;
+                        sfac_t[i][1]=0.0;
                     }
-                }
-            ii_tipi += 1;  
-            }
+                    unsigned int ik=ikx+iky+kz*(tipi_atomi+1)*tipi_atomi/2;
+                    //k[2]=PI/(box[1]-box[0])*ky; ///// MERDA IL COPIA/INCOLLA
+                    k[2]=PI/(box[1]-box[0])*kz;
+                  //  sfac_t[0][0]=0.1 ;/////// TOGLIERE
+                    s_fac_k(k,itimestep,sfac_t);
+                    unsigned int m=0;
+                    for (unsigned int i=0;i<tipi_atomi;i++)
+                        for (unsigned int j=0;j<=i;j++){
+                            //unsigned int m = (tipi_atomi+1)*tipi_atomi/2 - (i+1)*(i+2)/2 + j;
 
+                            sfac[ik+m][0]+=       ( sfac_t[i*3][0]*  sfac_t[j*3][0]  +sfac_t[i*3][1]*  sfac_t[j*3][1] -sfac[ik+m][0])/(itime);
+                            sfac[ik+m][1]+=       (-sfac_t[i*3][0]*  sfac_t[j*3][1] + sfac_t[i*3][1]*  sfac_t[j*3][0] -sfac[ik+m][1])/(itime);
+                            sfac[size_half  +ik+m][0]+=  ( sfac_t[i*3+1][0]*sfac_t[j*3+1][0]+sfac_t[i*3+1][1]*sfac_t[j*3+1][1]  - sfac[  size_half+ik+m][0])/(itime);
+                            sfac[size_half  +ik+m][1]+=  (-sfac_t[i*3+1][0]*sfac_t[j*3+1][1]+sfac_t[i*3+1][1]*sfac_t[j*3+1][0] -  sfac[  size_half+ik+m][1])/(itime);
+                            sfac[2*size_half+ik+m][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0]+ sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+m][0])/(itime);
+                            sfac[2*size_half+ik+m][1]+=(-sfac_t[i*3+2][0]*sfac_t[j*3+2][1]+sfac_t[i*3+2][1]*sfac_t[j*3+2][0]-     sfac[2*size_half+ik+m][1])/(itime);
+                            m++;
+                        }
+                    //std::cout<<" m=  "<<m<<std::endl ;
+                }
+
+            }
         }
-}
+
+
+
+    }
+
+
     //fare trasformata di fourier discreta (copia da spettrovibrazionale.cpp:84)
 
 
