@@ -1,12 +1,20 @@
 #include "cg.h"
 #include "config.h"
+#include "../rnd.h"
+#include "../lib/json.hpp"
 #include <iostream>
+#include <string>
+#include <fstream>
 
 #ifdef HAVEeigen3EigenDense
 #include <eigen3/Eigen/Dense>
 #else
 #include <Eigen/Dense>
 #endif
+
+
+#define NATOMS 36
+using json = nlohmann::json;
 
 template <int D>
 class QuadraticForm : public Function <Eigen::Matrix<double,D,1>, double> {
@@ -118,13 +126,14 @@ public:
                             sub[d0*DIM+d1]+=f2*dx(d0)*dx(d1);
                         }
                     }
+                    /*
                     for (unsigned int d0=0;d0<DIM;d0++) {
                         for (unsigned int d1=0;d1<DIM;d1++)
                             std::cout << sub[d0*DIM+d1]<<" ";
                         std::cout << "\n";
                     }
                     std::cout << "\n\n";
-
+*/
                     //add the matrix contribution to diagonal and off diagonal term (matrix is symmetric)
                     for (unsigned int d0=0;d0<DIM;d0++) {
                         //off diagonal
@@ -238,30 +247,35 @@ public:
         std::cout << "\n\n\n"<<H<<"\n";
     }
 
+    void pbc_wrap(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > x ,double L=0.0) {
+        if (L==0.0) L=T(0,0);
+        x=x-L*Eigen::floor(x.array()/L).matrix();
+    }
+
 private:
     constexpr bool want_pbc()       {return (flags & 1) == 1;}
     constexpr bool has_deriv2()     {return (flags & 2) == 2;}
     constexpr bool newton_forces()  {return (flags & 4) == 4;}
-    constexpr bool square_box() {return (flags & 8) == 8;}
+    constexpr bool orthorombic_box() {return (flags & 8) == 8;}
     Eigen::Matrix<double,DIM,DIM> T,Tinv;
     template <typename D1,typename D2>
     inline
     Eigen::Matrix<typename D1::Scalar,DIM,1>  pbc(const Eigen::MatrixBase<D1> &x1, const Eigen::MatrixBase<D2> &x0,
                        typename D1::Scalar & r2min) {
         Eigen::Matrix<typename D1::Scalar,DIM,1> u1,u0,dx;
-        u1=Tinv*x1;
-        u0=Tinv*x0;
-        u1=u1-Eigen::floor(u1.array()).matrix();
-        u0=u0-Eigen::floor(u0.array()).matrix();
-        dx=T*(u1-u0);
+        u1=Tinv*(x1-x0);
+        u0=u1-Eigen::round(u1.array()).matrix();
+        dx=T*u0;
         r2min=dx.squaredNorm();
-        for (unsigned int i=0;i<DIM;i++) {
-            for (int i0=-1;i0<2;i0+=2){
-                Eigen::Matrix<typename D1::Scalar,DIM,1> dxn=dx+double(i0)*T.col(i);
-                typename D1::Scalar r2=dxn.squaredNorm();
-                if (r2<r2min){
-                    r2min=r2;
-                    dx=dxn;
+        if (! orthorombic_box()){
+            for (unsigned int i=0;i<DIM;i++) {
+                for (int i0=-1;i0<2;i0+=2){
+                    Eigen::Matrix<typename D1::Scalar,DIM,1> dxn=dx+double(i0)*T.col(i);
+                    typename D1::Scalar r2=dxn.squaredNorm();
+                    if (r2<r2min){
+                        r2min=r2;
+                        dx=dxn;
+                    }
                 }
             }
         }
@@ -273,7 +287,7 @@ private:
 };
 
 template <unsigned int N,unsigned int DIM>
-class LJPair : public MultiPair<N,DIM,1 | 2 > {
+class LJPair : public MultiPair<N,DIM,1 | 2 | 8 > {
 protected:
     virtual double pair       (const double & r2) override {
         double r6=r2*r2*r2;
@@ -293,7 +307,126 @@ protected:
 
 };
 
+template <unsigned int N,unsigned int DIM,unsigned int FLAGS>
+class Integrator {
+public:
+    Integrator (MultiPair<N,DIM,FLAGS> * p) : p(p) {
+
+    }
+
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos ) {
+        std::cerr << "Error: not implemented\n";
+        abort();
+    }
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > vel  ){
+        std::cerr << "Error: not implemented\n";
+        abort();
+    }
+
+    void dump(std::ostream & out, const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x) {
+
+        out << N <<"\n\n";
+        for (unsigned int i=0;i<N;i++) {
+            out  <<"1 ";
+             for (unsigned int j=0;j<DIM;j++)
+                out << x(i*DIM+j) << " ";
+             out << "\n";
+        }
+       // out << "\n;
+
+    }
+
+
+protected:
+    MultiPair<N,DIM,FLAGS> *p;
+    double energy;
+    Eigen::Matrix<double,N*DIM,1> pos_m;
+    Eigen::Matrix<double,N*DIM,1> deriv_m;
+    Eigen::Matrix<double,N*DIM,N*DIM> hessian_m;
+};
+template <unsigned int N, unsigned int DIM,unsigned int FLAGS>
+class IntegratorAcceleratedLangevin : public Integrator<N,DIM,FLAGS> {
+public:
+
+    IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, double delta,double T) : Integrator<N,DIM,FLAGS>(p), delta(delta), T(T) {
+        pos_m=pos;
+        c=sqrt(2*T*delta);
+    }
+
+    void set_T(double T_) {
+        T=T_;
+        c=sqrt(2*T*delta);
+    }
+
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, bool accelerated=true) final {
+        Eigen::Matrix<double,N*DIM,1> z,pos_p;
+        Eigen::Matrix<double,N*DIM,N*DIM,1> H,H_inv;
+
+        if (accelerated){
+            H=p->hessian_deriv(pos,deriv_m);
+            H_inv=H.inverse();
+        } else{
+            deriv_m=p->deriv(pos);
+        }
+        /*
+        auto eigenvalues=H.eigenvalues();
+        std::cout << eigenvalues<<"\n";
+        //if (eigenvalues.col(0)[0]<0){
+        //    H=H+eigenvalues(0)*1.1*Eigen::Matrix<double,N*DIM,N*DIM>::Identity();
+        //}
+        */
+        //mette in z un vettore di variabili normali distribuite come N(0,1)
+        for (unsigned int i=0;i<N*DIM;i++) {
+            z(i)=normal_gauss();
+        }
+
+        //trasforma le variabili secondo la matrice di covarianze
+        if (accelerated)
+            z=H_inv*z;
+
+        if (accelerated){
+            pos_p=pos-c*z+H_inv*deriv_m-
+                    H_inv*(hessian_m-H)*(pos_m-pos)/2.0;
+            hessian_m=H;
+        }
+        else
+            pos_p=pos-c*z -delta*deriv_m;
+
+        pos_m=pos;
+        pos=pos_p;
+    }
+
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > vel  ) {
+        std::cerr << "Warning: called method for second order dynamics, but this is first order\n";
+        step(pos);
+    }
+
+    void init_global_rnd(unsigned int seed,unsigned int thermalization_steps=10000) {
+        set_SHR3_jsr((seed+1)*123);
+        for (unsigned int i=0;i<thermalization_steps;i++) {
+            rnd_shr3();
+        }
+        init_cmwc4096();
+        for (unsigned int i=0;i<thermalization_steps;i++) {
+            cmwc4096();
+        }
+    }
+
+private:
+    double delta,T,c;
+    using Integrator<N,DIM,FLAGS>::p;
+    using Integrator<N,DIM,FLAGS>::pos_m;
+    using Integrator<N,DIM,FLAGS>::deriv_m;
+    using Integrator<N,DIM,FLAGS>::hessian_m;
+
+};
+
 int main() {
+
+    std::ifstream inputjs("input.json");
+    json js;
+    inputjs >> js;
+
     /// test con una forma quadratica:
 
     Eigen::Matrix4d m=Eigen::Matrix4d::Random();
@@ -312,17 +445,71 @@ int main() {
 
     std::cout << "======================\n";
 
-    LJPair<25,3> test;
+    LJPair<NATOMS,3> test;
     Eigen::Matrix3d cel;
-    cel << 6.0 , 0.0 , 0.0
-        , 0.0 , 6.0 , 0.0
-        , 0.0 , 0.0 , 6.0;
-    test.init_pbc( cel);
-    Eigen::Matrix<double,25*3,1> x=Eigen::Matrix<double,25*3,1>::Random()*6.0;
 
-    ParabolaLineMinimization <Eigen::Matrix<double,25*3,1>,double,LJPair<25,3> > lineMin(0.02,0.1,4,3);
-    Cg<Eigen::Matrix<double,25*3,1>,double,LJPair<25,3> > testcg(test,x,test(x),lineMin,8);
-    for (unsigned int i=0;i<2000;i++) {
+    if (js.count("cell_size")==0) {
+        std::cerr << "Errore: impossibile trovare l'elemento \"cell_size\"\n";
+        return -1;
+    }
+
+    if (js.count("dynamics")==0) {
+        std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\"\n";
+        return -1;
+    } else {
+        if (js["dynamics"].count("nsteps")==0) {
+            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"nsteps\"\n";
+            return -1;
+        }
+        if (js["dynamics"].count("output")==0) {
+            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"output\"\n";
+            return -1;
+        }
+        if (js["dynamics"].count("T")==0) {
+            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"T\"\n";
+            return -1;
+        }
+        if (js["dynamics"].count("dt")==0) {
+            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"dt\"\n";
+            return -1;
+        }
+    }
+    if (js.count("minimization")==0) {
+        std::cerr << "Errore: impossibile trovare l'elemento \"minimization\"\n";
+        return -1;
+        if (js["minimization"].count("nsteps")==0) {
+            std::cerr << "Errore: impossibile trovare l'elemento \"minimization\":\"nsteps\"\n";
+            return -1;
+        }
+    }
+
+    unsigned int nsteps_d=js["dynamics"]["nsteps"];
+    unsigned int nsteps_cg=js["minimization"]["nsteps"];
+    unsigned int dump_mod=1;
+    double cell_size=js["cell_size"];
+    double temperature=js["dynamics"]["T"];
+    double dt=js["dynamics"]["dt"];
+    double Tfinal;
+    std::string outname=js["dynamics"]["output"];
+    if (js["dynamics"].count("print")==1){
+        dump_mod=js["dynamics"]["print"];
+    }
+
+    if (js["dynamics"].count("Tfinal")==0) {
+        Tfinal=temperature;
+    } else {
+        Tfinal=js["dynamics"]["Tfinal"];
+    }
+
+    cel << cell_size , 0.0 , 0.0
+        , 0.0 , cell_size , 0.0
+        , 0.0 , 0.0 , cell_size;
+    test.init_pbc( cel);
+    Eigen::Matrix<double,NATOMS*3,1> x=Eigen::Matrix<double,NATOMS*3,1>::Random()*cell_size;
+
+    ParabolaLineMinimization <Eigen::Matrix<double,NATOMS*3,1>,double,LJPair<NATOMS,3> > lineMin(0.02,0.1,4,3);
+    Cg<Eigen::Matrix<double,NATOMS*3,1>,double,LJPair<NATOMS,3> > testcg(test,x,test(x),lineMin,8);
+    for (unsigned int i=0;i<nsteps_cg;i++) {
         if (i%100==0)
             std::cout << i << " " << testcg.get_fx()<< "\n";
         if (!testcg.iteration())
@@ -333,5 +520,26 @@ int main() {
     std::cout << "Test delle forze: " << test.check_forces(x,0.001,0.001)<<"\n";
     std::cout << "Test dell'hessiana: " << test.check_hessian_forces(x,0.001,0.001)<<"\n";
 
+    std::cout << "\n\n\nInizio dinamica\n\n\n";
+    std::ofstream output(outname,std::ios_base::app);
+    IntegratorAcceleratedLangevin<NATOMS,3,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature);
+    //forse ok in c++17
+//    IntegratorAcceleratedLangevin<> firstOrderAcceleratedLangevin(&test,x,0.001,0.5);
+    firstOrderAcceleratedLangevin.init_global_rnd(67857);
+    test.pbc_wrap(x);
+    firstOrderAcceleratedLangevin.dump(output,x);
+    for (unsigned int istep=0;istep<nsteps_d;istep++) {
+        firstOrderAcceleratedLangevin.set_T(temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1));
+        firstOrderAcceleratedLangevin.step(x,false);
+        if (istep%dump_mod==0)
+            firstOrderAcceleratedLangevin.dump(output,x);
+        std::cout <<istep<<" " << test(x) << "\n";
+    }
+    std::cout << "Finito!\nVMD:\n\n";
+    std::cout <<"mol delete 0\n\
+mol addrep 0\n\
+display resetview\n\
+mol new {/home/bertossa/analisi/build-analisi-Desktop-Minimum Size Release/libcg/out.xyz} type {xyz} first 0 last -1 step 1 waitfor -1\n"
+    << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
 
 }
