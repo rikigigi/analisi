@@ -5,11 +5,14 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <functional>
 
 #ifdef HAVEeigen3EigenDense
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Eigenvalues>
 #else
 #include <Eigen/Dense>
+#include <Eigen/Eigenvalues>
 #endif
 
 
@@ -193,6 +196,7 @@ public:
                 res=false;
             }
         }
+        return res;
     }
     bool check_hessian_forces(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
         double res=false;
@@ -245,6 +249,7 @@ public:
         }
 
         std::cout << "\n\n\n"<<H<<"\n";
+        return res;
     }
 
     void pbc_wrap(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > x ,double L=0.0) {
@@ -347,7 +352,15 @@ protected:
 template <unsigned int N, unsigned int DIM,unsigned int FLAGS>
 class IntegratorAcceleratedLangevin : public Integrator<N,DIM,FLAGS> {
 public:
-
+    static double regularizer(const double & e,double * const & p) {
+        /* eq. (45) of Mazzola, Sorella, "Accelerated molecular dynamics for ab-initio Electronic Simulations""
+         * e    --> lambda
+         * p[0] --> epsilon
+         * p[1] --> tau
+         * p[2] --> delta
+        */
+        return 1.0/(1.0+exp((e-p[0])/p[1]))/p[2]+e*(1.0-1.0/(1.0+exp((e-p[0])/p[1])));
+    }
     IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, double delta,double T) : Integrator<N,DIM,FLAGS>(p), delta(delta), T(T) {
         pos_m=pos;
         c=sqrt(2*T*delta);
@@ -361,9 +374,19 @@ public:
     virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, bool accelerated=true) final {
         Eigen::Matrix<double,N*DIM,1> z,pos_p;
         Eigen::Matrix<double,N*DIM,N*DIM,1> H,H_inv;
+        double d=1.0e-1;
+        double regularizer_parameters[]={1.0,2/d,d};
 
         if (accelerated){
             H=p->hessian_deriv(pos,deriv_m);
+            //regularize the matrix: diagonalize it
+            Eigen::SelfAdjointEigenSolver< Eigen::Matrix<double,N*DIM,N*DIM,1> > eigensolver;
+            eigensolver.compute(H);
+            auto eigenvalue=eigensolver.eigenvalues();
+            auto eigenvectors=eigensolver.eigenvectors();
+            //regularize the eigenvalues with regularizer function
+            eigenvalue=eigenvalue.unaryExpr(std::bind(&regularizer,std::placeholders::_1,regularizer_parameters));
+            H=eigenvectors.transpose()*eigenvalue.asDiagonal()*eigenvectors;
             H_inv=H.inverse();
         } else{
             deriv_m=p->deriv(pos);
@@ -385,7 +408,7 @@ public:
             z=H_inv*z;
 
         if (accelerated){
-            pos_p=pos-c*z+H_inv*deriv_m-
+            pos_p=pos-c*z-H_inv*deriv_m-
                     H_inv*(hessian_m-H)*(pos_m-pos)/2.0;
             hessian_m=H;
         }
@@ -423,6 +446,8 @@ private:
 
 int main() {
 
+    bool accelerated=false, test_hessian=false;
+
     std::ifstream inputjs("input.json");
     json js;
     inputjs >> js;
@@ -453,6 +478,13 @@ int main() {
         return -1;
     }
 
+    if (js.count("test_hessian")!=0) {
+        test_hessian=js["test_hessian"];
+        std::cerr << "test_hessian: " << (test_hessian?"true":"false") << "\n";
+    }
+
+
+
     if (js.count("dynamics")==0) {
         std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\"\n";
         return -1;
@@ -472,6 +504,11 @@ int main() {
         if (js["dynamics"].count("dt")==0) {
             std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"dt\"\n";
             return -1;
+        }
+        if (js["dynamics"].count("accelerated")>0) {
+            std::cerr << "Accelerated dynamics: ";
+            accelerated=js["dynamics"]["accelerated"];
+            std::cerr << (accelerated?"true":"false")<<"\n";
         }
     }
     if (js.count("minimization")==0) {
@@ -516,9 +553,12 @@ int main() {
             break;
     }
     std::cout <<  "Final: " << testcg.get_fx()<< "\n";
+    x=testcg.get_x();
 
-    std::cout << "Test delle forze: " << test.check_forces(x,0.001,0.001)<<"\n";
-    std::cout << "Test dell'hessiana: " << test.check_hessian_forces(x,0.001,0.001)<<"\n";
+    if (test_hessian){
+        std::cout << "Test delle forze: " << test.check_forces(x,0.0001,0.001)<<"\n";
+        std::cout << "Test dell'hessiana: " << test.check_hessian_forces(x,0.0001,0.001)<<"\n";
+    }
 
     std::cout << "\n\n\nInizio dinamica\n\n\n";
     std::ofstream output(outname,std::ios_base::app);
@@ -526,11 +566,11 @@ int main() {
     //forse ok in c++17
 //    IntegratorAcceleratedLangevin<> firstOrderAcceleratedLangevin(&test,x,0.001,0.5);
     firstOrderAcceleratedLangevin.init_global_rnd(67857);
-    test.pbc_wrap(x);
+//    test.pbc_wrap(x);
     firstOrderAcceleratedLangevin.dump(output,x);
     for (unsigned int istep=0;istep<nsteps_d;istep++) {
         firstOrderAcceleratedLangevin.set_T(temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1));
-        firstOrderAcceleratedLangevin.step(x,false);
+        firstOrderAcceleratedLangevin.step(x,accelerated);
         if (istep%dump_mod==0)
             firstOrderAcceleratedLangevin.dump(output,x);
         std::cout <<istep<<" " << test(x) << "\n";

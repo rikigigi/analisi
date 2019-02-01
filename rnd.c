@@ -1477,15 +1477,15 @@ double u,v,r,t;
 */
 
 double normal_gauss(){
-int i,indice;
+ int i,indice;
 double x,y;
 
 i=cmwc4096();
-indice=i&127;
+indice=i & 127;
 x=wtab[indice]*i;
     if (abs(i)<ktab[indice]){ // sono completamente dentro la gaussiana, accetto subito!
         return i*wtab[indice];
-    }else if (i==127){ // aiai sono finito sulla coda
+    }else if (indice==127){ // aiai sono finito sulla coda
             do {
                 x=-log(UNI)/PARAM_R;
                 y=-log(UNI);
