@@ -16,7 +16,7 @@
 #endif
 
 
-#define NATOMS 36
+#define NATOMS 10
 using json = nlohmann::json;
 
 template <int D>
@@ -258,10 +258,10 @@ public:
     }
 
 private:
-    constexpr bool want_pbc()       {return (flags & 1) == 1;}
-    constexpr bool has_deriv2()     {return (flags & 2) == 2;}
-    constexpr bool newton_forces()  {return (flags & 4) == 4;}
-    constexpr bool orthorombic_box() {return (flags & 8) == 8;}
+    constexpr bool want_pbc()     const  {return (flags & 1) == 1;}
+    constexpr bool has_deriv2()     const {return (flags & 2) == 2;}
+    constexpr bool newton_forces() const  {return (flags & 4) == 4;}
+    constexpr bool orthorombic_box() const {return (flags & 8) == 8;}
     Eigen::Matrix<double,DIM,DIM> T,Tinv;
     template <typename D1,typename D2>
     inline
@@ -361,8 +361,9 @@ public:
         */
         return 1.0/(1.0+exp((e-p[0])/p[1]))/p[2]+e*(1.0-1.0/(1.0+exp((e-p[0])/p[1])));
     }
-    IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, double delta,double T) : Integrator<N,DIM,FLAGS>(p), delta(delta), T(T) {
+    IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, double delta,double T,bool accelerated=true) : Integrator<N,DIM,FLAGS>(p), delta(delta), T(T),accelerated(accelerated),d(1.0) {
         pos_m=pos;
+        first=true;
         c=sqrt(2*T*delta);
     }
 
@@ -371,11 +372,19 @@ public:
         c=sqrt(2*T*delta);
     }
 
-    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, bool accelerated=true) final {
-        Eigen::Matrix<double,N*DIM,1> z,pos_p;
+    void set_d(double d_) {
+        d=d_;
+    }
+
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos) final {
+
+       Eigen::Matrix<double,N*DIM,1> z,pos_p;
         Eigen::Matrix<double,N*DIM,N*DIM,1> H,H_inv;
-        double d=1.0e-1;
         double regularizer_parameters[]={1.0,2/d,d};
+
+        for (unsigned int i=0;i<N*DIM;i++) {
+            z(i)=normal_gauss();
+        }
 
         if (accelerated){
             H=p->hessian_deriv(pos,deriv_m);
@@ -387,10 +396,13 @@ public:
             //regularize the eigenvalues with regularizer function
             eigenvalue=eigenvalue.unaryExpr(std::bind(&regularizer,std::placeholders::_1,regularizer_parameters));
             H=eigenvectors.transpose()*eigenvalue.asDiagonal()*eigenvectors;
-            H_inv=H.inverse();
+            H_inv=(eigenvectors.transpose()*( Eigen::pow(eigenvalue.array(),-1) ).matrix().asDiagonal()*eigenvectors);
+            //trasforma le variabili secondo la matrice di covarianze
+            z=(eigenvectors.transpose()*( Eigen::pow(eigenvalue.array(),-0.5) ).matrix().asDiagonal()*eigenvectors)*z;
         } else{
             deriv_m=p->deriv(pos);
         }
+//ok fino a qui
         /*
         auto eigenvalues=H.eigenvalues();
         std::cout << eigenvalues<<"\n";
@@ -399,24 +411,27 @@ public:
         //}
         */
         //mette in z un vettore di variabili normali distribuite come N(0,1)
-        for (unsigned int i=0;i<N*DIM;i++) {
-            z(i)=normal_gauss();
-        }
 
-        //trasforma le variabili secondo la matrice di covarianze
-        if (accelerated)
-            z=H_inv*z;
 
-        if (accelerated){
-            pos_p=pos-c*z-H_inv*deriv_m-
+        if (accelerated ){
+            if (!first)
+                pos_p=pos-c*z-delta*H_inv*deriv_m-
                     H_inv*(hessian_m-H)*(pos_m-pos)/2.0;
+            else
+                pos_p=pos-c*z-H_inv*deriv_m;
             hessian_m=H;
         }
         else
             pos_p=pos-c*z -delta*deriv_m;
-
+/*
+        this->dump(std::cerr,deriv_m);
+ //       this->dump(std::cerr,deriv_m);
+        std::cerr <<"z:"<<z<< "\n\nH: " << H << "\n\nH_inv"<<H_inv<<"\n\n\n";
+*/
         pos_m=pos;
         pos=pos_p;
+
+        first=false;
     }
 
     virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > vel  ) {
@@ -436,7 +451,8 @@ public:
     }
 
 private:
-    double delta,T,c;
+    double delta,T,c,d;
+    bool accelerated,first;
     using Integrator<N,DIM,FLAGS>::p;
     using Integrator<N,DIM,FLAGS>::pos_m;
     using Integrator<N,DIM,FLAGS>::deriv_m;
@@ -447,6 +463,7 @@ private:
 int main() {
 
     bool accelerated=false, test_hessian=false;
+    double d=1.0;
 
     std::ifstream inputjs("input.json");
     json js;
@@ -509,6 +526,9 @@ int main() {
             std::cerr << "Accelerated dynamics: ";
             accelerated=js["dynamics"]["accelerated"];
             std::cerr << (accelerated?"true":"false")<<"\n";
+            if (js["dynamics"].count("delta")>0) {
+                d=js["dynamics"]["delta"];
+            }
         }
     }
     if (js.count("minimization")==0) {
@@ -562,24 +582,29 @@ int main() {
 
     std::cout << "\n\n\nInizio dinamica\n\n\n";
     std::ofstream output(outname,std::ios_base::app);
-    IntegratorAcceleratedLangevin<NATOMS,3,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature);
+    IntegratorAcceleratedLangevin<NATOMS,3,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,accelerated);
+    if(accelerated)
+        firstOrderAcceleratedLangevin.set_d(d);
     //forse ok in c++17
 //    IntegratorAcceleratedLangevin<> firstOrderAcceleratedLangevin(&test,x,0.001,0.5);
     firstOrderAcceleratedLangevin.init_global_rnd(67857);
 //    test.pbc_wrap(x);
-    firstOrderAcceleratedLangevin.dump(output,x);
+
+
+
     for (unsigned int istep=0;istep<nsteps_d;istep++) {
-        firstOrderAcceleratedLangevin.set_T(temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1));
-        firstOrderAcceleratedLangevin.step(x,accelerated);
+        double T=temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1);
+        firstOrderAcceleratedLangevin.set_T(T);
+        firstOrderAcceleratedLangevin.step(x);
         if (istep%dump_mod==0)
             firstOrderAcceleratedLangevin.dump(output,x);
-        std::cout <<istep<<" " << test(x) << "\n";
+        std::cout <<istep<<" "<<T<<" " << test(x) << "\n";
     }
     std::cout << "Finito!\nVMD:\n\n";
     std::cout <<"mol delete 0\n\
 mol addrep 0\n\
 display resetview\n\
-mol new {/home/bertossa/analisi/build-analisi-Desktop-Minimum Size Release/libcg/out.xyz} type {xyz} first 0 last -1 step 1 waitfor -1\n"
+mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
     << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
 
 }
