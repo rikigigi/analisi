@@ -7,7 +7,9 @@
 #define UNI (rnd_double()-0.5)*2
 extern "C" {
 uint32_t lcg(void);
-void init_cmwc4096(void); // inizializza cmwc4096 con lcg()
+void set_SHR3_jsr(uint32_t j); // inizializza SHR3 (usato per inizializzare cmwc4096)
+uint32_t rnd_shr3(); // random number generator
+void init_cmwc4096(void); // inizializza cmwc4096 con SHR3()
 uint32_t cmwc4096(void); //cmwc4096 x1 (32 bit)
 uint64_t rnd64(void); //cmwc4096 x2 (64 bit)
 double rnd_double(); // double fra 0.5 e 1
@@ -21,7 +23,7 @@ void istg__(double a, double b, unsigned int z, unsigned int nc, unsigned int *i
 // in mu e var vengono scritti valore medio e varianza
 // *ist[z] è l'istogramma
 void istogramma(float a, float b, float *xx, unsigned int z, unsigned int nc, unsigned int *ist, float *sorgente,float *mu, float *var); // float, array
-float normal_gauss();
+double normal_gauss();
 void ols (unsigned int n, double *x, double *y, double *m, double *q, double *em, double *eq, double *chi2);
 void ols2 (unsigned int n, float *x, float *y, float *ey, float *m, float *q, float *em, float *eq,float *chi2);
 #ifndef ANALISI

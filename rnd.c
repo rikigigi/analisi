@@ -20,6 +20,14 @@
 // array di stato dei generatori, globale
 static uint32_t Q_[4096], jz,jsr=123;
 
+void set_SHR3_jsr(uint32_t j)  {
+    jsr=j;
+}
+
+uint32_t rnd_shr3(){
+    return SHR3;
+}
+
 // tabelle per il generatore (veloce) di numeri con distribuzione gaussiana
 #define PI 3.1415926535897932384626433832795
 #define LEVELS 128
@@ -1468,16 +1476,16 @@ double u,v,r,t;
 /* implementazione avanzata di un generatore di numeri pseudo-casuali con distribuzione gaussiana (http://www.jstatsoft.org/v05/i08/paper (George Marsaglia; Wai Wan Tsang (2000). "The Ziggurat Method for Generating Random Variables". Journal of Statistical Software 5 (8).)
 */
 
-float normal_gauss(){
-int i,indice;
-float x,y;
+double normal_gauss(){
+ int i,indice;
+double x,y;
 
 i=cmwc4096();
-indice=i&127;
+indice=i & 127;
 x=wtab[indice]*i;
     if (abs(i)<ktab[indice]){ // sono completamente dentro la gaussiana, accetto subito!
         return i*wtab[indice];
-    }else if (i==127){ // aiai sono finito sulla coda
+    }else if (indice==127){ // aiai sono finito sulla coda
             do {
                 x=-log(UNI)/PARAM_R;
                 y=-log(UNI);

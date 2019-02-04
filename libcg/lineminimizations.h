@@ -136,7 +136,7 @@ public:
                 f_a=f_min;
                 return Result::MaximumIterationsExceeded;
             } else if (f_min==f_a){
-                if (f_a_orig=!f_a){
+                if (f_a_orig!=f_a){
                     x0=x_orig;
                     f_a=f_a_orig;
                 }

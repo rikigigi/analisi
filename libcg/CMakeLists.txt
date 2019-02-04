@@ -1,1 +1,1 @@
-add_executable(testcg test.cpp)
+add_executable(testcg test.cpp ../rnd.c)
