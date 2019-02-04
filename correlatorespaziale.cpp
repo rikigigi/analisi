@@ -128,12 +128,12 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                             sfac[size_half  +ik+ii_tipi_matrix][1]+=  (-sfac_t[i*3+1][0]*sfac_t[j*3+1][1] + sfac_t[i*3+1][1]*sfac_t[j*3+1][0] -  sfac[  size_half+ik+ii_tipi_matrix][1])/(itime);
                             sfac[2*size_half+ik+ii_tipi_matrix][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0] + sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+ii_tipi_matrix][0])/(itime);
                             sfac[2*size_half+ik+ii_tipi_matrix][1]+=(-sfac_t[i*3+2][0]*sfac_t[j*3+2][1] + sfac_t[i*3+2][1]*sfac_t[j*3+2][0]-     sfac[2*size_half+ik+ii_tipi_matrix][1])/(itime);
-     //                         sfac[ik+ii_tipi_matrix][0]+=               cos(2*PI/(nk)*ik);
-     //                         sfac[ik+ii_tipi_matrix][1]+=               sin(2*PI/(nk)*ik); 
-     //                         sfac[size_half  +ik+ii_tipi_matrix][0]+=   cos(2*PI/(nk)*ik); 
-     //                         sfac[size_half  +ik+ii_tipi_matrix][1]+=   sin(2*PI/(nk)*ik);
-     //                         sfac[2*size_half+ik+ii_tipi_matrix][0]+=   cos(2*PI/(nk)*ik); 
-     //                         sfac[2*size_half+ik+ii_tipi_matrix][1]+=   sin(2*PI/(nk)*ik);
+    //                          sfac[ik+ii_tipi_matrix][0] =             cos(2*PI/(nk)*ik);
+    //                          sfac[ik+ii_tipi_matrix][1] =             sin(2*PI/(nk)*ik); 
+    //                          sfac[size_half  +ik+ii_tipi_matrix][0] = cos(2*PI/(nk)*ik); 
+    //                          sfac[size_half  +ik+ii_tipi_matrix][1] = sin(2*PI/(nk)*ik);
+    //                          sfac[2*size_half+ik+ii_tipi_matrix][0] = cos(2*PI/(nk)*ik); 
+    //                          sfac[2*size_half+ik+ii_tipi_matrix][1] = sin(2*PI/(nk)*ik);
 
                         }
                     }
@@ -148,13 +148,15 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
 
 
     fftw_free( sfac_t);
+ for (unsigned int ns=0;ns<3;ns++){
    for (unsigned int i=0;i<tipi_atomi*(tipi_atomi+1)/2;i++){  
-    fftw_execute_dft_c2r(fftw3,&sfac[              i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk]);
-    fftw_execute_dft_c2r(fftw3,&sfac[  size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + size]);
-    fftw_execute_dft_c2r(fftw3,&sfac[2*size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + 2*size]);
-   }
+    fftw_execute_dft_c2r(fftw3,&sfac[ ns*size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + ns*size]);
+   // fftw_execute_dft_c2r(fftw3,&sfac[    size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + size]);
+   // fftw_execute_dft_c2r(fftw3,&sfac[  2*size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + 2*size]);
+   }  
+  } //end ns loop
 
-}
+} // end calcola
 
 
 
