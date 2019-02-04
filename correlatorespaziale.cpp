@@ -72,21 +72,29 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
     int n[]={nk,nk,nk};
     //int n[]={1,1,1};
     //int n[]={nk,nk,nk/2+1};
-    fftw3 = fftw_plan_many_dft_c2r(3, // rango della trasformata (3D)
-                                   n, // lunghezza di ciascuna trasformata
-                                   tipi_atomi*(tipi_atomi+1)/2, // numero di trasformate
+    fftw3 = fftw_plan_dft_c2r_3d ( n[0],n[1],n[2], // lunghezza di ciascuna trasformata
                                    /*  ****** input ******  */
                                    sfac,//traiettoria->velocita_inizio(), // puntatore ai dati
-                                   NULL, // i dati sono tutti compatti, non fanno parte di array più grandi
-                                   1, // la distanza fra due dati successivi
-                                   nk*nk*nk, // la distanza fra due serie di dati adiacenti
                                    /*  ****** output ******  */
                                    lista, // puntatore all'array di output
-                                   NULL,
-                                   1, // la distanza fra due dati successivi
-                                   nk*nk*nk, // la distanza fra due serie di dati adiacenti
                                    FFTW_DESTROY_INPUT
                                    );
+
+ //   fftw3 = fftw_plan_many_dft_c2r(3, // rango della trasformata (3D)
+ //                                  n, // lunghezza di ciascuna trasformata
+ //                                  tipi_atomi*(tipi_atomi+1)/2, // numero di trasformate
+ //                                  /*  ****** input ******  */
+ //                                  sfac,//traiettoria->velocita_inizio(), // puntatore ai dati
+ //                                  NULL, // i dati sono tutti compatti, non fanno parte di array più grandi
+ //                                  1, // la distanza fra due dati successivi
+ //                                  nk*nk*nk, // la distanza fra due serie di dati adiacenti
+ //                                  /*  ****** output ******  */
+ //                                  lista, // puntatore all'array di output
+ //                                  NULL,
+ //                                  1, // la distanza fra due dati successivi
+ //                                  nk*nk*nk, // la distanza fra due serie di dati adiacenti
+ //                                  FFTW_DESTROY_INPUT
+ //                                  );
 
     for (unsigned int itimestep=primo;itimestep<ntimesteps+primo;itimestep+=skip){
         itime += 1;
@@ -120,6 +128,13 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
                             sfac[size_half  +ik+ii_tipi_matrix][1]+=  (-sfac_t[i*3+1][0]*sfac_t[j*3+1][1] + sfac_t[i*3+1][1]*sfac_t[j*3+1][0] -  sfac[  size_half+ik+ii_tipi_matrix][1])/(itime);
                             sfac[2*size_half+ik+ii_tipi_matrix][0]+=( sfac_t[i*3+2][0]*sfac_t[j*3+2][0] + sfac_t[i*3+2][1]*sfac_t[j*3+2][1]-    sfac[2*size_half+ik+ii_tipi_matrix][0])/(itime);
                             sfac[2*size_half+ik+ii_tipi_matrix][1]+=(-sfac_t[i*3+2][0]*sfac_t[j*3+2][1] + sfac_t[i*3+2][1]*sfac_t[j*3+2][0]-     sfac[2*size_half+ik+ii_tipi_matrix][1])/(itime);
+    //                          sfac[ik+ii_tipi_matrix][0] =             cos(2*PI/(nk)*ik);
+    //                          sfac[ik+ii_tipi_matrix][1] =             sin(2*PI/(nk)*ik); 
+    //                          sfac[size_half  +ik+ii_tipi_matrix][0] = cos(2*PI/(nk)*ik); 
+    //                          sfac[size_half  +ik+ii_tipi_matrix][1] = sin(2*PI/(nk)*ik);
+    //                          sfac[2*size_half+ik+ii_tipi_matrix][0] = cos(2*PI/(nk)*ik); 
+    //                          sfac[2*size_half+ik+ii_tipi_matrix][1] = sin(2*PI/(nk)*ik);
+
                         }
                     }
                 }
@@ -127,18 +142,21 @@ void CorrelatoreSpaziale::calcola(unsigned int primo) {
             }
 
         }
-}
+     }
     //fare trasformata di fourier discreta (copia da spettrovibrazionale.cpp:84)
 
 
 
     fftw_free( sfac_t);
+ for (unsigned int ns=0;ns<3;ns++){
+   for (unsigned int i=0;i<tipi_atomi*(tipi_atomi+1)/2;i++){  
+    fftw_execute_dft_c2r(fftw3,&sfac[ ns*size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + ns*size]);
+   // fftw_execute_dft_c2r(fftw3,&sfac[    size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + size]);
+   // fftw_execute_dft_c2r(fftw3,&sfac[  2*size_half + i*nk*nk*(nk/2+1)], &lista[i*nk*nk*nk + 2*size]);
+   }  
+  } //end ns loop
 
-    fftw_execute_dft_c2r(fftw3,sfac,lista);
-    fftw_execute_dft_c2r(fftw3,&sfac[  size_half], &lista[size]);
-    fftw_execute_dft_c2r(fftw3,&sfac[2*size_half], &lista[2*size]);
-
-}
+} // end calcola
 
 
 
