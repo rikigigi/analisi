@@ -6,17 +6,23 @@
 
 
 
-template <class X,class K,class F>
+template <class X,class K,class F >
 class Cg
 {
 public:
     enum State{LineMinimizationFail,Regular,Problems,Restarting,NotInitialized};
+
     Cg(F &f_,LineMinimization<X,K,F> &lm_) : f(f_),lm(lm_),state(NotInitialized) {}
-    Cg(F &f_,X x0_,K  f_x0, LineMinimization<X,K,F> &lm_,unsigned int min_iteration_without_restarts):
-        f(f_),lm(lm_),state(NotInitialized) {init(x0_,f_x0,min_iteration_without_restarts);}
-    void init(X x0_,K  f_x0, unsigned int min_iteration_without_restarts ) {
+
+    Cg(F &f_,X x0_,K  f_x0, LineMinimization<X,K,F> &lm_,unsigned int min_iteration_without_restarts)
+        :
+        f(f_),lm(lm_),state(NotInitialized) {
+        init(x0_,f_x0,min_iteration_without_restarts);
+    }
+
+    void init(X x0_,K  f_x0, unsigned int min_iteration_without_restarts) {
         min_iteration_without_restart=min_iteration_without_restarts;
-        x=x0_;
+        x=x0_;d=x;r=x;rp=x; // to initialize to something all variables
         f_x=f_x0;
         //first iteration
         n_iterations=0;
@@ -35,7 +41,10 @@ public:
 
     void restart_iteration() {
         std::cout << "Restarting CG\n";
-        d=-f.deriv(x);
+        //d=-f.deriv(x);
+        f.deriv(x,d);
+        d=-d;
+
         r=d;
         auto res=lm(f,x,d,f_x);
         if (res==LineMinimization<X, K, F>::Result::MissingMinimum) {
@@ -55,7 +64,10 @@ public:
             restart_iteration();
         } else {
             rp=r;
-            r=-f.deriv(x);
+            //r=-f.deriv(x);
+            f.deriv(x,r);
+            r=-r;
+
             beta=(r.transpose()*(r-rp)/(rp.squaredNorm()))(0);
             if (beta<0) beta=0;
             d=r+beta*d;

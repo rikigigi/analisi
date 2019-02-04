@@ -16,18 +16,24 @@
 #endif
 
 
-#define NATOMS 10
+#define NATOMS -1
+#define DIMs 3
 using json = nlohmann::json;
 
 template <int D>
-class QuadraticForm : public Function <Eigen::Matrix<double,D,1>, double> {
+class QuadraticForm : public Function <
+        Eigen::Matrix<double,D,1>,
+        double,
+        Eigen::Matrix<double,D,D>,
+        Eigen::Ref<Eigen::Matrix<double,D,1> >
+      > {
   public:
     virtual double operator () (const Eigen::Matrix<double,D,1> & x) final {
         return (0.5*x.transpose()*A*x-b.transpose()*x)(0,0);
     }
 
-    virtual Eigen::Matrix<double,D,1> deriv (const Eigen::Matrix<double,D,1> & x) final {
-        return (A*x - b).eval();
+    virtual void deriv (const Eigen::Matrix<double,D,1> & x, Eigen::Ref<Eigen::Matrix<double,D,1> > res) final {
+        res= (A*x - b).eval();
     }
 
     void set_A_b(const Eigen::Matrix<double,D,D> & A_, const Eigen::Matrix<double,D,1> &b_) {
@@ -45,14 +51,24 @@ protected:
 };
 
 
+constexpr int eigen_matrix_dim(const int N,const int DIM) {
+    return N>0? (N*DIM):(Eigen::Dynamic);
+}
+
 template <int N,int DIM,int flags >
-class MultiPair : public Function <Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> >, double,  Eigen::Matrix<double,N*DIM,N*DIM>,  Eigen::Matrix<double,N*DIM,1>,
-       Eigen::Ref<Eigen::Matrix<double,N*DIM,1> > > {
+class MultiPair : public Function <
+        Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> >,
+        double,
+        Eigen::Ref <Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM)> >,
+        Eigen::Ref <Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> >,
+        Eigen::Ref<Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> >,
+        Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1>
+> {
 public:
-    virtual double operator() (const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x ) final {
+    virtual double operator() (const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x ) final {
         double res=0.0;
-        for (unsigned int i=0;i<N;i++) {
-            for (unsigned int j=i+1;j<N;j++) {
+        for (unsigned int i=0;i<x.rows()/DIM;i++) {
+            for (unsigned int j=i+1;j<x.rows()/DIM;j++) {
                 double r2;
                 Eigen::Matrix<double,DIM,1> dx;
                 if (want_pbc()){
@@ -67,11 +83,10 @@ public:
         }
         return res;
     }
-    virtual Eigen::Matrix<double,N*DIM,1> deriv(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x) final {
-        Eigen::Matrix<double,N*DIM,1> res;
+    virtual void deriv(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x,Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > res) final {
         res.setZero();
-        for (unsigned int i=0;i<N;i++) {
-            for (unsigned int j=i+1;j<N;j++) {
+        for (unsigned int i=0;i<x.rows()/DIM;i++) {
+            for (unsigned int j=i+1;j<x.rows()/DIM;j++) {
                 if (i==j)
                     continue;
                 double r2;
@@ -90,17 +105,18 @@ public:
                 }
             }
         }
-        return res;
     }
 
-    virtual Eigen::Matrix<double,N*DIM,N*DIM> hessian_deriv(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > res1 ) final {
-        Eigen::Matrix<double,N*DIM,N*DIM> res;
+    virtual void hessian_deriv(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x,
+                               Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > res1,
+                               Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM)> > res
+                               ) final {
         res.setZero();
         res1.setZero();
 //        Eigen::Matrix<double,N*DIM,N*DIM> res1;
         if (has_deriv2()) {
-            for (unsigned int i1=0;i1<N;i1++) {
-                for (unsigned int i2=i1+1;i2<N;i2++) { //hessian is symmetric
+            for (unsigned int i1=0;i1<x.rows()/DIM;i1++) {
+                for (unsigned int i2=i1+1;i2<x.rows()/DIM;i2++) { //hessian is symmetric
                     // note: here I calculate also the diagonal term, that has a different form with one more sum
                     // If one makes the calculation,
                     // the diagonal term is simply the sum of the other terms in the row. Because the matrix is symmetric, at the end of the day,
@@ -172,7 +188,6 @@ public:
                 }
             }
             res1=res1/2.0;
-            return res;
         } else {
             throw std::runtime_error("Not implemented!");
         }
@@ -183,10 +198,13 @@ public:
         Tinv=t.inverse();
     }
 
-    bool check_forces(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
-        Eigen::Matrix<double,N*DIM,1> force=deriv(x),x_;
+    bool check_forces(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
+        Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> force,x_;
+        force.resize(x.rows(),1);
+        x_.resize(x.rows(),1);
+        deriv(x,force);
         double res=true;
-        for (unsigned int i=0;i<N*DIM;i++) {
+        for (unsigned int i=0;i<x.rows();i++) {
             double dvdr=0.0;
             x_=x;
             x_(i)=x_(i)+x_(i)*dx_over_x;
@@ -201,11 +219,15 @@ public:
         }
         return res;
     }
-    bool check_hessian_forces(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
+    bool check_hessian_forces(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
         double res=false;
-        Eigen::Matrix<double,N*DIM,1> force,x_;
-        Eigen::Matrix<double,N*DIM,N*DIM> H=hessian_deriv(x,force);
-        for (unsigned int i=0;i<N*DIM;i++) {
+        Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> force,x_;
+        force.resize(x.rows(),1);
+        x_.resize(x.rows(),1);
+        Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM)> H;
+        H.resize(x.rows(),x.rows());
+        hessian_deriv(x,force,H);
+        for (unsigned int i=0;i<x.rows();i++) {
             {
                 double dvdr=0.0;
                 x_=x;
@@ -219,7 +241,7 @@ public:
                     res=false;
                 }
             }
-            for (unsigned int j=0;j<N*DIM;j++) {
+            for (unsigned int j=0;j<x.rows();j++) {
                 double dp,dm,d1p,d1m;
                 x_=x;
                 x_(j)=x_(j)+x_(j)*dx_over_x;
@@ -255,7 +277,7 @@ public:
         return res;
     }
 
-    void pbc_wrap(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > x ,double L=0.0) {
+    void pbc_wrap(Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > x ,double L=0.0) {
         if (L==0.0) L=T(0,0);
         x=x-L*Eigen::floor(x.array()/L).matrix();
     }
@@ -294,7 +316,7 @@ private:
     virtual double pair_deriv2_r2(const double & r2)=0;
 };
 
-template <unsigned int N,unsigned int DIM>
+template <int N,unsigned int DIM>
 class LJPair : public MultiPair<N,DIM,1 | 2 | 8 > {
 protected:
     virtual double pair       (const double & r2) override {
@@ -315,26 +337,30 @@ protected:
 
 };
 
-template <unsigned int N,unsigned int DIM,unsigned int FLAGS>
+template <int N,unsigned int DIM,unsigned int FLAGS>
 class Integrator {
 public:
-    Integrator (MultiPair<N,DIM,FLAGS> * p) : p(p) {
-
+    Integrator (MultiPair<N,DIM,FLAGS> * p,unsigned int natoms) : p(p) {
+        if (N<=0) {
+            pos_m.resize(DIM*natoms,1);
+            deriv_m.resize(DIM*natoms,1);
+            hessian_m.resize(DIM*natoms,DIM*natoms);
+        }
     }
 
-    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos ) {
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > pos ) {
         std::cerr << "Error: not implemented\n";
         abort();
     }
-    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > vel  ){
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > pos,Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > vel  ){
         std::cerr << "Error: not implemented\n";
         abort();
     }
 
-    void dump(std::ostream & out, const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x) {
+    void dump(std::ostream & out, const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x) {
 
-        out << N <<"\n\n";
-        for (unsigned int i=0;i<N;i++) {
+        out << x.rows()/DIM <<"\n\n";
+        for (unsigned int i=0;i<x.rows()/DIM;i++) {
             out  <<"1 ";
              for (unsigned int j=0;j<DIM;j++)
                 out << x(i*DIM+j) << " ";
@@ -348,11 +374,11 @@ public:
 protected:
     MultiPair<N,DIM,FLAGS> *p;
     double energy;
-    Eigen::Matrix<double,N*DIM,1> pos_m;
-    Eigen::Matrix<double,N*DIM,1> deriv_m;
-    Eigen::Matrix<double,N*DIM,N*DIM> hessian_m;
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> pos_m;
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> deriv_m;
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM)> hessian_m;
 };
-template <unsigned int N, unsigned int DIM,unsigned int FLAGS>
+template <int N, unsigned int DIM,unsigned int FLAGS>
 class IntegratorAcceleratedLangevin : public Integrator<N,DIM,FLAGS> {
 public:
     static double regularizer(const double & e,double * const & p) {
@@ -364,10 +390,25 @@ public:
         */
         return 1.0/(1.0+exp((e-p[0])/p[1]))/p[2]+e*(1.0-1.0/(1.0+exp((e-p[0])/p[1])));
     }
-    IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos, double delta,double T,bool accelerated=true) : Integrator<N,DIM,FLAGS>(p), delta(delta), T(T),accelerated(accelerated),d(1.0) {
+    IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,
+                                   Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > pos,
+                                   double delta,
+                                   double T,
+                                   unsigned int natoms,
+                                   bool accelerated=true
+            ) : Integrator<N,DIM,FLAGS>(p,natoms), delta(delta), T(T),accelerated(accelerated),d(1.0) {
         pos_m=pos;
         first=true;
         c=sqrt(2*T*delta);
+
+
+        eigenvalue.resize(DIM*natoms,1);
+        z.resize(DIM*natoms,1);
+        pos_p.resize(DIM*natoms,1);
+        H.resize(DIM*natoms,DIM*natoms);
+        H_inv.resize(DIM*natoms,DIM*natoms);
+        eigenvectors.resize(DIM*natoms,DIM*natoms);
+
     }
 
     void set_T(double T_) {
@@ -379,23 +420,21 @@ public:
         d=d_;
     }
 
-    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos) final {
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > pos) final {
 
-       Eigen::Matrix<double,N*DIM,1> z,pos_p;
-        Eigen::Matrix<double,N*DIM,N*DIM,1> H,H_inv;
         double regularizer_parameters[]={1.0,2/d,d};
 
-        for (unsigned int i=0;i<N*DIM;i++) {
+        for (unsigned int i=0;i<z.rows();i++) {
             z(i)=normal_gauss();
         }
 
         if (accelerated){
-            H=p->hessian_deriv(pos,deriv_m);
+            p->hessian_deriv(pos,deriv_m,H);
             //regularize the matrix: diagonalize it
-            Eigen::SelfAdjointEigenSolver< Eigen::Matrix<double,N*DIM,N*DIM,1> > eigensolver;
+            Eigen::SelfAdjointEigenSolver< Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM),1> > eigensolver;
             eigensolver.compute(H);
             eigenvalue=eigensolver.eigenvalues();
-            auto eigenvectors=eigensolver.eigenvectors();
+            eigenvectors=eigensolver.eigenvectors();
             //regularize the eigenvalues with regularizer function
             eigenvalue=eigenvalue.unaryExpr(std::bind(&regularizer,std::placeholders::_1,regularizer_parameters));
             H=eigenvectors.transpose()*eigenvalue.asDiagonal()*eigenvectors;
@@ -403,7 +442,7 @@ public:
             //trasforma le variabili secondo la matrice di covarianze
             z=(eigenvectors.transpose()*( Eigen::pow(eigenvalue.array(),-0.5) ).matrix().asDiagonal()*eigenvectors)*z;
         } else{
-            deriv_m=p->deriv(pos);
+            p->deriv(pos,deriv_m);
         }
 //ok fino a qui
         /*
@@ -437,7 +476,7 @@ public:
         first=false;
     }
 
-    virtual void step(Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > pos,Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > vel  ) {
+    virtual void step(Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > pos,Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > vel  ) {
         std::cerr << "Warning: called method for second order dynamics, but this is first order\n";
         step(pos);
     }
@@ -453,22 +492,28 @@ public:
         }
     }
 
-    Eigen::Matrix<double,N*DIM,1> get_eigenvalue(){return eigenvalue;}
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> get_eigenvalue(){return eigenvalue;}
 
 private:
     double delta,T,c,d;
     bool accelerated,first;
-    Eigen::Matrix<double,N*DIM,1> eigenvalue;
+
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1>                         eigenvalue;
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1>                         z,pos_p;
+    Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM) > H,H_inv,eigenvectors;
+
     using Integrator<N,DIM,FLAGS>::p;
     using Integrator<N,DIM,FLAGS>::pos_m;
     using Integrator<N,DIM,FLAGS>::deriv_m;
     using Integrator<N,DIM,FLAGS>::hessian_m;
+
 
 };
 
 int main() {
 
     bool accelerated=false, test_hessian=false,plot_eigenvalue=false,eoutput=false;
+    unsigned int natoms=0;
     std::string eigen_out,energy_out;
     double d=1.0;
 
@@ -494,8 +539,18 @@ int main() {
 
     std::cout << "======================\n";
 
-    LJPair<NATOMS,3> test;
-    Eigen::Matrix3d cel;
+    if (NATOMS<=0) {
+        if (js.count("natoms")==0) {
+            std::cerr << "Errore: è necessario specificare \"natoms\"\n";
+            return -1;
+        } else {
+            natoms=js["natoms"];
+        }
+    } else {
+        natoms=NATOMS;
+    }
+
+
 
     if (js.count("cell_size")==0) {
         std::cerr << "Errore: impossibile trovare l'elemento \"cell_size\"\n";
@@ -577,14 +632,24 @@ int main() {
         Tfinal=js["dynamics"]["Tfinal"];
     }
 
+
+
+    LJPair<NATOMS,3> test;
+    Eigen::Matrix3d cel;
+
     cel << cell_size , 0.0 , 0.0
         , 0.0 , cell_size , 0.0
         , 0.0 , 0.0 , cell_size;
     test.init_pbc( cel);
-    Eigen::Matrix<double,NATOMS*3,1> x=Eigen::Matrix<double,NATOMS*3,1>::Random()*cell_size;
 
-    ParabolaLineMinimization <Eigen::Matrix<double,NATOMS*3,1>,double,LJPair<NATOMS,3> > lineMin(0.02,0.1,4,3);
-    Cg<Eigen::Matrix<double,NATOMS*3,1>,double,LJPair<NATOMS,3> > testcg(test,x,test(x),lineMin,8);
+    Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>x;
+    if (NATOMS<=0) {
+        x.resize(natoms*DIMs,1);
+    }
+    x=Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>::Random(natoms*DIMs,1)*cell_size;
+
+    ParabolaLineMinimization <Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > lineMin(0.02,0.1,4,3);
+    Cg<Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > testcg(test,x,test(x),lineMin,8);
     for (unsigned int i=0;i<nsteps_cg;i++) {
         if (i%100==0)
             std::cout << i << " " << testcg.get_fx()<< "\n";
@@ -603,7 +668,7 @@ int main() {
     std::ofstream output(outname,std::ios_base::app);
     std::ofstream output_energy(energy_out,std::ios_base::app);
     std::ofstream output_eigen(eigen_out,std::ios_base::app);
-    IntegratorAcceleratedLangevin<NATOMS,3,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,accelerated);
+    IntegratorAcceleratedLangevin<NATOMS,DIMs,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,natoms,accelerated);
     if(accelerated)
         firstOrderAcceleratedLangevin.set_d(d);
     //forse ok in c++17
@@ -623,9 +688,8 @@ int main() {
                 output_eigen << firstOrderAcceleratedLangevin.get_eigenvalue().transpose()<<"\n";
             }
         }
-        if (!eoutput)
+        if (eoutput &&  istep%dump_mod==0){
             std::cout <<istep<<" "<<T<<" " << test(x) << "\n";
-        else {
             output_energy <<istep<<" "<<T<<" " << test(x) << "\n";
         }
     }

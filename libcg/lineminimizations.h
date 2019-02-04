@@ -41,8 +41,8 @@ public:
     }
     virtual Result operator () (F f,X & x0, const X & d, K & f_a) override {
         Result res=Result::MinimumFound;
-        X x_min=x0;
-        X x_orig=x0;
+        x_min=x0;
+        x_orig=x0;
         K f_min=f_a;
         K f_a_orig=f_a;
         bool fail=false;
@@ -55,7 +55,7 @@ public:
         calls_without_fail++;
         tot_iter++;
 
-        X du=d/d.norm();
+        du=d/d.norm();
         K dx_o=dx;
 
         unsigned int retries=0;
@@ -160,6 +160,7 @@ private:
     K conc(K f_a,K f_b, K f_c, K a, K b, K c ) {
         return pend(f_b,f_c,b,c)-pend(f_a,f_b,a,b);
     }
+    X x_min, x_orig,du;
     K dx,xmax;
     unsigned int max_search,outer_iter,fail_count,calls_without_fail,
     raise_rate,stop_raise_epoch,tot_iter;
