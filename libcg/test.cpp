@@ -68,7 +68,8 @@ public:
         return res;
     }
     virtual Eigen::Matrix<double,N*DIM,1> deriv(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x) final {
-        Eigen::Matrix<double,N*DIM,1> res=Eigen::Matrix<double,N*DIM,1>::Zero();
+        Eigen::Matrix<double,N*DIM,1> res;
+        res.setZero();
         for (unsigned int i=0;i<N;i++) {
             for (unsigned int j=i+1;j<N;j++) {
                 if (i==j)
@@ -94,6 +95,8 @@ public:
 
     virtual Eigen::Matrix<double,N*DIM,N*DIM> hessian_deriv(const Eigen::Ref< const Eigen::Matrix<double,N*DIM,1> > & x, Eigen::Ref < Eigen::Matrix<double,N*DIM,1> > res1 ) final {
         Eigen::Matrix<double,N*DIM,N*DIM> res;
+        res.setZero();
+        res1.setZero();
 //        Eigen::Matrix<double,N*DIM,N*DIM> res1;
         if (has_deriv2()) {
             for (unsigned int i1=0;i1<N;i1++) {
@@ -391,7 +394,7 @@ public:
             //regularize the matrix: diagonalize it
             Eigen::SelfAdjointEigenSolver< Eigen::Matrix<double,N*DIM,N*DIM,1> > eigensolver;
             eigensolver.compute(H);
-            auto eigenvalue=eigensolver.eigenvalues();
+            eigenvalue=eigensolver.eigenvalues();
             auto eigenvectors=eigensolver.eigenvectors();
             //regularize the eigenvalues with regularizer function
             eigenvalue=eigenvalue.unaryExpr(std::bind(&regularizer,std::placeholders::_1,regularizer_parameters));
@@ -450,9 +453,12 @@ public:
         }
     }
 
+    Eigen::Matrix<double,N*DIM,1> get_eigenvalue(){return eigenvalue;}
+
 private:
     double delta,T,c,d;
     bool accelerated,first;
+    Eigen::Matrix<double,N*DIM,1> eigenvalue;
     using Integrator<N,DIM,FLAGS>::p;
     using Integrator<N,DIM,FLAGS>::pos_m;
     using Integrator<N,DIM,FLAGS>::deriv_m;
@@ -462,7 +468,8 @@ private:
 
 int main() {
 
-    bool accelerated=false, test_hessian=false;
+    bool accelerated=false, test_hessian=false,plot_eigenvalue=false,eoutput=false;
+    std::string eigen_out,energy_out;
     double d=1.0;
 
     std::ifstream inputjs("input.json");
@@ -514,6 +521,12 @@ int main() {
             std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"output\"\n";
             return -1;
         }
+        if (js["dynamics"].count("write_energy")>0) {
+            eoutput=js["dynamics"]["write_energy"];
+            if (eoutput){
+                energy_out=js["dynamics"]["energy_out"];
+            }
+        }
         if (js["dynamics"].count("T")==0) {
             std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"T\"\n";
             return -1;
@@ -528,6 +541,12 @@ int main() {
             std::cerr << (accelerated?"true":"false")<<"\n";
             if (js["dynamics"].count("delta")>0) {
                 d=js["dynamics"]["delta"];
+            }
+            if (js["dynamics"].count("plot_eigenvalue")>0) {
+                plot_eigenvalue=js["dynamics"]["plot_eigenvalue"];
+                if (plot_eigenvalue){
+                    eigen_out=js["dynamics"]["eigen_out"];
+                }
             }
         }
     }
@@ -582,6 +601,8 @@ int main() {
 
     std::cout << "\n\n\nInizio dinamica\n\n\n";
     std::ofstream output(outname,std::ios_base::app);
+    std::ofstream output_energy(energy_out,std::ios_base::app);
+    std::ofstream output_eigen(eigen_out,std::ios_base::app);
     IntegratorAcceleratedLangevin<NATOMS,3,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,accelerated);
     if(accelerated)
         firstOrderAcceleratedLangevin.set_d(d);
@@ -596,14 +617,22 @@ int main() {
         double T=temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1);
         firstOrderAcceleratedLangevin.set_T(T);
         firstOrderAcceleratedLangevin.step(x);
-        if (istep%dump_mod==0)
+        if (istep%dump_mod==0){
             firstOrderAcceleratedLangevin.dump(output,x);
-        std::cout <<istep<<" "<<T<<" " << test(x) << "\n";
+            if (plot_eigenvalue){
+                output_eigen << firstOrderAcceleratedLangevin.get_eigenvalue().transpose()<<"\n";
+            }
+        }
+        if (!eoutput)
+            std::cout <<istep<<" "<<T<<" " << test(x) << "\n";
+        else {
+            output_energy <<istep<<" "<<T<<" " << test(x) << "\n";
+        }
     }
     std::cout << "Finito!\nVMD:\n\n";
-    std::cout <<"mol delete 0\n\
-mol addrep 0\n\
-display resetview\n\
+    std::cout <<"#mol delete 0\n\
+#mol addrep 0\n\
+#display resetview\n\
 mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
     << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
 
