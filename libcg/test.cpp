@@ -15,6 +15,18 @@
 #include <Eigen/Eigenvalues>
 #endif
 
+template<typename Derived>
+std::istream & operator >>
+(std::istream & s,
+ Eigen::MatrixBase<Derived> & m)
+{
+    for (int i = 0; i < m.rows(); ++i)
+    for (int j = 0; j < m.cols(); j++)
+      s >> m(i,j);
+
+  return s;
+}
+
 
 #define NATOMS -1
 #define DIMs 3
@@ -553,38 +565,44 @@ private:
 
 };
 
-int main() {
+int main(int argc,char *argv[]) {
 
-    bool accelerated=false, test_hessian=false,plot_eigenvalue=false,eoutput=false;
+    bool accelerated=false, test_hessian=false,plot_eigenvalue=false,eoutput=false,random_state=true;
     unsigned int natoms=0;
-    std::string eigen_out,energy_out;
+    std::string eigen_out,energy_out,file_in,file_out,json_in="input.json";
     double d=1.0;
+    if (argc != 1) {
+        json_in.assign(argv[1]);
+    }
+    std::cerr << "Reading input from \""<<json_in<<"\"\n";
 
-    std::ifstream inputjs("input.json");
+    std::ifstream inputjs(json_in);
     json js;
     inputjs >> js;
+    inputjs.close();
 
     /// test con una forma quadratica:
+    if (false){
+        Eigen::Matrix4d m=Eigen::Matrix4d::Random();
+        m = Eigen::Matrix4d::Random();
+        Eigen::Matrix<double,4,1> xq=2*Eigen::Matrix<double,4,1>::Random(), b=Eigen::Matrix<double,4,1>::Random();
 
-    Eigen::Matrix4d m=Eigen::Matrix4d::Random();
-    m = Eigen::Matrix4d::Random();
-    Eigen::Matrix<double,4,1> xq=2*Eigen::Matrix<double,4,1>::Random(), b=Eigen::Matrix<double,4,1>::Random();
+        QuadraticForm<4> testq;
+        testq.set_A_b(0.5*(m.transpose()+m)+Eigen::Matrix4d::Identity()*4,b);
+        ParabolaLineMinimization <Eigen::Matrix<double,4,1>,double,QuadraticForm<4> > lineMinq(5,4,20,3);
+        Cg<Eigen::Matrix<double,4,1>,double,QuadraticForm<4> > testcgq(testq,xq,testq(xq),lineMinq,8);
+        std::cout << 0 << " " << testq.get_solution_distance(testcgq.get_x())<< "\n";
+        for (unsigned int i=0;i<4;i++){
+            testcgq.iteration();
+            std::cout << i+1 << " " << testq.get_solution_distance(testcgq.get_x())<< "\n";
+        }
 
-    QuadraticForm<4> testq;
-    testq.set_A_b(0.5*(m.transpose()+m)+Eigen::Matrix4d::Identity()*4,b);
-    ParabolaLineMinimization <Eigen::Matrix<double,4,1>,double,QuadraticForm<4> > lineMinq(5,4,20,3);
-    Cg<Eigen::Matrix<double,4,1>,double,QuadraticForm<4> > testcgq(testq,xq,testq(xq),lineMinq,8);
-    std::cout << 0 << " " << testq.get_solution_distance(testcgq.get_x())<< "\n";
-    for (unsigned int i=0;i<4;i++){
-        testcgq.iteration();
-        std::cout << i+1 << " " << testq.get_solution_distance(testcgq.get_x())<< "\n";
+        std::cout << "======================\n";
     }
-
-    std::cout << "======================\n";
 
     if (NATOMS<=0) {
         if (js.count("natoms")==0) {
-            std::cerr << "Errore: è necessario specificare \"natoms\"\n";
+            std::cerr << "Error: you must specify \"natoms\": [#atoms]\n";
             return -1;
         } else {
             natoms=js["natoms"];
@@ -594,9 +612,30 @@ int main() {
     }
 
 
+    if (js.count("initial_state")==0) {
+        std::cerr << "Error: you must specify \"initial_state\": [true|false]\n";
+        return -1;
+    } else {
+        random_state=!js["initial_state"];
+        if (!random_state) {
+            if (js.count("file_in")==0){
+                std::cerr <<"Error: you must specify the input file for the initial coordinates with \"file_in\": \"[inputfile]\".\n";
+                return -1;
+            } else {
+                file_in=js["file_in"];
+            }
+        }
+    }
+
+    if (js.count("output_file")==0) {
+        std::cerr << "Error: please specify \"output_file\" in input file.\n";
+        return -1;
+    } else {
+        file_out=js["output_file"];
+    }
 
     if (js.count("cell_size")==0) {
-        std::cerr << "Errore: impossibile trovare l'elemento \"cell_size\"\n";
+        std::cerr << "Error: you must specify \"cell_size\": [cellsize, for example 5.0]\n";
         return -1;
     }
 
@@ -608,29 +647,34 @@ int main() {
 
 
     if (js.count("dynamics")==0) {
-        std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\"\n";
+        std::cerr << "Error: you must specify the \"dynamics\": {} section\n";
         return -1;
     } else {
         if (js["dynamics"].count("nsteps")==0) {
-            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"nsteps\"\n";
+            std::cerr << "Error: you must specify \"dynamics\":{\"nsteps\": [#number of dynamic steps]}\n";
             return -1;
         }
         if (js["dynamics"].count("output")==0) {
-            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"output\"\n";
+            std::cerr << "Error: you must specify \"dynamics\":{\"output\": [output file for the dynamics]}\n";
             return -1;
         }
         if (js["dynamics"].count("write_energy")>0) {
             eoutput=js["dynamics"]["write_energy"];
             if (eoutput){
-                energy_out=js["dynamics"]["energy_out"];
+                if (js["dynamics"].count("energy_out")==0){
+                    std::cerr << "Error: you must specify \"dynamics\":{\"energy_out\": [output file for the thermodynamic quantities]}\n";
+                    return -1;
+                }else {
+                    energy_out=js["dynamics"]["energy_out"];
+                }
             }
         }
         if (js["dynamics"].count("T")==0) {
-            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"T\"\n";
+            std::cerr << "Error: you must specify \"dynamics\":{\"T\": [temperature of the system]}\n";
             return -1;
         }
         if (js["dynamics"].count("dt")==0) {
-            std::cerr << "Errore: impossibile trovare l'elemento \"dynamics\":\"dt\"\n";
+            std::cerr << "Error: you must specify \"dynamics\":{\"dt\": [timestep of the dynamic]}\n";
             return -1;
         }
         if (js["dynamics"].count("accelerated")>0) {
@@ -643,16 +687,20 @@ int main() {
             if (js["dynamics"].count("plot_eigenvalue")>0) {
                 plot_eigenvalue=js["dynamics"]["plot_eigenvalue"];
                 if (plot_eigenvalue){
+                    if (js["dynamics"].count("eigen_out")==0){
+                        std::cerr << "Error: you must specify \"dynamics\":{\"eigen_out\": [output file for the eigenvalues of the hessian]}\n";
+                        return -1;
+                    }
                     eigen_out=js["dynamics"]["eigen_out"];
                 }
             }
         }
     }
     if (js.count("minimization")==0) {
-        std::cerr << "Errore: impossibile trovare l'elemento \"minimization\"\n";
+        std::cerr << "Error: you must specify \"minimization\": {}\n";
         return -1;
         if (js["minimization"].count("nsteps")==0) {
-            std::cerr << "Errore: impossibile trovare l'elemento \"minimization\":\"nsteps\"\n";
+            std::cerr << "Error: you must specify \"minimization\":{\"nsteps\": [#number of cg steps]}\n";
             return -1;
         }
     }
@@ -688,60 +736,87 @@ int main() {
     if (NATOMS<=0) {
         x.resize(natoms*DIMs,1);
     }
-    x=Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>::Random(natoms*DIMs,1)*cell_size;
+    if (random_state){
+        std::cerr << "Initializing atoms in random positions.\n";
+        x=Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>::Random(natoms*DIMs,1)*cell_size;
+    } else {
+        std::cerr << "Reading initial positions from file \""<<file_in<<"\".\n";
+        std::ifstream infile(file_in);
+        infile >> x;
+        if (!infile.good()) {
+            std::cerr << "An error occured while reading file (wrong number of atoms? Wrong file?).\n";
+            return -1;
+        }
+        infile.close();
+    }
 
     ParabolaLineMinimization <Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > lineMin(0.02,0.1,4,3);
     Cg<Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > testcg(test,x,test(x),lineMin,8);
-    for (unsigned int i=0;i<nsteps_cg;i++) {
-        if (i%100==0)
-            std::cout << i << " " << testcg.get_fx()<< "\n";
-        if (!testcg.iteration())
-            break;
+    if (nsteps_cg>0){
+        std::cerr << "Performing cg minimization of the initial state.\n";
+        for (unsigned int i=0;i<nsteps_cg;i++) {
+            if (i%100==0)
+                std::cout << i << " " << testcg.get_fx()<< "\n";
+            if (!testcg.iteration())
+                break;
+        }
+        std::cout <<  "Final: " << testcg.get_fx()<< "\n";
+        x=testcg.get_x();
     }
-    std::cout <<  "Final: " << testcg.get_fx()<< "\n";
-    x=testcg.get_x();
 
     if (test_hessian){
-        std::cout << "Test delle forze: " << test.check_forces(x,0.0001,0.001)<<"\n";
-        std::cout << "Test dell'hessiana: " << test.check_hessian_forces(x,0.0001,0.001)<<"\n";
+        std::cout << "Forces calculation test: " << test.check_forces(x,0.0001,0.001)<<"\n";
+        std::cout << "Hessian calculation test: " << test.check_hessian_forces(x,0.0001,0.001)<<"\n";
     }
 
-    std::cout << "\n\n\nInizio dinamica\n\n\n";
-    std::ofstream output(outname,std::ios_base::app);
-    std::ofstream output_energy(energy_out,std::ios_base::app);
-    std::ofstream output_eigen(eigen_out,std::ios_base::app);
-    IntegratorAcceleratedLangevin<NATOMS,DIMs,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,natoms,accelerated);
-    if(accelerated)
-        firstOrderAcceleratedLangevin.set_d(d);
-    //forse ok in c++17
-//    IntegratorAcceleratedLangevin<> firstOrderAcceleratedLangevin(&test,x,0.001,0.5);
-    firstOrderAcceleratedLangevin.init_global_rnd(67857);
-//    test.pbc_wrap(x);
+    if (nsteps_d>0){
+        std::cout << "\n\n====================\n  Begin of the dynamic\n====================\n\n";
+        std::ofstream output(outname,std::ios_base::app);
+        std::ofstream output_energy(energy_out,std::ios_base::app);
+        std::ofstream output_eigen(eigen_out,std::ios_base::app);
+        IntegratorAcceleratedLangevin<NATOMS,DIMs,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,natoms,accelerated);
+        if(accelerated)
+            firstOrderAcceleratedLangevin.set_d(d);
+        //forse ok in c++17
+        //    IntegratorAcceleratedLangevin<> firstOrderAcceleratedLangevin(&test,x,0.001,0.5);
+        firstOrderAcceleratedLangevin.init_global_rnd(67857);
+        //    test.pbc_wrap(x);
 
 
 
-    for (unsigned int istep=0;istep<nsteps_d;istep++) {
-        double T=temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1);
-        firstOrderAcceleratedLangevin.set_T(T);
-        firstOrderAcceleratedLangevin.step(x);
-        if (istep%dump_mod==0){
-            firstOrderAcceleratedLangevin.dump(output,x);
-            if (plot_eigenvalue){
-                output_eigen << firstOrderAcceleratedLangevin.get_eigenvalue().transpose()<<"\n";
+        for (unsigned int istep=0;istep<nsteps_d;istep++) {
+            double T=temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1);
+            firstOrderAcceleratedLangevin.set_T(T);
+            firstOrderAcceleratedLangevin.step(x);
+            if (istep%dump_mod==0){
+                firstOrderAcceleratedLangevin.dump(output,x);
+                if (plot_eigenvalue){
+                    output_eigen << firstOrderAcceleratedLangevin.get_eigenvalue().transpose()<<"\n";
+                }
+            }
+            if (eoutput &&  istep%dump_mod==0){
+                std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<< "\n";
+                output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<<"\n";
             }
         }
-        if (eoutput &&  istep%dump_mod==0){
-            std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<< "\n";
-            output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<<"\n";
-        }
+        std::cout << "Finished!\nVMD:\n\n vmd -e .vmd_cmd\n\nClean:\n\n rm \""<< energy_out << "\" \"" << eigen_out << "\" \"" << outname << "\" .vmd_cmd \n\n" ;
+
+
+        std::ofstream output_cmd(".vmd_cmd");
+        output_cmd <<"#mol delete 0\n\
+             #mol addrep 0\n\
+             #display resetview\n\
+                 mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
+                 << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
+
+        std::cerr << "End of run. Writing output in \""<<file_out<<"\"...\n";
     }
-    std::cout << "Finito!\nVMD:\n\n vmd -e .vmd_cmd\n\nPulisci:\n\n rm \""<< energy_out << "\" \"" << eigen_out << "\" \"" << outname << "\" .vmd_cmd \n\n" ;
 
-
-    std::ofstream output_cmd(".vmd_cmd");
-    output_cmd <<"#mol delete 0\n\
-#mol addrep 0\n\
-#display resetview\n\
-mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
-    << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
+    std::ofstream output_final(file_out);
+    output_final << x<<"\n";
+    if (output_final.good()) {
+        std::cerr<< "Ok.\n";
+    } else {
+        std::cerr << "Fail!!\n";
+    }
 }
