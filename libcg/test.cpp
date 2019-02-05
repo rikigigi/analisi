@@ -85,6 +85,8 @@ public:
     }
     virtual void deriv(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x,Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > res) final {
         res.setZero();
+        zero_virial();
+        zero_energy();
         for (unsigned int i=0;i<x.rows()/DIM;i++) {
             for (unsigned int j=i+1;j<x.rows()/DIM;j++) {
                 if (i==j)
@@ -99,6 +101,8 @@ public:
                     r2=dx.squaredNorm();
                 }
                 double dp_dr=pair_deriv_r2(r2);
+                virial_pair(dp_dr,dx.data());
+                energy_pair(pair(r2));
                 for (unsigned int i0=0;i0<DIM;i0++) {
                     res(i*DIM+i0)+=dp_dr*dx(i0);
                     res(j*DIM+i0)-=dp_dr*dx(i0);
@@ -113,6 +117,8 @@ public:
                                ) final {
         res.setZero();
         res1.setZero();
+        zero_virial();
+        zero_energy();
 //        Eigen::Matrix<double,N*DIM,N*DIM> res1;
         if (has_deriv2()) {
             for (unsigned int i1=0;i1<x.rows()/DIM;i1++) {
@@ -137,6 +143,10 @@ public:
                     double f2=4*pair_deriv2_r2(r2); //second derivative with respect to r^2_ij
                     double f1=2*pair_deriv_r2(r2); //first derivative with respect to r^2_ij
                     double sub[DIM*DIM]={0.0};
+
+                    virial_pair(f1,dx.data());
+                    energy_pair(pair(r2));
+
                     for (unsigned int d0=0;d0<DIM;d0++) {
                         // calculate also force (it is free, at this point)
                         res1(i1*DIM+d0)+=f1*dx(d0);
@@ -282,12 +292,21 @@ public:
         x=x-L*Eigen::floor(x.array()/L).matrix();
     }
 
+    Eigen::Matrix<double,DIM,DIM> get_virial() {
+        return virial;
+    }
+
+    double get_energy() {
+        return energy;
+    }
+
 private:
     constexpr bool want_pbc()     const  {return (flags & 1) == 1;}
     constexpr bool has_deriv2()     const {return (flags & 2) == 2;}
     constexpr bool newton_forces() const  {return (flags & 4) == 4;}
     constexpr bool orthorombic_box() const {return (flags & 8) == 8;}
-    Eigen::Matrix<double,DIM,DIM> T,Tinv;
+    Eigen::Matrix<double,DIM,DIM> T,Tinv,virial;
+    double energy;
     template <typename D1,typename D2>
     inline
     Eigen::Matrix<typename D1::Scalar,DIM,1>  pbc(const Eigen::MatrixBase<D1> &x1, const Eigen::MatrixBase<D2> &x0,
@@ -311,6 +330,30 @@ private:
         }
         return dx;
     }
+
+
+    void zero_virial() {
+        virial.setZero();
+    }
+
+    void zero_energy() {
+        energy=0;
+    }
+
+    void energy_pair(double e_ij){
+        energy+=e_ij;
+    }
+
+    void virial_pair(const double f_ij,double * const  x_ij) {
+        for (unsigned int x=0;x<DIM;x++) {
+            virial(x,x)+=f_ij*x_ij[x]*x_ij[x];
+            for (unsigned int y=x+1;y<DIM;y++) {
+                virial(x,y)+=f_ij*x_ij[x]*x_ij[y];
+                virial(y,x)+=f_ij*x_ij[x]*x_ij[y];
+            }
+        }
+    }
+
     virtual double pair       (const double & r2)=0;
     virtual double pair_deriv_r2 (const double & r2)=0;
     virtual double pair_deriv2_r2(const double & r2)=0;
@@ -634,12 +677,11 @@ int main() {
 
 
 
-    LJPair<NATOMS,3> test;
-    Eigen::Matrix3d cel;
+    LJPair<NATOMS,DIMs> test;
+    Eigen::Matrix<double,DIMs,DIMs> cel;
 
-    cel << cell_size , 0.0 , 0.0
-        , 0.0 , cell_size , 0.0
-        , 0.0 , 0.0 , cell_size;
+    cel = cell_size * Eigen::Matrix<double,DIMs,DIMs>::Identity();
+    double volume=std::pow(cell_size,DIMs);
     test.init_pbc( cel);
 
     Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>x;
@@ -689,15 +731,17 @@ int main() {
             }
         }
         if (eoutput &&  istep%dump_mod==0){
-            std::cout <<istep<<" "<<T<<" " << test(x) << "\n";
-            output_energy <<istep<<" "<<T<<" " << test(x) << "\n";
+            std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<< "\n";
+            output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<<"\n";
         }
     }
-    std::cout << "Finito!\nVMD:\n\n";
-    std::cout <<"#mol delete 0\n\
+    std::cout << "Finito!\nVMD:\n\n vmd -e .vmd_cmd\n\nPulisci:\n\n rm \""<< energy_out << "\" \"" << eigen_out << "\" \"" << outname << "\" .vmd_cmd \n\n" ;
+
+
+    std::ofstream output_cmd(".vmd_cmd");
+    output_cmd <<"#mol delete 0\n\
 #mol addrep 0\n\
 #display resetview\n\
 mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
     << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
-
 }
