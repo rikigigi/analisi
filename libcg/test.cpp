@@ -153,10 +153,11 @@ public:
                     }
 
                     double f2=4*pair_deriv2_r2(r2); //second derivative with respect to r^2_ij
-                    double f1=2*pair_deriv_r2(r2); //first derivative with respect to r^2_ij
+                    double f1=pair_deriv_r2(r2); //first derivative with respect to r^2_ij
                     double sub[DIM*DIM]={0.0};
 
                     virial_pair(f1,dx.data());
+                    f1=f1*2;
                     energy_pair(pair(r2));
 
                     for (unsigned int d0=0;d0<DIM;d0++) {
@@ -486,7 +487,6 @@ public:
         if (accelerated){
             p->hessian_deriv(pos,deriv_m,H);
             //regularize the matrix: diagonalize it
-            Eigen::SelfAdjointEigenSolver< Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM),1> > eigensolver;
             eigensolver.compute(H);
             eigenvalue=eigensolver.eigenvalues();
             eigenvectors=eigensolver.eigenvectors();
@@ -495,7 +495,7 @@ public:
             H=eigenvectors.transpose()*eigenvalue.asDiagonal()*eigenvectors;
             H_inv=(eigenvectors.transpose()*( Eigen::pow(eigenvalue.array(),-1) ).matrix().asDiagonal()*eigenvectors);
             //trasforma le variabili secondo la matrice di covarianze
-            z=(eigenvectors.transpose()*( Eigen::pow(eigenvalue.array(),-0.5) ).matrix().asDiagonal()*eigenvectors)*z;
+            z=( (Eigen::pow(eigenvalue.array(),-0.5) ).matrix().asDiagonal()*eigenvectors*z).eval();
         } else{
             p->deriv(pos,deriv_m);
         }
@@ -552,6 +552,8 @@ public:
 private:
     double delta,T,c,d;
     bool accelerated,first;
+
+    Eigen::SelfAdjointEigenSolver< Eigen::Matrix<double,eigen_matrix_dim(N,DIM),eigen_matrix_dim(N,DIM),1> > eigensolver;
 
     Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1>                         eigenvalue;
     Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1>                         z,pos_p;
@@ -634,10 +636,13 @@ int main(int argc,char *argv[]) {
         file_out=js["output_file"];
     }
 
-    if (js.count("cell_size")==0) {
-        std::cerr << "Error: you must specify \"cell_size\": [cellsize, for example 5.0]\n";
+    if (js.count("cell_size")==0 && js.count("rho")==0 || js.count("cell_size")>0 && js.count("rho")>0) {
+        std::cerr << "Error: you must specify only one of \"cell_size\": [cellsize, for example 5.0]  or \"rho\": [reduced density, for example 0.5]\n";
         return -1;
     }
+
+
+
 
     if (js.count("test_hessian")!=0) {
         test_hessian=js["test_hessian"];
@@ -708,7 +713,13 @@ int main(int argc,char *argv[]) {
     unsigned int nsteps_d=js["dynamics"]["nsteps"];
     unsigned int nsteps_cg=js["minimization"]["nsteps"];
     unsigned int dump_mod=1;
-    double cell_size=js["cell_size"];
+    double cell_size;//
+    if (js.count("rho")==0) {
+        cell_size=js["cell_size"];
+    } else {
+        double rho=js["rho"];
+        cell_size=std::pow(double(natoms)/rho,1.0/3.0);
+    }
     double temperature=js["dynamics"]["T"];
     double dt=js["dynamics"]["dt"];
     double Tfinal;
@@ -749,10 +760,10 @@ int main(int argc,char *argv[]) {
         }
         infile.close();
     }
-
-    ParabolaLineMinimization <Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > lineMin(0.02,0.1,4,3);
-    Cg<Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > testcg(test,x,test(x),lineMin,8);
     if (nsteps_cg>0){
+
+        ParabolaLineMinimization <Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > lineMin(0.02,0.1,4,3);
+        Cg<Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>,double,LJPair<NATOMS,DIMs> > testcg(test,x,test(x),lineMin,8);
         std::cerr << "Performing cg minimization of the initial state.\n";
         for (unsigned int i=0;i<nsteps_cg;i++) {
             if (i%100==0)
@@ -770,7 +781,14 @@ int main(int argc,char *argv[]) {
     }
 
     if (nsteps_d>0){
-        std::cout << "\n\n====================\n  Begin of the dynamic\n====================\n\n";
+        std::ofstream output_cmd(".vmd_cmd");
+        output_cmd <<"#mol delete 0\n\
+             #mol addrep 0\n\
+             #display resetview\n\
+                 mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
+                 << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
+        output_cmd.close();
+        std::cout << "\n\n========================\n| Begin of the dynamic |\n========================\n\n";
         std::ofstream output(outname,std::ios_base::app);
         std::ofstream output_energy(energy_out,std::ios_base::app);
         std::ofstream output_eigen(eigen_out,std::ios_base::app);
@@ -795,19 +813,14 @@ int main(int argc,char *argv[]) {
                 }
             }
             if (eoutput &&  istep%dump_mod==0){
-                std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<< "\n";
-                output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms+ test.get_virial().trace()/DIMs)/volume<<"\n";
+                std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<< "\n";
+                output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<<"\n";
             }
         }
         std::cout << "Finished!\nVMD:\n\n vmd -e .vmd_cmd\n\nClean:\n\n rm \""<< energy_out << "\" \"" << eigen_out << "\" \"" << outname << "\" .vmd_cmd \n\n" ;
 
 
-        std::ofstream output_cmd(".vmd_cmd");
-        output_cmd <<"#mol delete 0\n\
-             #mol addrep 0\n\
-             #display resetview\n\
-                 mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
-                 << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
+
 
         std::cerr << "End of run. Writing output in \""<<file_out<<"\"...\n";
     }
