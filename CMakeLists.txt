@@ -75,8 +75,36 @@ if(DEFINED ENV{BOOST_INCLUDE})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I $ENV{BOOST_INCLUDE}")
 endif()
 
+set (EIGEN_DOWNLOADED_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-eigen-323c052e1731")
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/eigen-eigen-323c052e1731)
+	include_directories(${EIGEN_DOWNLOADED_LIB_DIR})
+    set(HAVEEigenDense 1)
+    message(STATUS "Using downloaded eigen3 library (if you have problems delete directory ${EIGEN_DOWNLOADED_LIB_DIR})")
+else()
+
 check_include_file_CXX ("eigen3/Eigen/Dense" HAVEeigen3EigenDense)
 check_include_file_CXX ("Eigen/Dense" HAVEEigenDense)
+
+
+if (  HAVEeigen3EigenDense OR HAVEEigenDense )
+message(STATUS "Using system eigen3 library")
+else()
+    message(STATUS "Downloading eigen3 library and unpacking in source directory")
+    file (DOWNLOAD
+        http://bitbucket.org/eigen/eigen/get/3.3.7.tar.bz2
+        ${CMAKE_CURRENT_SOURCE_DIR}/eigen3.3.7.tar.bz2
+        SHA512=c12bfd034d0a1112bf2df3f773ad98f36b2b53fbbfceac5f143ee1793322746fb8a6546d7db7da2a1000da6a535bd8cea0c4125b549afc90a6570743b02dcf3d
+        SHOW_PROGRESS
+       )
+    execute_process(
+	COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_CURRENT_SOURCE_DIR}/eigen3.3.7.tar.bz2
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+
+endif()
+endif()
+
 check_include_file_CXX ("fftw3.h" HAVEfftw3)
 check_include_file_CXX ("fftw.h" HAVEfftw)
 
