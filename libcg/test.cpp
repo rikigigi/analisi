@@ -77,6 +77,9 @@ class MultiPair : public Function <
         Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1>
 > {
 public:
+    MultiPair(double cut) : cutoff2(cut*cut),cutoff(cut){
+
+    }
     virtual double operator() (const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x ) final {
         double res=0.0;
         for (unsigned int i=0;i<x.rows()/DIM;i++) {
@@ -90,6 +93,7 @@ public:
                     dx=(x.template segment<DIM>(i*DIM,DIM)-x.template segment<DIM>(j*DIM,DIM));
                     r2=dx.squaredNorm();
                 }
+                if (r2>cutoff2) continue;
                 res+=pair(r2);
             }
         }
@@ -112,7 +116,8 @@ public:
                     dx=(x.template segment<DIM>(i*DIM,DIM)-x.template segment<DIM>(j*DIM,DIM));
                     r2=dx.squaredNorm();
                 }
-                double dp_dr=pair_deriv_r2(r2);
+                if (r2>cutoff2) continue;
+                double dp_dr=2*pair_deriv_r2(r2);
                 virial_pair(dp_dr,dx.data());
                 energy_pair(pair(r2));
                 for (unsigned int i0=0;i0<DIM;i0++) {
@@ -152,12 +157,12 @@ public:
                         r2=dx.squaredNorm();
                     }
 
+                    if (r2>cutoff2) continue;
                     double f2=4*pair_deriv2_r2(r2); //second derivative with respect to r^2_ij
-                    double f1=pair_deriv_r2(r2); //first derivative with respect to r^2_ij
+                    double f1=2*pair_deriv_r2(r2); //first derivative with respect to r^2_ij
                     double sub[DIM*DIM]={0.0};
 
                     virial_pair(f1,dx.data());
-                    f1=f1*2;
                     energy_pair(pair(r2));
 
                     for (unsigned int d0=0;d0<DIM;d0++) {
@@ -210,7 +215,7 @@ public:
                     }
                 }
             }
-            res1=res1/2.0;
+            res1=res1;
         } else {
             throw std::runtime_error("Not implemented!");
         }
@@ -230,11 +235,11 @@ public:
         for (unsigned int i=0;i<x.rows();i++) {
             double dvdr=0.0;
             x_=x;
-            x_(i)=x_(i)+x_(i)*dx_over_x;
+            x_(i)=x(i)+dx_over_x;
             double vp=operator ()(x_);
-            x_(i)=x_(i)-x_(i)*dx_over_x;
+            x_(i)=x(i)-dx_over_x;
             double vm=operator ()(x_);
-            dvdr=(vp-vm)/(2*x(i)*dx_over_x);
+            dvdr=(vp-vm)/(2*dx_over_x);
             std::cerr << "Index "<< i<< ": \tnumerical = " << dvdr << " calculated = "<< force(i)<<"\n";
             if (fabs((dvdr-force(i)))/force(i)>max_error) {
                 res=false;
@@ -254,11 +259,11 @@ public:
             {
                 double dvdr=0.0;
                 x_=x;
-                x_(i)=x_(i)+x_(i)*dx_over_x;
+                x_(i)=x(i)+dx_over_x;
                 double vp=operator ()(x_);
-                x_(i)=x_(i)-x_(i)*dx_over_x;
+                x_(i)=x(i)-dx_over_x;
                 double vm=operator ()(x_);
-                dvdr=(vp-vm)/(2*x(i)*dx_over_x);
+                dvdr=(vp-vm)/(2*dx_over_x);
                 std::cerr << "Force "<< i<< ": \t numerical = " << dvdr << " calculated = "<< force(i)<<"\n";
                 if (fabs((dvdr-force(i)))/force(i)>max_error) {
                     res=false;
@@ -267,26 +272,26 @@ public:
             for (unsigned int j=0;j<x.rows();j++) {
                 double dp,dm,d1p,d1m;
                 x_=x;
-                x_(j)=x_(j)+x_(j)*dx_over_x;
-                x_(i)=x_(i)+x_(i)*dx_over_x;
+                x_(j)=x_(j)+dx_over_x;
+                x_(i)=x_(i)+dx_over_x;
                 dp=operator ()(x_);
                 x_=x;
-                x_(j)=x_(j)+x_(j)*dx_over_x;
-                x_(i)=x_(i)-x_(i)*dx_over_x;
+                x_(j)=x_(j)+dx_over_x;
+                x_(i)=x_(i)-dx_over_x;
                 dm=operator ()(x_);
-                d1p=(dp-dm)/(2*x(i)*dx_over_x);
+                d1p=(dp-dm)/(2*dx_over_x);
 
                 x_=x;
-                x_(j)=x_(j)-x_(j)*dx_over_x;
-                x_(i)=x_(i)+x_(i)*dx_over_x;
+                x_(j)=x_(j)-dx_over_x;
+                x_(i)=x_(i)+dx_over_x;
                 dp=operator ()(x_);
                 x_=x;
-                x_(j)=x_(j)-x_(j)*dx_over_x;
-                x_(i)=x_(i)-x_(i)*dx_over_x;
+                x_(j)=x_(j)-dx_over_x;
+                x_(i)=x_(i)-dx_over_x;
                 dm=operator ()(x_);
-                d1m=(dp-dm)/(2*x(i)*dx_over_x);
+                d1m=(dp-dm)/(2*dx_over_x);
 
-                double d2=(d1p-d1m)/(2*x(j)*dx_over_x);
+                double d2=(d1p-d1m)/(2*dx_over_x);
 
                 std::cerr << i << " "<<j << " " << d2 << " " << H(i,j) << "\n";
                 if (fabs((d2-H(i,j)))/H(i,j)>max_error) {
@@ -319,7 +324,7 @@ private:
     constexpr bool newton_forces() const  {return (flags & 4) == 4;}
     constexpr bool orthorombic_box() const {return (flags & 8) == 8;}
     Eigen::Matrix<double,DIM,DIM> T,Tinv,virial;
-    double energy;
+    double energy,cutoff2,cutoff;
     template <typename D1,typename D2>
     inline
     Eigen::Matrix<typename D1::Scalar,DIM,1>  pbc(const Eigen::MatrixBase<D1> &x1, const Eigen::MatrixBase<D2> &x0,
@@ -374,21 +379,23 @@ private:
 
 template <int N,unsigned int DIM>
 class LJPair : public MultiPair<N,DIM,1 | 2 | 8 > {
+public:
+    LJPair(double cut) : MultiPair<N,DIM,1 | 2 | 8 >(cut) {}
 protected:
     virtual double pair       (const double & r2) override {
         double r6=r2*r2*r2;
-        return 1.0/(r6*r6)-1.0/r6;
+        return 4.0/(r6*r6)-4.0/r6;
     }
     virtual double pair_deriv_r2 (const double & r2) override {
         double r6=r2*r2*r2;
-        return -6.0/(r6*r6*r2)+3.0/(r6*r2);
+        return 4.0*(-6.0/(r6*r6*r2)+3.0/(r6*r2));
     }
 
     virtual double pair_deriv2_r2(const double & r2) override{
         double r4=r2*r2;
         double r6=r4*r2;
         double r12=r6*r6;
-        return 7.0*6.0/(r12*r4)-4.0*3.0/(r6*r4);
+        return 4.0*(7.0*6.0/(r12*r4)-4.0*3.0/(r6*r4));
     }
 
 };
@@ -571,8 +578,8 @@ int main(int argc,char *argv[]) {
 
     bool accelerated=false, test_hessian=false,plot_eigenvalue=false,eoutput=false,random_state=true;
     unsigned int natoms=0;
-    std::string eigen_out,energy_out,file_in,file_out,json_in="input.json";
-    double d=1.0;
+    std::string eigen_out,energy_out,file_in,file_out,json_in="input.json",prefix="";
+    double d=1.0,cutoff=10.0;
     if (argc != 1) {
         json_in.assign(argv[1]);
     }
@@ -611,6 +618,18 @@ int main(int argc,char *argv[]) {
         }
     } else {
         natoms=NATOMS;
+    }
+
+    if (js.count("cutoff")==0) {
+        std::cerr << "Error: you must specify \"cutoff\": [potential cutoff]\n";
+        return -1;
+    } else {
+        cutoff=js["cutoff"];
+    }
+
+    if (js.count("prefix")!=0) {
+        prefix=js["prefix"];
+        std::cerr << "Using the prefix for all filenames: \""<<prefix<<"\"\n";
     }
 
 
@@ -736,7 +755,7 @@ int main(int argc,char *argv[]) {
 
 
 
-    LJPair<NATOMS,DIMs> test;
+    LJPair<NATOMS,DIMs> test(cutoff);
     Eigen::Matrix<double,DIMs,DIMs> cel;
 
     cel = cell_size * Eigen::Matrix<double,DIMs,DIMs>::Identity();
@@ -752,7 +771,7 @@ int main(int argc,char *argv[]) {
         x=Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>::Random(natoms*DIMs,1)*cell_size;
     } else {
         std::cerr << "Reading initial positions from file \""<<file_in<<"\".\n";
-        std::ifstream infile(file_in);
+        std::ifstream infile(prefix+file_in);
         infile >> x;
         if (!infile.good()) {
             std::cerr << "An error occured while reading file (wrong number of atoms? Wrong file?).\n";
@@ -776,22 +795,25 @@ int main(int argc,char *argv[]) {
     }
 
     if (test_hessian){
+        std::cerr << "Testing hessian and forces algorithm..";
         std::cout << "Forces calculation test: " << test.check_forces(x,0.0001,0.001)<<"\n";
+        std::cerr << ".";
         std::cout << "Hessian calculation test: " << test.check_hessian_forces(x,0.0001,0.001)<<"\n";
+        std::cerr << " Done!\n";
     }
 
     if (nsteps_d>0){
-        std::ofstream output_cmd(".vmd_cmd");
+        std::ofstream output_cmd(prefix+".vmd_cmd");
         output_cmd <<"#mol delete 0\n\
              #mol addrep 0\n\
              #display resetview\n\
-                 mol new {"<< outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
+                 mol new {"<< prefix+outname<<"} type {xyz} first 0 last -1 step 1 waitfor -1\n"
                  << "set cell [pbc set { "<< cell_size <<" " <<cell_size<<" " <<cell_size<< " } -all]\npbc wrap -all\npbc box\nmol modstyle 0 0 VDW 0.100000 12.000000\n";
         output_cmd.close();
         std::cout << "\n\n========================\n| Begin of the dynamic |\n========================\n\n";
-        std::ofstream output(outname,std::ios_base::app);
-        std::ofstream output_energy(energy_out,std::ios_base::app);
-        std::ofstream output_eigen(eigen_out,std::ios_base::app);
+        std::ofstream output(prefix+outname,std::ios_base::app);
+        std::ofstream output_energy(prefix+energy_out,std::ios_base::app);
+        std::ofstream output_eigen(prefix+eigen_out,std::ios_base::app);
         IntegratorAcceleratedLangevin<NATOMS,DIMs,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,natoms,accelerated);
         if(accelerated)
             firstOrderAcceleratedLangevin.set_d(d);
@@ -801,6 +823,7 @@ int main(int argc,char *argv[]) {
         //    test.pbc_wrap(x);
 
 
+        std::cerr <<"natoms = "<< natoms << ";  DIMs = " << DIMs<<";  volume = " << volume<<"\n";
 
         for (unsigned int istep=0;istep<nsteps_d;istep++) {
             double T=temperature+ (Tfinal-temperature)*double(istep)/double(nsteps_d-1);
@@ -813,19 +836,19 @@ int main(int argc,char *argv[]) {
                 }
             }
             if (eoutput &&  istep%dump_mod==0){
-                std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<< "\n";
-                output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<<"\n";
+                std::cout <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<< " "<<test.get_virial().trace()/DIMs/volume<< "\n";
+                output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<< " "<<test.get_virial().trace()/DIMs/volume<<"\n";
             }
         }
-        std::cout << "Finished!\nVMD:\n\n vmd -e .vmd_cmd\n\nClean:\n\n rm \""<< energy_out << "\" \"" << eigen_out << "\" \"" << outname << "\" .vmd_cmd \n\n" ;
+        std::cout << "Finished!\nVMD:\n\n vmd -e .vmd_cmd\n\nClean:\n\n rm "<<(eoutput?"\""+prefix+energy_out+"\" ":"") <<(plot_eigenvalue?"\""+prefix+eigen_out+"\" ":"")<< "\"" << prefix+outname << "\""<< prefix+".vmd_cmd \n\n" ;
 
 
 
 
-        std::cerr << "End of run. Writing output in \""<<file_out<<"\"...\n";
+        std::cerr << "End of run. Writing output in \""<<prefix+file_out<<"\"...\n";
     }
 
-    std::ofstream output_final(file_out);
+    std::ofstream output_final(prefix+file_out);
     output_final << x<<"\n";
     if (output_final.good()) {
         std::cerr<< "Ok.\n";
