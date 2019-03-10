@@ -771,7 +771,7 @@ int main(int argc,char *argv[]) {
         x=Eigen::Matrix<double,eigen_matrix_dim(NATOMS,DIMs),1>::Random(natoms*DIMs,1)*cell_size;
     } else {
         std::cerr << "Reading initial positions from file \""<<file_in<<"\".\n";
-        std::ifstream infile(prefix+file_in);
+        std::ifstream infile(file_in);
         infile >> x;
         if (!infile.good()) {
             std::cerr << "An error occured while reading file (wrong number of atoms? Wrong file?).\n";
@@ -840,7 +840,7 @@ int main(int argc,char *argv[]) {
                 output_energy <<istep<<" "<<T<<" " << test.get_energy() << " "<< ( T*natoms- test.get_virial().trace()/DIMs)/volume<< " "<<test.get_virial().trace()/DIMs/volume<<"\n";
             }
         }
-        std::cout << "Finished!\nVMD:\n\n vmd -e .vmd_cmd\n\nClean:\n\n rm "<<(eoutput?"\""+prefix+energy_out+"\" ":"") <<(plot_eigenvalue?"\""+prefix+eigen_out+"\" ":"")<< "\"" << prefix+outname << "\""<< prefix+".vmd_cmd \n\n" ;
+        std::cout << "Finished!\nVMD:\n\n vmd -e .vmd_cmd\n\nClean:\n\n rm "<<(eoutput?"\""+prefix+energy_out+"\" ":" ") <<(plot_eigenvalue?"\""+prefix+eigen_out+"\" ":" ")<< "\"" << prefix+outname << "\""<< prefix+".vmd_cmd \n\n" ;
 
 
 
