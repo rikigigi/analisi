@@ -231,7 +231,7 @@ public:
         force.resize(x.rows(),1);
         x_.resize(x.rows(),1);
         deriv(x,force);
-        double res=true;
+        bool res=true;
         for (unsigned int i=0;i<x.rows();i++) {
             double dvdr=0.0;
             x_=x;
@@ -248,7 +248,7 @@ public:
         return res;
     }
     bool check_hessian_forces(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
-        double res=false;
+        bool res=false;
         Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> force,x_;
         force.resize(x.rows(),1);
         x_.resize(x.rows(),1);
