@@ -487,6 +487,7 @@ public:
 
         double regularizer_parameters[]={1.0,2/d,d};
 
+        //mette in z un vettore di variabili normali distribuite come N(0,1)
         for (unsigned int i=0;i<z.rows();i++) {
             z(i)=normal_gauss();
         }
@@ -514,7 +515,6 @@ public:
         //    H=H+eigenvalues(0)*1.1*Eigen::Matrix<double,N*DIM,N*DIM>::Identity();
         //}
         */
-        //mette in z un vettore di variabili normali distribuite come N(0,1)
 
 
         if (accelerated ){
@@ -655,7 +655,7 @@ int main(int argc,char *argv[]) {
         file_out=js["output_file"];
     }
 
-    if (js.count("cell_size")==0 && js.count("rho")==0 || js.count("cell_size")>0 && js.count("rho")>0) {
+    if (js.count("cell_size")==0 && js.count("rho")==0 || (js.count("cell_size")>0 && js.count("rho")>0) ) {
         std::cerr << "Error: you must specify only one of \"cell_size\": [cellsize, for example 5.0]  or \"rho\": [reduced density, for example 0.5]\n";
         return -1;
     }
