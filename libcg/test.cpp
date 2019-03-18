@@ -231,7 +231,7 @@ public:
         force.resize(x.rows(),1);
         x_.resize(x.rows(),1);
         deriv(x,force);
-        double res=true;
+        bool res=true;
         for (unsigned int i=0;i<x.rows();i++) {
             double dvdr=0.0;
             x_=x;
@@ -248,7 +248,7 @@ public:
         return res;
     }
     bool check_hessian_forces(const Eigen::Ref< const Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > & x, const double & dx_over_x, const double & max_error=0.001 ) {
-        double res=false;
+        bool res=false;
         Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> force,x_;
         force.resize(x.rows(),1);
         x_.resize(x.rows(),1);
@@ -492,6 +492,7 @@ public:
 
         double regularizer_parameters[]={1.0,2/d,d};
 
+        //mette in z un vettore di variabili normali distribuite come N(0,1)
         for (unsigned int i=0;i<z.rows();i++) {
             z(i)=normal_gauss();
         }
@@ -519,7 +520,6 @@ public:
         //    H=H+eigenvalues(0)*1.1*Eigen::Matrix<double,N*DIM,N*DIM>::Identity();
         //}
         */
-        //mette in z un vettore di variabili normali distribuite come N(0,1)
 
 
         if (accelerated ){
@@ -663,7 +663,7 @@ int main(int argc,char *argv[]) {
         file_out=js["output_file"];
     }
 
-    if (js.count("cell_size")==0 && js.count("rho")==0 || js.count("cell_size")>0 && js.count("rho")>0) {
+    if (js.count("cell_size")==0 && js.count("rho")==0 || (js.count("cell_size")>0 && js.count("rho")>0) ) {
         std::cerr << "Error: you must specify only one of \"cell_size\": [cellsize, for example 5.0]  or \"rho\": [reduced density, for example 0.5]\n";
         return -1;
     }
