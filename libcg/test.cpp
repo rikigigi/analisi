@@ -451,7 +451,12 @@ public:
          * p[1] --> tau
          * p[2] --> delta
         */
-        return 1.0/(1.0+exp((e-p[0])/p[1]))/p[2]+e*(1.0-1.0/(1.0+exp((e-p[0])/p[1])));
+        if (inverse_reg()){
+            return 1.0/(p[2]/(1.0+exp((e-p[0])/p[1]))+e*(1.0-1.0/(1.0+exp((e-p[0])/p[1]))));
+        } else {
+            return 1.0/(1.0+exp((e-p[0])/p[1]))/p[2]+e*(1.0-1.0/(1.0+exp((e-p[0])/p[1])));
+        }
+
     }
     IntegratorAcceleratedLangevin (MultiPair<N,DIM,FLAGS> *p,
                                    Eigen::Ref < Eigen::Matrix<double,eigen_matrix_dim(N,DIM),1> > pos,
@@ -570,6 +575,9 @@ private:
     using Integrator<N,DIM,FLAGS>::pos_m;
     using Integrator<N,DIM,FLAGS>::deriv_m;
     using Integrator<N,DIM,FLAGS>::hessian_m;
+
+
+    constexpr bool inverse_reg() const {return (FLAGS & 32) == 32;}
 
 
 };
@@ -814,7 +822,8 @@ int main(int argc,char *argv[]) {
         std::ofstream output(prefix+outname,std::ios_base::app);
         std::ofstream output_energy(prefix+energy_out,std::ios_base::app);
         std::ofstream output_eigen(prefix+eigen_out,std::ios_base::app);
-        IntegratorAcceleratedLangevin<NATOMS,DIMs,11> firstOrderAcceleratedLangevin(&test,x,dt,temperature,natoms,accelerated);
+        //imposto il regolarizzatore come l'inverso di quello utilizzato nell'articolo (se si vuole lo stesso, basta togliere |32)
+        IntegratorAcceleratedLangevin<NATOMS,DIMs,11|32> firstOrderAcceleratedLangevin(&test,x,dt,temperature,natoms,accelerated);
         if(accelerated)
             firstOrderAcceleratedLangevin.set_d(d);
         //forse ok in c++17
