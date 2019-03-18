@@ -378,9 +378,9 @@ private:
 };
 
 template <int N,unsigned int DIM>
-class LJPair : public MultiPair<N,DIM,1 | 2 | 8 > {
+class LJPair : public MultiPair<N,DIM,1 | 2 | 8 |32 > {
 public:
-    LJPair(double cut) : MultiPair<N,DIM,1 | 2 | 8 >(cut) {}
+    LJPair(double cut) : MultiPair<N,DIM,1 | 2 | 8 |32 >(cut) {}
 protected:
     virtual double pair       (const double & r2) override {
         double r6=r2*r2*r2;
@@ -444,7 +444,7 @@ protected:
 template <int N, unsigned int DIM,unsigned int FLAGS>
 class IntegratorAcceleratedLangevin : public Integrator<N,DIM,FLAGS> {
 public:
-    static double regularizer(const double & e,double * const & p) {
+    double regularizer(const double & e,double * const & p) const {
         /* eq. (45) of Mazzola, Sorella, "Accelerated molecular dynamics for ab-initio Electronic Simulations""
          * e    --> lambda
          * p[0] --> epsilon
@@ -504,7 +504,7 @@ public:
             eigenvalue=eigensolver.eigenvalues();
             eigenvectors=eigensolver.eigenvectors();
             //regularize the eigenvalues with regularizer function
-            eigenvalue=eigenvalue.unaryExpr(std::bind(&regularizer,std::placeholders::_1,regularizer_parameters));
+            eigenvalue=eigenvalue.unaryExpr(std::bind(&IntegratorAcceleratedLangevin <N,DIM,FLAGS>::regularizer,this,std::placeholders::_1,regularizer_parameters));
             H=eigenvectors.transpose()*eigenvalue.asDiagonal()*eigenvectors;
             H_inv=(eigenvectors.transpose()*( Eigen::pow(eigenvalue.array(),-1) ).matrix().asDiagonal()*eigenvectors);
             //trasforma le variabili secondo la matrice di covarianze
