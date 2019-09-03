@@ -91,6 +91,7 @@ if (  HAVEeigen3EigenDense OR HAVEEigenDense )
 message(STATUS "Using system eigen3 library")
 else()
     message(STATUS "Downloading eigen3 library and unpacking in source directory")
+    include_directories(${EIGEN_DOWNLOADED_LIB_DIR})
     file (DOWNLOAD
         http://bitbucket.org/eigen/eigen/get/3.3.7.tar.bz2
         ${CMAKE_CURRENT_SOURCE_DIR}/eigen3.3.7.tar.bz2
