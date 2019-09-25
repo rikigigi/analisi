@@ -24,6 +24,7 @@ public:
         unsigned int tmax=0,
         unsigned int nthreads=0,
         bool calcola_msd_centro_di_massa=false,
+        bool calcola_msd_nel_sistema_del_centro_di_massa=false,
         bool debug=false
             );
 
@@ -34,7 +35,7 @@ public:
 private:
     Traiettoria * traiettoria;
     unsigned int ntimesteps,skip,lmax,leff,nthread,f_cm;
-    bool cm_msd,debug;
+    bool cm_msd,cm_self,debug;
 };
 
 #endif // MSD_H

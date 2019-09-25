@@ -20,8 +20,8 @@
 #include "mp.h"
 #endif
 
-MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa,bool debug) :
-    traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa),debug(debug)
+MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa, bool calcola_msd_nel_sistema_del_centro_di_massa, bool debug) :
+    traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa),debug(debug),cm_self(calcola_msd_nel_sistema_del_centro_di_massa)
 {
     if (calcola_msd_centro_di_massa)
         f_cm=2;
@@ -93,13 +93,34 @@ void MSD::calcola(unsigned int primo) {
                         cont[i]=0;
                     }
                     for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
-                        for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                            double delta=(pow(traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0],2)+
-                                    pow(traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1],2)+
-                                    pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))/3.0
-                                    -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)];
-                            lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                        if (cm_self){
+                            for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
+                                unsigned int itype=traiettoria->get_type(iatom);
+                                double delta=(pow(
+                                               traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0]
+                                              -(traiettoria->posizioni_cm(primo+imedia,itype)[0]-traiettoria->posizioni_cm(primo+imedia+t,itype)[0])
+                                        ,2)+
+                                        pow(
+                                            traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1]
+                                            -(traiettoria->posizioni_cm(primo+imedia,itype)[1]-traiettoria->posizioni_cm(primo+imedia+t,itype)[1])
+                                        ,2)+
+                                        pow(
+                                            traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2]
+                                            -(traiettoria->posizioni_cm(primo+imedia,itype)[2]-traiettoria->posizioni_cm(primo+imedia+t,itype)[2])
+                                        ,2))/3.0
+                                        -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)];
+                                lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
+                            }
+                        }else{
+                            for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
+                                double delta=(pow(traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0],2)+
+                                        pow(traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1],2)+
+                                        pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))/3.0
+                                        -lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)];
+                                lista[traiettoria->get_ntypes()*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+
+                            }
                         }
                         if (cm_msd) {
                             for (unsigned int itype=0; itype < traiettoria->get_ntypes(); itype++) {
