@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0,nk=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200;
-    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,bench=false;
+    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
@@ -97,6 +97,7 @@ int main(int argc, char ** argv)
             ("covarianze,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"nel calcolo del coefficiente di conducibilità, oltre alla media e alla varianza di tutte le variabili calcola anche la covarianza della coppia di quantità calcolate indicate. Deve essere un numero pari di numeri")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni atomo di ciascuna specie atomica")
             ("mean-square-displacement-cm,Q",boost::program_options::bool_switch(&msd_cm)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per centro di massa di ciascuna specie atomica")
+            ("mean-square-displacement-self",boost::program_options::bool_switch(&msd_self)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio di ciascuna specie atomica calcolato nel sistema di riferimento del rispettivo centro di massa")
             ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti. Se è impostato il calcolo della g(r,t), indica gli estremi dell'istogramma.")
             ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
@@ -401,7 +402,7 @@ int main(int argc, char ** argv)
                 }
                 delete binary_traj;
 
-            }else if (msd || msd_cm){
+            }else if (msd || msd_cm || msd_self){
                 std::cerr << "Inizio del calcolo dello spostamento quadratico medio ";
                 unsigned int f_cm=1;
                 if (msd_cm) {
@@ -409,12 +410,17 @@ int main(int argc, char ** argv)
                      f_cm=2;
                 }else{
                      std::cerr << "per ciascun atomo...\n";
+                     if (msd_self) {
+                         std::cerr << "Nel sistema di riferimento del centro di massa della rispettiva specie...\n";
+                     } else {
+                         std::cerr << "Nel sistema di riferimento delle coordinate della cella...\n";
+                     }
                 }
 
                 Traiettoria test(input);
 
-                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool> Msd(&test,blocknumber);
-                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,dumpGK);
+                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);
+                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);
                 for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {
                     for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)
                         std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<
