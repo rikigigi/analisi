@@ -11,6 +11,7 @@
 
 
 #include <iostream>
+#include <array>
 #include <fstream>
 #include <boost/program_options.hpp>
 //#include "interfaccia.h"
@@ -18,6 +19,7 @@
 #include "spettrovibrazionale.h"
 #include "modivibrazionali.h"
 #include "boost/version.hpp"
+#include <boost/lexical_cast.hpp>
 #include "config.h"
 #include "istogrammavelocita.h"
 #include "greenkubo2componentionicfluid.h"
@@ -42,6 +44,67 @@
 #include "mp.h"
 #endif
 
+namespace std{
+
+template<typename A, typename B>
+std::ostream & operator << (std::ostream & out, const std::pair<A,B> & p) {
+    out << p.first << " "<<p.second;
+    return out;
+}
+
+
+/*
+template <typename A,typename B>
+std::istream & operator >> (std::istream & in, std::pair<A,B> & p) {
+    in >> p.first >> p.second;
+    return in;
+}
+*/
+
+template<typename A,std::size_t N>
+std::ostream & operator << (std::ostream &out, const std::array<A,N> &c) {
+    for (unsigned int i=0;i<N;++i) {
+        out << c[i] << " ";
+    }
+    return out;
+}
+
+/*
+template<typename A, std::size_t N>
+std::istream & operator >> (std::istream &in, std::array<A,N> &c) {
+    for (unsigned int i=0;i<N;++i) {
+        in >> c[i];
+    }
+    return in;
+}
+*/
+template<typename A, std::size_t N>
+void validate (boost::any& v,
+               const std::vector<std::string>& values,
+               std::array<A,N> *,int) {
+    if (values.size()!=N) {
+        throw std::runtime_error("std::array<A,N> needs N arguments");
+    }
+    std::array<A,N> res;
+    for (unsigned int i=0;i<N;++i) {
+        res[i]=boost::lexical_cast<A>(values[i]);
+    }
+    v=res;
+}
+
+template<typename A, typename B>
+void validate (boost::any& v,
+               const std::vector<std::string>& values,
+               std::pair<A,B>*, int) {
+    if (values.size()!=2){
+        throw std::runtime_error("pair<A,B> needs two arguments");
+    }
+    std::pair<A,B> res;
+    res.first = boost::lexical_cast<A>(values[0]);
+    res.second = boost::lexical_cast<B>(values[1]);
+    v=res;
+}
+}
 
 int main(int argc, char ** argv)
 {
@@ -53,10 +116,12 @@ int main(int argc, char ** argv)
 
     boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
-    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0,nk=0;
+    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
+    std::pair<int,double> nk;
+    std::array<double,3> kdir;
     std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
     std::vector<std::string> headers,output_conversion_gro;
@@ -109,7 +174,8 @@ int main(int argc, char ** argv)
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
-            ("spatial-correlator,A",boost::program_options::value<int> (&nk)->default_value(0),"Numero di punti della griglia ...")
+            ("spatial-correlator,A",boost::program_options::value(&nk)->default_value({0,0.0})->multitoken(),"Numero di punti della griglia ...")
+            ("spatial-correlator-dir",boost::program_options::value(&kdir)->default_value({1.0,0.0,0.0})->multitoken(),"Direzione di k")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"scrive nello standard output le colonne lette dal file di log specificato. Se viene specificato anche il calcolo delle correnti con l'opzione -a ( per esempio, se ho due specie atomiche, -a '#J 2 1.0 0.0' '#J 2 0.0 1.0' calcola la velocità del centro di massa della prima specie e della seconda specie), scrive anche le correnti calcolate nell'ordine in cui sono state specificate. In questo caso è necessario fornire anche il file binario della traiettoria con -i")
@@ -528,43 +594,36 @@ int main(int argc, char ** argv)
                     std::cout << "\n";
                 }
 
-            } else if (nk>0) {
+            } else if (nk.first>0) {
                 std::cerr << "Inizio del calcolo delle correlazioni spaziali delle velocità...\n";
-                Traiettoria t(input);
-                MediaBlocchi<CorrelatoreSpaziale,unsigned int, double, unsigned int, unsigned int, bool> blocchi_corr_spaziale(&t,blocknumber);
-                blocchi_corr_spaziale.calcola(nk,0,numero_thread,skip,false);
-
-                unsigned int col=4;
-                std::cout << "#Colonna di output: descrizione; \n# ";
-                std::cout << "1: rx; 2: ry; 3: rz; 4: r**2; ";
-                for (unsigned int i=0;i<t.get_ntypes();i++)
-                    for (unsigned int j=0;j<=i;j++){
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") x; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") x_var; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") y; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") y_var; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") z; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") z_var; ";
+                //generate k-list
+                std::vector<std::array<double,3> > klist;
+                klist.reserve(nk.first);
+                for (unsigned int i=0;i<nk.first;++i){
+                    auto k=kdir;
+                    for (auto & ki : k) {
+                        ki=ki*nk.second*double(i)/double(nk.first);
                     }
+                    klist.push_back(k);
+                }
+                Traiettoria t(input);
+                t.set_pbc_wrap(true);
 
-                std::cout << "\n";
-
-                for (unsigned int rx=0;rx<nk;rx++)
-                    for (unsigned int ry=0;ry<nk;ry++)
-                        for (unsigned int rz=0;rz<nk;rz++){
-                            std::cout<< rx<<" "<<ry<<" "<<rz<< " "<<rx*rx+ry*ry+rz*rz<<" ";
-                            for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
-                                for (unsigned int idim=0;idim<3;idim++)
-                                    std::cout<< blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
-                            }
-                            std::cout << "\n";
-                        }
+                CorrelatoreSpaziale corr(&t,klist,0.0,numero_thread,skip,false);
+                unsigned int nt=t.get_ntimesteps(),
+                        s=(nt-1)/blocknumber;
+                corr.reset(s);
+                t.imposta_dimensione_finestra_accesso(s+corr.numeroTimestepsOltreFineBlocco(blocknumber));
+                //print stuff
+                std::cout << "#kdir= "<<kdir[0]<<" "<<kdir[1]<<" "<<kdir[2]<<std::endl
+                          << "#dk= "<<nk.second<<std::endl
+                          << "#nk= "<<nk.first<<std::endl;
+                for (unsigned int i=0;i<blocknumber;++i) {
+                    unsigned int ts=s*i;
+                    t.imposta_inizio_accesso(ts);
+                    corr.calcola(ts);
+                    corr.print(std::cout);
+                }
             }
     }
 

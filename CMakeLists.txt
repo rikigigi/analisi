@@ -11,8 +11,8 @@ include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-CHECK_CXX_COMPILER_FLAG("-flto" CXX_COMPILER_SUPPORTS_LTO)
-CHECK_C_COMPILER_FLAG("-flto" C_COMPILER_SUPPORTS_LTO)
+#CHECK_CXX_COMPILER_FLAG("-flto" CXX_COMPILER_SUPPORTS_LTO)
+#CHECK_C_COMPILER_FLAG("-flto" C_COMPILER_SUPPORTS_LTO)
 if(COMPILER_SUPPORTS_CXX11)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 elseif(COMPILER_SUPPORTS_CXX0X)
@@ -29,6 +29,8 @@ else()
     message (FATAL_ERROR "boost_program_options library not found!")
 endif()
 
+
+
 #fftw3
 find_library (FFTW NAMES "fftw3")
 find_library (FFTW_TH NAMES "fftw3_threads")
@@ -37,8 +39,46 @@ find_library (FFTW_OMP NAMES "fftw3_omp")
 #xdrfile
 find_library (XDRFILE NAMES "xdrfile" )
 
-aux_source_directory(. SRC_LIST)
-add_executable(${PROJECT_NAME} ${SRC_LIST})
+set (ANALISI_LIB
+    calcoliblocchi.cpp
+    chargefluxts.cpp
+    convertibinario.cpp
+    convolution.cpp
+    correlatorespaziale.cpp
+    cronometro.C
+    doubleround.cpp
+    gofrt.cpp
+    greenkubo2componentionicfluid.cpp
+    greenkuboNcomponentionicfluid.cpp
+    heatfluxts.cpp
+    interpolator.cpp
+    istogrammaatomiraggio.cpp
+    istogrammavelocita.cpp
+    modivibrazionali.cpp
+    mp.cpp
+    msd.cpp
+    operazionisulista.cpp
+    posizioniequilibrio.cpp
+    readlog.cpp
+    rnd.c
+    spettrovibrazionale.cpp
+    testtraiettoria.cpp
+    traiettoria.cpp
+
+    )
+
+add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
+set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
+
+#python interface
+include_directories(pybind11/include)
+add_subdirectory( pybind11 )
+pybind11_add_module(pyanalisi pyanalisi.cpp)
+target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
+
+
 if (FFTW_OMP)
     set (FFTW_MT "${FFTW_OMP}" )
 elseif (FFTW_TH)
@@ -58,6 +98,7 @@ else ()
 endif()
 
 target_link_libraries(${PROJECT_NAME} "${BPO}" "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
+target_link_libraries(${PROJECT_NAME}_lib "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)
 #add_definitions(-DANALISI)
 
