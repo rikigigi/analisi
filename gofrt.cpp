@@ -45,8 +45,14 @@ template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimes
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
+}
 
-
+template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_shape(){
+    return {leff,traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1),nbin};
+}
+template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_stride(){
+    return {traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin*sizeof(TFLOAT),
+             nbin*sizeof(TFLOAT), sizeof(TFLOAT)};
 }
 
 template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {

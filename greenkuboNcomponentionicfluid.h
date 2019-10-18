@@ -49,6 +49,8 @@ public:
     unsigned int n_seg_bench();
 
     std::string get_columns_description();
+    std::vector<ssize_t> get_shape();
+    std::vector<ssize_t> get_stride();
 
     private:
     using OperazioniSuLista<GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>,TFLOAT>::lista;
