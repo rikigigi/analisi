@@ -75,6 +75,8 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("printRes",[](CorrelatoreSpaziale & c){
                 c.print(std::cout);
             },R"begend()begend")
+            .def("__enter__",[](CorrelatoreSpaziale & c) -> CorrelatoreSpaziale & { return c;} )
+            .def("__exit__",[](CorrelatoreSpaziale & c, py::object * exc_type, py::object * exc_value, py::object * traceback){})
             .def_buffer([](CorrelatoreSpaziale & c) -> py::buffer_info{
                 return py::buffer_info(
                 c.accesso_lista(),                               /* Pointer to buffer */

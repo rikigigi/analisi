@@ -54,7 +54,7 @@ public:
     enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
     Traiettoria::Errori imposta_dimensione_finestra_accesso(const int & timesteps);
     Traiettoria::Errori imposta_inizio_accesso(const int & timesteps);
-    int get_natoms(){return natoms;}
+    int get_natoms()const {return natoms;}
     int get_ntimesteps(){return n_timesteps;}
     int64_t get_timestep_lammps(unsigned int timestep);
     double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; std::cerr<< "Errore: non posso ritornare una massa per un tipo che non esiste!\n";abort(); return 0.0;}

@@ -38,13 +38,13 @@ public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 1;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
-    void s_fac_k(double  k[3], unsigned int i_t,double * out );
-    int get_sfac_size(){return size_sfac;}
+    void s_fac_k(const double  k[3], const unsigned int i_t,double * out ) const;
+    int get_sfac_size()const {return size_sfac;}
     void print(std::ostream & out);
     CorrelatoreSpaziale & operator = (const CorrelatoreSpaziale &);
     ~CorrelatoreSpaziale();
-    std::vector<ssize_t> get_shape();
-    std::vector<ssize_t> get_stride();
+    std::vector<ssize_t> get_shape() const;
+    std::vector<ssize_t> get_stride() const;
 
 private:
     using OperazioniSuLista<CorrelatoreSpaziale, double>::lista;
