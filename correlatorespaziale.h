@@ -16,11 +16,6 @@
 #include "operazionisulista.h"
 #include <vector>
 
-#ifdef HAVEfftw3
-#include <fftw3.h>
-#else
-#include <fftw.h>
-#endif
 
 class Traiettoria;
 

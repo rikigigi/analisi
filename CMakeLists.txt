@@ -64,7 +64,7 @@ set (ANALISI_LIB
     spettrovibrazionale.cpp
     testtraiettoria.cpp
     traiettoria.cpp
-
+    heatc.cpp
     )
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})

@@ -17,11 +17,6 @@
 #include "traiettoria.h"
 #include "operazionisulista.h"
 #include "config.h"
-#ifdef HAVEfftw3
-#include <fftw3.h>
-#else
-#include <fftw.h>
-#endif
 
 #define PI 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628
 
@@ -44,8 +39,10 @@ CorrelatoreSpaziale::CorrelatoreSpaziale(Traiettoria *t,
 
 
 void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
-    if (ntimesteps<=numeroTimestepsPerBlocco && t->get_ntypes()<=tipi_atomi)
+    if (ntimesteps<=numeroTimestepsPerBlocco && t->get_ntypes()<=tipi_atomi){
+        ntimesteps=numeroTimestepsPerBlocco;
         return;
+    }
     delete [] sfac;
     delete [] lista;
     tipi_atomi=t->get_ntypes();
@@ -53,7 +50,7 @@ void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
     size_k=3*tipi_atomi*2;// (complex number)
     size_sfac=size_k*nk;
     lunghezza_lista=ntimesteps*size_sfac/skip;
-    sfac = (double *) fftw_malloc(sizeof(double)*size_sfac*nthreads);
+    sfac = new double[size_sfac*nthreads];
     lista = new double[lunghezza_lista];
 }
 
@@ -144,7 +141,7 @@ void CorrelatoreSpaziale::print(std::ostream &out){
 
 
 CorrelatoreSpaziale::~CorrelatoreSpaziale(){
-    fftw_free(sfac);
+    delete [] sfac;
 }
 
 CorrelatoreSpaziale & CorrelatoreSpaziale::operator =(const CorrelatoreSpaziale & destra) {

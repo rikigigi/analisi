@@ -8,6 +8,7 @@
 #include "correlatorespaziale.h"
 #include "gofrt.h"
 #include "greenkuboNcomponentionicfluid.h"
+#include "heatc.h"
 
 namespace py = pybind11;
 
@@ -78,6 +79,26 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("__enter__",[](CorrelatoreSpaziale & c) -> CorrelatoreSpaziale & { return c;} )
             .def("__exit__",[](CorrelatoreSpaziale & c, py::object * exc_type, py::object * exc_value, py::object * traceback){})
             .def_buffer([](CorrelatoreSpaziale & c) -> py::buffer_info{
+                return py::buffer_info(
+                c.accesso_lista(),                               /* Pointer to buffer */
+                sizeof(double),                          /* Size of one scalar */
+                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
+                c.get_shape().size(),                                      /* Number of dimensions */
+                c.get_shape(),                 /* Buffer dimensions */
+                c.get_stride()
+        );
+            });
+
+
+    py::class_<HeatC>(m,"HeatCurrentCalc", py::buffer_protocol())
+            .def(py::init<Traiettoria*,double,unsigned int,unsigned int>(),R"begend(
+                 calculates  something ill defined
+)begend")
+            .def("reset",&HeatC::reset,R"begend()begend")
+            .def("calculate",&HeatC::calcola,R"begend()begend")
+            .def("__enter__",[](HeatC & c) -> HeatC & { return c;} )
+            .def("__exit__",[](HeatC & c, py::object * exc_type, py::object * exc_value, py::object * traceback){})
+            .def_buffer([](HeatC & c) -> py::buffer_info{
                 return py::buffer_info(
                 c.accesso_lista(),                               /* Pointer to buffer */
                 sizeof(double),                          /* Size of one scalar */
