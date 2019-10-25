@@ -39,7 +39,7 @@ CorrelatoreSpaziale::CorrelatoreSpaziale(Traiettoria *t,
 
 
 void CorrelatoreSpaziale::reset(const unsigned int numeroTimestepsPerBlocco) {
-    if (ntimesteps<=numeroTimestepsPerBlocco && t->get_ntypes()<=tipi_atomi){
+    if (ntimesteps>=numeroTimestepsPerBlocco && t->get_ntypes()>=tipi_atomi){
         ntimesteps=numeroTimestepsPerBlocco;
         return;
     }

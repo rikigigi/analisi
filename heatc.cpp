@@ -23,7 +23,7 @@ HeatC::HeatC(Traiettoria *t, double sigma, unsigned int nthreads, unsigned int s
 }
 
 void HeatC::reset(const unsigned int numeroTimestepsPerBlocco) {
-    if (ntimesteps<= numeroTimestepsPerBlocco && t->get_ntypes()<=tipi_atomi){
+    if (ntimesteps>= numeroTimestepsPerBlocco && t->get_ntypes()>=tipi_atomi){
         ntimesteps=numeroTimestepsPerBlocco;
         return;
     }
