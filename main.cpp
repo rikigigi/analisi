@@ -69,6 +69,14 @@ std::ostream & operator << (std::ostream &out, const std::array<A,N> &c) {
     return out;
 }
 
+template<typename A,std::size_t N >
+std::ostream & operator << (std::ostream &out, const boost::array<A,N> &c) {
+    for (unsigned int i=0;i<N;++i) {
+        out << c[i] << " ";
+    }
+    return out;
+}
+
 /*
 template<typename A, std::size_t N>
 std::istream & operator >> (std::istream &in, std::array<A,N> &c) {
