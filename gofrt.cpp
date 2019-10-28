@@ -51,8 +51,8 @@ template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_shape(){
     return {leff,traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1),nbin};
 }
 template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_stride(){
-    return {traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin*sizeof(TFLOAT),
-             nbin*sizeof(TFLOAT), sizeof(TFLOAT)};
+    return {static_cast<long>(traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin*sizeof(TFLOAT)),
+             static_cast<long>(nbin*sizeof(TFLOAT)), sizeof(TFLOAT)};
 }
 
 template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {

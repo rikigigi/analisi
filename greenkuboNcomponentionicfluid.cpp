@@ -138,7 +138,7 @@ std::vector<ssize_t> GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>::get_shap
 }
 template< class TFLOAT, class TFLOAT_READ>
 std::vector<ssize_t> GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>::get_stride(){
-    return {narr*sizeof(TFLOAT),sizeof(TFLOAT)};
+    return {static_cast<long>(narr*sizeof(TFLOAT)),sizeof(TFLOAT)};
 }
 
 
