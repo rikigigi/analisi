@@ -14,7 +14,6 @@
 #include <array>
 #include <fstream>
 #include <boost/program_options.hpp>
-//#include "interfaccia.h"
 #include "testtraiettoria.h"
 #include "spettrovibrazionale.h"
 #include "modivibrazionali.h"
@@ -518,6 +517,7 @@ int main(int argc, char ** argv)
                 unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
                 unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
 
+                std::cout << gofr.puntatoreCalcolo()->get_columns_description();
                 for (unsigned int t=0;t<tmax;t++) {
                     for (unsigned int r=0;r<gofrt;r++) {
                         std::cout << t << " " << r;

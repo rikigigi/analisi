@@ -46,7 +46,7 @@ public:
     double *scatola_last();
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
-    int get_ntypes();
+    int get_ntypes ();
     std::vector<unsigned int> get_types();
     unsigned int get_type(const unsigned int &atomo);
     int get_type_min() {return min_type;}
@@ -55,7 +55,7 @@ public:
     Traiettoria::Errori imposta_dimensione_finestra_accesso(const int & timesteps);
     Traiettoria::Errori imposta_inizio_accesso(const int & timesteps);
     int get_natoms()const {return natoms;}
-    int get_ntimesteps(){return n_timesteps;}
+    int get_ntimesteps() const{return n_timesteps;}
     int64_t get_timestep_lammps(unsigned int timestep);
     double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; std::cerr<< "Errore: non posso ritornare una massa per un tipo che non esiste!\n";abort(); return 0.0;}
     void set_mass(unsigned int i,double m) {if (i<get_ntypes()) masse[i]=m;}
