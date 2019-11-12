@@ -11,6 +11,12 @@ include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+CHECK_CXX_COMPILER_FLAG("-fsanitize=address -fsanitize=leak -fsanitize=undefined" COMPILE_HAS_SANITIZER)
+if (COMPILER_HAS_SANITIZER)
+    set(COMPILER_SANITIZE_FLAGS "-fsanitize=address -fsanitize=leak -fsanitize=undefined")
+else()
+    message(WARNING "Compiler does not support -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+endif()
 #CHECK_CXX_COMPILER_FLAG("-flto" CXX_COMPILER_SUPPORTS_LTO)
 #CHECK_C_COMPILER_FLAG("-flto" C_COMPILER_SUPPORTS_LTO)
 if(COMPILER_SUPPORTS_CXX11)
@@ -65,6 +71,8 @@ set (ANALISI_LIB
     testtraiettoria.cpp
     traiettoria.cpp
     heatc.cpp
+    calcolamultithread.cpp
+    centerdiff.cpp
     )
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
@@ -154,8 +162,8 @@ check_include_file_CXX ("fftw.h" HAVEfftw)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
 
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DEIGEN_INITIALIZE_MATRICES_BY_NAN -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DEIGEN_INITIALIZE_MATRICES_BY_NAN ${COMPILER_SANITIZE_FLAGS}")
+set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${COMPILER_SANITIZE_FLAGS}")
 set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 if (C_COMPILER_SUPPORTS_LTO AND CXX_COMPILER_SUPPORTS_LTO AND CMAKE_BUILD_TYPE STREQUAL "Release")

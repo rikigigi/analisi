@@ -26,15 +26,12 @@ CorrelatoreSpaziale::CorrelatoreSpaziale(Traiettoria *t,
                                                  unsigned int nthreads,
                                                  unsigned int skip,
                                                  bool debug) :
-    sfac(nullptr), sigma2(sigma2),nthreads(nthreads),debug(debug),skip(skip),tipi_atomi(0),t(t),ntimesteps(0)
+    t{t},sfac(nullptr), sigma2(sigma2),debug(debug),tipi_atomi(0),ntimesteps(0), CalcolaMultiThread (nthreads,skip)
 {
     nk=ks.size();
     klist=ks;
     size_k=0;
     size_sfac=0;
-    if (nthreads==0)
-        nthreads=1;
-
 }
 
 
@@ -84,49 +81,34 @@ void CorrelatoreSpaziale::s_fac_k(const double  k[3],
     }
 }
 
-void CorrelatoreSpaziale::calcola(unsigned int primo) {
+void CorrelatoreSpaziale::calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int &ith) {
 
-    unsigned int npassith=ntimesteps/skip/nthreads;
-    std::vector<std::thread> threads;
+    double * sfact=&sfac[size_sfac*ith];
+    int ilista=(start-primo)/skip;
+    for (unsigned int itimestep=start;itimestep<stop;itimestep+=skip){
+        //calculate at itimestep in lista ad itimestep+1 in sfac. Then put in itimestep the difference
+        //loop over k
+        int ik=0;
 
-    for (unsigned int ith=0;ith<nthreads;++ith){
-        threads.push_back(std::thread([&,ith](){
-            unsigned int start=primo+npassith*ith*skip;
-            unsigned int stop=start+npassith*skip;
-            if (ith==nthreads-1)
-                stop=primo+ntimesteps;
-            double * sfact=&sfac[size_sfac*ith];
-            int ilista=(start-primo)/skip;
-            for (unsigned int itimestep=start;itimestep<stop;itimestep+=skip){
-                //calculate at itimestep in lista ad itimestep+1 in sfac. Then put in itimestep the difference
-                //loop over k
-                int ik=0;
-
-                for (unsigned int i=0;i<size_sfac;i++) {
-                    sfact[i]=0.0;
-                }
-                for (unsigned int i=0;i<size_sfac;i++) {
-                    lista[size_sfac*ilista+i]=0.0;
-                }
-                for (auto &k : klist){
-                    double kmod=sqrt(k[0]*k[0]+k[1]*k[1]+k[2]*k[2]);
-                    if (kmod == 0) kmod=1.0;
-                    s_fac_k(k.data(),itimestep,&lista[size_sfac*ilista+ik*size_k]);
-                    s_fac_k(k.data(),itimestep+1,&sfact[ik*size_k]);
-                    //put the difference inside lista
-                    for (unsigned int i=0;i<size_k;i++){
-                        lista[size_sfac*ilista+ik*size_k+i]=(sfact[ik*size_k+i]-lista[size_sfac*ilista+ik*size_k+i])/kmod;
-                    }
-                    ++ik;
-                }
-                ilista++;
+        for (unsigned int i=0;i<size_sfac;i++) {
+            sfact[i]=0.0;
+        }
+        for (unsigned int i=0;i<size_sfac;i++) {
+            lista[size_sfac*ilista+i]=0.0;
+        }
+        for (auto &k : klist){
+            double kmod=sqrt(k[0]*k[0]+k[1]*k[1]+k[2]*k[2]);
+            if (kmod == 0) kmod=1.0;
+            s_fac_k(k.data(),itimestep,&lista[size_sfac*ilista+ik*size_k]);
+            s_fac_k(k.data(),itimestep+1,&sfact[ik*size_k]);
+            //put the difference inside lista
+            for (unsigned int i=0;i<size_k;i++){
+                lista[size_sfac*ilista+ik*size_k+i]=(sfact[ik*size_k+i]-lista[size_sfac*ilista+ik*size_k+i])/kmod;
             }
-        }));
+            ++ik;
+        }
+        ilista++;
     }
-    for (auto & t : threads){
-        t.join();
-    }
-    threads.clear();
 } // end calcola
 
 void CorrelatoreSpaziale::print(std::ostream &out){
@@ -144,8 +126,4 @@ CorrelatoreSpaziale::~CorrelatoreSpaziale(){
     delete [] sfac;
 }
 
-CorrelatoreSpaziale & CorrelatoreSpaziale::operator =(const CorrelatoreSpaziale & destra) {
-    OperazioniSuLista<CorrelatoreSpaziale>::operator =(destra);
-
-}
 

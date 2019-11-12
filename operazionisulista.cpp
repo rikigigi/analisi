@@ -24,6 +24,8 @@
 #include "msd.h"
 #include "correlatorespaziale.h"
 #include "heatc.h"
+#include "calcolamultithread.h"
+#include "centerdiff.h"
 
 template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT >::OperazioniSuLista()
 {
@@ -224,5 +226,7 @@ template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,long 
 template class OperazioniSuLista<MSD>;
 template class OperazioniSuLista<Gofrt<double>,double>;
 template class OperazioniSuLista<Gofrt<long double>,long double>;
-template class OperazioniSuLista<CorrelatoreSpaziale,double>;
 template class OperazioniSuLista<HeatC, double>;
+template class OperazioniSuLista<CorrelatoreSpaziale,double>;
+template class OperazioniSuLista<CenterDiff,double>;
+//template class OperazioniSuLista<CalcolaMultiThread,double>;

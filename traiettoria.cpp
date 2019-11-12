@@ -473,7 +473,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 #endif
         //indicizza i timesteps che mancano
         for (int itimestep=timestep_indicizzato+1;itimestep<=timestep;itimestep++){
-            Intestazione_timestep * intestazione=0;
+            Intestazione_timestep * intestazione=nullptr;
             size_t offset = leggi_pezzo_intestazione(timesteps[itimestep-1],intestazione);
             timesteps[itimestep]=timesteps[itimestep-1]+offset;
             timesteps_lammps[itimestep-1]=intestazione->timestep;
@@ -485,7 +485,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     int res=madvise(file,timesteps[timestep],MADV_DONTNEED);
     if ( res==-1) {
         std::cerr << "Errore in madvise MADV_DONTNEED: "<< res<<"\n";
-        perror(0);
+        perror(nullptr);
     }
 
     if (timestep < timestep_corrente && timesteps[timestep]+tstep_size*timestep_finestra*2 < fsize ) { // avviso che le zone di memoria successive non mi servono
@@ -612,14 +612,12 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 }
                 for (unsigned int icoord=0;icoord<3;icoord++)
                     buffer_velocita[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].velocita[icoord];
-                if (false) {
+
+                if (buffer_tipi[id]!= tipo) {
+                    std::cerr << "Errore: il tipo di atomo per l'id "<<id<<"e' cambiato da "<<buffer_tipi[id]<< " a "<<tipo<<" !\n";
                     buffer_tipi[id]=tipo;
-                } else {
-                    if (buffer_tipi[id]!= tipo) {
-                        std::cerr << "Errore: il tipo di atomo per l'id "<<id<<"e' cambiato da "<<buffer_tipi[id]<< " a "<<tipo<<" !\n";
-                        buffer_tipi[id]=tipo;
-                    }
                 }
+
                 //aggiorna la media delle posizioni e delle velocità del centro di massa
                 unsigned int tipo_id=buffer_tipi_id[id];
                 cont_cm[tipo_id]++;

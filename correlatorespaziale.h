@@ -12,7 +12,7 @@
 
 #ifndef CORRELATORESPAZIALE_H
 #define CORRELATORESPAZIALE_H
-
+#include "calcolamultithread.h"
 #include "operazionisulista.h"
 #include <vector>
 
@@ -20,7 +20,7 @@
 class Traiettoria;
 
 
-class CorrelatoreSpaziale : public OperazioniSuLista<CorrelatoreSpaziale, double>
+class CorrelatoreSpaziale : public CalcolaMultiThread, public OperazioniSuLista<CorrelatoreSpaziale,double>
 {
 public:
     CorrelatoreSpaziale(Traiettoria *t,
@@ -30,28 +30,27 @@ public:
                         unsigned int skip=1,
                         bool debug=false
             );
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 1;}
-    void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
+    virtual unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) final {return 1;}
+    virtual void reset(const unsigned int numeroTimestepsPerBlocco) final;
+    virtual void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith);
     void s_fac_k(const double  k[3], const unsigned int i_t,double * out ) const;
     int get_sfac_size()const {return size_sfac;}
     void print(std::ostream & out);
-    CorrelatoreSpaziale & operator = (const CorrelatoreSpaziale &);
+    using CalcolaMultiThread::operator=;
     ~CorrelatoreSpaziale();
-    std::vector<ssize_t> get_shape() const;
-    std::vector<ssize_t> get_stride() const;
+    virtual std::vector<ssize_t> get_shape() const final;
+    virtual std::vector<ssize_t> get_stride() const final;
 
 private:
-    using OperazioniSuLista<CorrelatoreSpaziale, double>::lista;
-    using OperazioniSuLista<CorrelatoreSpaziale, double>::lunghezza_lista;
-
+    using OperazioniSuLista<CorrelatoreSpaziale,double>::lista;
+    using OperazioniSuLista<CorrelatoreSpaziale,double>::lunghezza_lista;
+    Traiettoria *t;
     double * sfac;
     std::vector< std::array<double,3> > klist;
     double sigma2;
     unsigned int size_sfac,size_k;
-    unsigned int nthreads,nk,skip,tipi_atomi,ntimesteps;
+    unsigned int nk,tipi_atomi,ntimesteps;
     bool debug;
-    Traiettoria *t;
 };
 
 #endif // CORRELATORESPAZIALE_H

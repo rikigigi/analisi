@@ -9,6 +9,7 @@
 #include "gofrt.h"
 #include "greenkuboNcomponentionicfluid.h"
 #include "heatc.h"
+#include "centerdiff.h"
 
 namespace py = pybind11;
 
@@ -144,5 +145,22 @@ PYBIND11_MODULE(pyanalisi,m) {
                 g.get_stride());
             });
 
+    py::class_<CenterDiff>(m,"CenterDiff", py::buffer_protocol())
+            .def(py::init<Traiettoria *,unsigned int,unsigned int, unsigned int>())
+            .def("reset",&CenterDiff::reset)
+            .def("getNumberOfExtraTimestepsNeeded", &CenterDiff::numeroTimestepsOltreFineBlocco)
+            .def("calculate", & CenterDiff::calcola)
+            .def_buffer([](CenterDiff & c) -> py::buffer_info {
+                return py::buffer_info(
+                            c.accesso_lista(),
+                            sizeof(double),
+                            py::format_descriptor<double>::format(),
+                            c.get_shape().size(),
+                            c.get_shape(),
+                            c.get_stride()
+                );
+            })
+            .def("__enter__",[](CenterDiff & c) -> CenterDiff & { return c;} )
+            .def("__exit__",[](CenterDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
 
 }
