@@ -113,5 +113,5 @@ HeatC::~HeatC(){
 
 HeatC & HeatC::operator =(const HeatC & destra) {
     OperazioniSuLista<HeatC>::operator =(destra);
-
+    return *this;
 }

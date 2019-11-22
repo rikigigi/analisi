@@ -2,7 +2,8 @@
 #include <array>
 #include <cmath>
 
-CenterDiff::CenterDiff(Traiettoria *t, unsigned int nthreads, unsigned int skip, unsigned int nit) : CalcolaMultiThread (nthreads,skip), t{t}, nit{nit},lista_alloc{0}
+CenterDiff::CenterDiff(Traiettoria *t, unsigned int nthreads, unsigned int skip, unsigned int nit, bool sum_first_two_and_ignore_vz,bool sum_1) :
+    CalcolaMultiThread (nthreads,skip), t{t}, nit{nit},lista_alloc{0},starting_center{},sum_first_two_and_ignore_vz{sum_first_two_and_ignore_vz},sum_1{sum_1}
 {
     if (nit==0) nit=1;
 }
@@ -19,11 +20,11 @@ void CenterDiff::reset(const unsigned int numeroTimestepsPerBlocco) {
 
 
 
-void CenterDiff::calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int &ith) {
+void CenterDiff::calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int &ith) noexcept {
     unsigned int ilista=(start-primo)/skip;
     std::array<double,3*3> dx,cn;
     std::array<double,3> sums;
-    dx.fill(0.0);
+    dx=starting_center;
     for (unsigned int itimestep=start;itimestep<stop;++itimestep) {
         double *box = t->scatola(itimestep);
         for (unsigned int i=0;i<nit;++i) {
@@ -34,11 +35,36 @@ void CenterDiff::calc_single_th(const unsigned int &start, const unsigned int &s
                 double * vel = t->velocita(itimestep,iatom);
                 for (unsigned int idim1=0;idim1<3;idim1++){
                     double l=box[idim1*2+1]-box[idim1*2+0];
-                    sums[idim1]+=vel[idim1];
-                    for (unsigned int idim2=0;idim2<3;idim2++) {
-                        double new_coord=coord[idim1]-dx[3*idim2+idim1];
-                        double wrapped_coord=new_coord-std::round(new_coord/l)*l;
-                        cn[idim2*3+idim1]+=wrapped_coord*vel[idim2];
+                    if (sum_first_two_and_ignore_vz && idim1==2){
+                        if (sum_1){
+                            sums[idim1]+=1.0;
+                        } else {
+                            sums[idim1]+=vel[0]+vel[1];
+                        }
+                    } else {
+                        sums[idim1]+=vel[idim1];
+                    }
+                    if (!sum_first_two_and_ignore_vz){
+                        for (unsigned int idim2=0;idim2<3;idim2++) {
+                            double new_coord=coord[idim1]-dx[3*idim2+idim1]; //shift of the origin
+                            double wrapped_coord=new_coord-std::round(new_coord/l)*l; // center of the cell is in zero
+                            cn[idim2*3+idim1]+=wrapped_coord*vel[idim2];
+                        }
+                    } else {
+                        for (unsigned int idim2=0;idim2<2;idim2++) {
+                            double new_coord=coord[idim1]-dx[3*idim2+idim1]; //shift of the origin
+                            double wrapped_coord=new_coord-std::round(new_coord/l)*l; // center of the cell is in zero
+                            cn[idim2*3+idim1]+=wrapped_coord*vel[idim2];
+                        }
+                        unsigned int idim2=2;
+                        double new_coord=coord[idim1]-dx[3*idim2+idim1]; //shift of the origin
+                        double wrapped_coord=new_coord-std::round(new_coord/l)*l; // center of the cell is in zero
+                        if (sum_1){
+                            cn[idim2*3+idim1]+=wrapped_coord;
+                        } else {
+                            cn[idim2*3+idim1]+=wrapped_coord*(vel[0]+vel[1]);
+                        }
+
                     }
                 }
             }

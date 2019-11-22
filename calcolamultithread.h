@@ -29,7 +29,7 @@ public:
     /*
      * This is called by many threads at the same time in "calcola" function
     */
-    virtual void calc_single_th(const unsigned int &start, const unsigned int & stop, const unsigned int & primo, const unsigned int & ith)=0;
+    virtual void calc_single_th(const unsigned int &start, const unsigned int & stop, const unsigned int & primo, const unsigned int & ith) noexcept =0;
     /*
      * those must be implemented to interface with block averages stuff. Anyway, there are useful
     */

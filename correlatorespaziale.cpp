@@ -81,7 +81,7 @@ void CorrelatoreSpaziale::s_fac_k(const double  k[3],
     }
 }
 
-void CorrelatoreSpaziale::calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int &ith) {
+void CorrelatoreSpaziale::calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int &ith) noexcept {
 
     double * sfact=&sfac[size_sfac*ith];
     int ilista=(start-primo)/skip;

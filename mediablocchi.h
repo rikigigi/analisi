@@ -33,7 +33,7 @@ template <class TR> class TraiettoriaF {
 public:
     static void imposta_dimensione_finestra_accesso(unsigned int s_,TR* traiettoria ){}
     static void imposta_inizio_accesso(unsigned int s_,TR* traiettoria  ){}
-    static unsigned int get_ntimesteps(TR* traiettoria ){}
+    static unsigned int get_ntimesteps(TR* traiettoria ){abort();return 0;}
 };
 
 template <> class TraiettoriaF<Traiettoria> {

@@ -10,6 +10,8 @@
 #include "greenkuboNcomponentionicfluid.h"
 #include "heatc.h"
 #include "centerdiff.h"
+#include "centerofmassdiff.h"
+#include "msd.h"
 
 namespace py = pybind11;
 
@@ -48,7 +50,9 @@ PYBIND11_MODULE(pyanalisi,m) {
                  Parameters
                  ----------
                  int -> first timestep to read
-)begend");
+)begend")
+    //.def("getPosition",[](Traiettoria & t, int ts,int natoms){return std::array<>})
+    ;
 
     using RL = ReadLog<double>;
     py::class_<RL>(m,"ReadLog")
@@ -146,10 +150,11 @@ PYBIND11_MODULE(pyanalisi,m) {
             });
 
     py::class_<CenterDiff>(m,"CenterDiff", py::buffer_protocol())
-            .def(py::init<Traiettoria *,unsigned int,unsigned int, unsigned int>())
+            .def(py::init<Traiettoria *,unsigned int,unsigned int, unsigned int,bool,bool>())
             .def("reset",&CenterDiff::reset)
             .def("getNumberOfExtraTimestepsNeeded", &CenterDiff::numeroTimestepsOltreFineBlocco)
             .def("calculate", & CenterDiff::calcola)
+            .def("setStartingCenter",&CenterDiff::set_starting_center)
             .def_buffer([](CenterDiff & c) -> py::buffer_info {
                 return py::buffer_info(
                             c.accesso_lista(),
@@ -162,5 +167,46 @@ PYBIND11_MODULE(pyanalisi,m) {
             })
             .def("__enter__",[](CenterDiff & c) -> CenterDiff & { return c;} )
             .def("__exit__",[](CenterDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
+
+
+    py::class_<CenterOfMassDiff>(m,"CenterOfMassDiff", py::buffer_protocol())
+            .def(py::init<Traiettoria *,unsigned int,unsigned int>())
+            .def("reset",&CenterOfMassDiff::reset)
+            .def("getNumberOfExtraTimestepsNeeded", &CenterOfMassDiff::numeroTimestepsOltreFineBlocco)
+            .def("calculate", & CenterOfMassDiff::calcola)
+            .def("setStartingCenter",&CenterOfMassDiff::set_starting_center)
+            .def("setZeroThreshold",&CenterOfMassDiff::set_zero_threshold)
+            .def("getResetError",&CenterOfMassDiff::get_reset_error)
+            .def_buffer([](CenterOfMassDiff & c) -> py::buffer_info {
+                return py::buffer_info(
+                            c.accesso_lista(),
+                            sizeof(double),
+                            py::format_descriptor<double>::format(),
+                            c.get_shape().size(),
+                            c.get_shape(),
+                            c.get_stride()
+                );
+            })
+            .def("__enter__",[](CenterOfMassDiff & c) -> CenterOfMassDiff & { return c;} )
+            .def("__exit__",[](CenterOfMassDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
+
+    py::class_<MSD>(m,"MeanSquareDisplacement",py::buffer_protocol())
+            .def(py::init<Traiettoria *, unsigned int, unsigned int, unsigned int , bool, bool,bool>())
+            .def("reset",&MSD::reset)
+            .def("getNumberOfExtraTimestepsNeeded",&MSD::numeroTimestepsOltreFineBlocco)
+            .def("calculate", &MSD::calcola)
+            .def_buffer([](MSD & m) -> py::buffer_info {
+                return py::buffer_info(
+                            m.accesso_lista(),
+                            sizeof(double),
+                            py::format_descriptor<double>::format(),
+                            m.get_shape().size(),
+                            m.get_shape(),
+                            m.get_stride()
+                            );
+            })
+            .def("__enter__",[](MSD & m) -> MSD & {return m;})
+            .def("__exit__",[](MSD & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
+            ;
 
 }

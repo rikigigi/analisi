@@ -26,6 +26,7 @@
 #include "heatc.h"
 #include "calcolamultithread.h"
 #include "centerdiff.h"
+#include "centerofmassdiff.h"
 
 template < class T, class TFLOAT >  OperazioniSuLista < T, TFLOAT >::OperazioniSuLista()
 {
@@ -229,4 +230,5 @@ template class OperazioniSuLista<Gofrt<long double>,long double>;
 template class OperazioniSuLista<HeatC, double>;
 template class OperazioniSuLista<CorrelatoreSpaziale,double>;
 template class OperazioniSuLista<CenterDiff,double>;
+template class OperazioniSuLista<CenterOfMassDiff,double>;
 //template class OperazioniSuLista<CalcolaMultiThread,double>;
