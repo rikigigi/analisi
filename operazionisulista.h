@@ -25,6 +25,7 @@ template <class T,class TFLOAT=double> class OperazioniSuLista
 {
 public:
     OperazioniSuLista<T,TFLOAT> &operator =(const OperazioniSuLista<T,TFLOAT> &);
+    OperazioniSuLista<T,TFLOAT> &operator =(OperazioniSuLista<T,TFLOAT> &&) = default;
     T & operator+= (const T&);
     T & operator-= (const T&);
     T & operator*= (const T&);
