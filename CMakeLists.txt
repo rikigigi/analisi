@@ -9,8 +9,8 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++1z" COMPILER_SUPPORTS_CXX0X)
 
 set(SAFE_CMAKE_REQUIRED_LINK_OPTIONS "${CMAKE_REQUIRED_LINK_OPTIONS}")
 set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=address")
@@ -38,11 +38,11 @@ endif()
 #CHECK_CXX_COMPILER_FLAG("-flto" CXX_COMPILER_SUPPORTS_LTO)
 #CHECK_C_COMPILER_FLAG("-flto" C_COMPILER_SUPPORTS_LTO)
 if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 elseif(COMPILER_SUPPORTS_CXX0X)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 else()
-    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
 endif()
 
 find_library( BPO NAMES boost_program_options)
@@ -81,7 +81,6 @@ set (ANALISI_LIB
     modivibrazionali.cpp
     mp.cpp
     msd.cpp
-    operazionisulista.cpp
     posizioniequilibrio.cpp
     readlog.cpp
     rnd.c
@@ -92,6 +91,7 @@ set (ANALISI_LIB
     calcolamultithread.cpp
     centerdiff.cpp
     centerofmassdiff.cpp
+    specialfunctions.cpp
     )
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
