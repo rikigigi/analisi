@@ -548,30 +548,20 @@ int main(int argc, char ** argv)
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<Gofrt<double>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
-                        gofr(&tr,blocknumber);
-                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,dumpGK);
+                MediaBlocchi<SphericalCorrelations<10,double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                        sh(&tr,blocknumber);
+                sh.calcola(factors_input[0],factors_input[1],sph,stop_acf,numero_thread,skip,dumpGK);
 
-                unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
-                unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
+                auto shape= sh.media()->get_shape();
 
-                std::cout << gofr.puntatoreCalcolo()->get_columns_description();
-                for (unsigned int t=0;t<tmax;t++) {
-                    for (unsigned int r=0;r<gofrt;r++) {
-                        std::cout << t << " " << r;
-                        for (unsigned int itype=0;itype<ntyp;itype++) {
-                            std::cout << " "<< gofr.media()->elemento(
-                                             t*ntyp*gofrt+
-                                             gofrt*itype+
-                                             r)
-                                      << " "<< gofr.varianza()->elemento(
-                                             t*ntyp*gofrt+
-                                             gofrt*itype+
-                                             r);
-                        }
-                        std::cout << "\n";
+                std::cout << sh.puntatoreCalcolo()->get_columns_description();
+                auto line_size=shape[1]*shape[2]*shape[3]*shape[4];
+                for (unsigned int t=0;t<shape[0];t++) {
+                    for (unsigned int r=0;r<line_size;r++) {
+                        std::cout << sh.media()->elemento(t*line_size+r) << " "<<
+                                     sh.varianza()->elemento(t*line_size+r) << " ";
                     }
-                    std::cout << "\n\n";
+                    std::cout << std::endl;
                 }
 
 

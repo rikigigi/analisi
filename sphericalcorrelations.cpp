@@ -2,9 +2,10 @@
 #include "specialfunctions.h"
 #include <vector>
 #include <thread>
+#include <sstream>
 
 template <int l, class TFLOAT, class T>
-SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T &t,
+SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
                                                          TFLOAT rmin,
                                                          TFLOAT rmax,
                                                          unsigned int nbin,
@@ -12,7 +13,7 @@ SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T &t,
                                                          unsigned int nthreads,
                                                          unsigned int skip,
                                                          bool debug) :
-T{t},rmin{rmin},rmax{rmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug}{
+t{*t},rmin{rmin},rmax{rmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug}{
 
 }
 
@@ -30,6 +31,15 @@ unsigned int SphericalCorrelations<l,TFLOAT,T>::numeroTimestepsOltreFineBlocco(u
 
 template <int l, class TFLOAT, class T>
 void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) {
+
+
+    //description of output
+    std::stringstream descr;
+
+    descr << "#TODO"<<std::endl;
+    c_descr=descr.str();
+
+
     //quanti timestep è lunga la funzione di correlazione
     leff =(numeroTimestepsPerBlocco<tmax || tmax==0)? numeroTimestepsPerBlocco : tmax;
     //numero di timestep su cui fare la media
@@ -42,6 +52,11 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
+}
+
+template <int l, class TFLOAT, class T>
+std::vector<ssize_t> SphericalCorrelations<l,TFLOAT,T>::get_shape() {
+    return {leff,ntypes,ntypes,nbin,(l+1)*(l+1)};
 }
 
 
@@ -114,7 +129,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             int *avecont=new int[ntypes];
 
             //loop over time differences
-            for (unsigned int dt=npassith*ith;t<ultimo;t++){
+            for (unsigned int dt=npassith*ith;dt<ultimo;dt++){
 
                 //azzera per tutti i tipi
                 azzera(index(dt,0,0),index(dt,ntypes-1,ntypes-1));
@@ -166,3 +181,5 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
 
 }
+
+template class SphericalCorrelations<10,double,Traiettoria>;
