@@ -162,6 +162,11 @@ public:
             lista[i]=0;
         }
     }
+    inline void azzera(int start, int stop){
+        for (unsigned int i=start;i<stop;i++) {
+            lista[i]=0;
+        }
+    }
 protected:
     OperazioniSuLista<T,TFLOAT> (const OperazioniSuLista<T, TFLOAT> & copiare) {
         lista=0;

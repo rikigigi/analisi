@@ -13,8 +13,6 @@ int test() {
     constexpr int lmax=10;
     double cheby[2*(lmax+1)];
     double result[(lmax+1)*(lmax+1)];
-    MultiVal<lmax,double,true> res;
-    res.init(result);
 
     {
         std::cout << "+++++++++++++++++++++++"<<std::endl;

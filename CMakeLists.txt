@@ -92,6 +92,7 @@ set (ANALISI_LIB
     centerdiff.cpp
     centerofmassdiff.cpp
     specialfunctions.cpp
+    sphericalcorrelations.cpp
     )
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})

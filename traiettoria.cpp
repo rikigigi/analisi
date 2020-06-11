@@ -653,22 +653,6 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
     return Ok;
 }
-double Traiettoria::d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l){
-    double d2=0.0,x;
-    double *xi=posizioni(itimestep,i);
-    double *xj=posizioni(jtimestep,j);
-    for (unsigned int idim=0;idim<3;idim++) {
-        x=xi[idim]-xj[idim];
-        if (x >   l[idim] * 0.5) x = x - l[idim];
-        if (x <= -l[idim] * 0.5) x = x + l[idim];
-        d2+=x*x;
-    }
-    return d2;
-}
-
-double Traiettoria::d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l){
-    return d2_minImage(i,j,itimestep,itimestep,l);
-}
 
 double * Traiettoria::posizioni(const int &timestep, const int &atomo){
 

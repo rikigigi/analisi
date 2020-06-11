@@ -279,12 +279,21 @@ inline T* get_multival (int j, MultiVal<L,T,dynamic> & val) noexcept {
     }
 }
 
-template <int l,class T, bool dynamic>
+template <int l,class T, bool dynamic,bool cartesian=false>
 class SphericalHarmonics{
 public:
-    SphericalHarmonics(T cost,T sinp, T cosp, T* cheby, T* result) noexcept : cheby{cheby}, cost{cost}, sinp{sinp}, cosp{cosp}{
+    SphericalHarmonics(T x, T y, T z, T* cheby, T* result) noexcept : cheby{cheby} {
         if constexpr (dynamic) {
             val.init(result);
+        }
+        if constexpr(cartesian) {
+            T rxy=sqrt(x*x+y*y);
+            T r=sqrt(x*x+y*y+z*z);
+            cost=z/r;
+            sinp=y/rxy;
+            cosp=x/rxy;
+        } else {
+            cost=x; sinp=y; cosp=z;
         }
     }
     inline

@@ -36,7 +36,7 @@ public:
     Gofrt<TFLOAT> & operator =(const Gofrt<TFLOAT> & destra);
     std::vector<ssize_t> get_shape();
     std::vector<ssize_t> get_stride();
-    std::string get_columns_description() {return c_descr;};
+    std::string get_columns_description() {return c_descr;}
 
 private:
     using OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT>::lista;

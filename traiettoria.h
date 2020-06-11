@@ -63,8 +63,25 @@ public:
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; std::cerr<< "Errore: non posso ritornare una carica per un tipo che non esiste!\n";abort(); return 0.0;}
     void index_all();
     void set_pbc_wrap(bool);
-    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l);
-    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l);
+    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l){
+        return d2_minImage(i,j,itimestep,itimestep,l);
+    }
+    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l){
+        double x[3];
+        return d2_minImage(i,j,itimestep,jtimestep,l,x);
+    }
+    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l,double *x){
+        double d2=0.0;
+        double *xi=posizioni(itimestep,i);
+        double *xj=posizioni(jtimestep,j);
+        for (unsigned int idim=0;idim<3;idim++) {
+            x[idim]=xi[idim]-xj[idim];
+            if (x[idim] >   l[idim] * 0.5) x[idim] = x[idim] - l[idim];
+            if (x[idim] <= -l[idim] * 0.5) x[idim] = x[idim] + l[idim];
+            d2+=x[idim]*x[idim];
+        }
+        return d2;
+    }
 //    void set_calculate_center_of_mass(bool);
 //    bool get_calculate_center_of_mass();
 private:

@@ -30,6 +30,7 @@
 #include "gofrt.h"
 #include <functional>
 #include "correlatorespaziale.h"
+#include "sphericalcorrelations.h"
 #ifdef HAVEfftw3
 #include <fftw3.h>
 #else
@@ -124,7 +125,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    unsigned int n_seg=0,gofrt=0,read_lines_thread=200;
+    unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::pair<int,double> nk;
@@ -170,7 +171,7 @@ int main(int argc, char ** argv)
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni atomo di ciascuna specie atomica")
             ("mean-square-displacement-cm,Q",boost::program_options::bool_switch(&msd_cm)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per centro di massa di ciascuna specie atomica")
             ("mean-square-displacement-self",boost::program_options::bool_switch(&msd_self)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio di ciascuna specie atomica calcolato nel sistema di riferimento del rispettivo centro di massa")
-            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti. Se è impostato il calcolo della g(r,t), indica gli estremi dell'istogramma.")
+            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti. Se è impostato il calcolo della g(r,t), indica gli estremi dell'istogramma. Se impostato --spherical-harmonics-correlation Indica gli estremi delle distanze radiali da considerare.")
             ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
@@ -180,6 +181,7 @@ int main(int argc, char ** argv)
             ("binary-convert-gromacs",boost::program_options::value<std::vector<std::string>>(&output_conversion_gro)->multitoken(),"esegui la conversione nel formato binario di lammps del file trr specificato come input. Qui specificare il nome del file di output e il file dei tipi con formato:\n id0 type0\n ...\nidN typeN\nnello stesso ordine degli atomi del file trr.")
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
+            ("spherical-harmonics-correlation,Y",boost::program_options::value<unsigned int>(&sph)->default_value(0),"Se >0 imposta il calcolo della funzione di correlazione della densità atomica, suddivisa per tipo di atomo, sviluppata in armoniche sferiche. Indica il numero di intervalli da usare nella suddivisione radiale. Specificare il raggio minimo e massimo con l'opzione -F.")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
             ("spatial-correlator,A",boost::program_options::value(&nk)->default_value({0,0.0})->multitoken(),"Numero di punti della griglia ...")
             ("spatial-correlator-dir",boost::program_options::value(&kdir)->default_value({1.0,0.0,0.0})->multitoken(),"Direzione di k")
@@ -507,6 +509,42 @@ int main(int argc, char ** argv)
                     abort();
                 }
                 std::cerr << "Inizio del calcolo di g(r,t) -- parte distintiva e parte non distintiva del correlatore di van Hove...\n";
+                Traiettoria tr(input);
+                tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
+
+                MediaBlocchi<Gofrt<double>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                        gofr(&tr,blocknumber);
+                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,dumpGK);
+
+                unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
+                unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
+
+                std::cout << gofr.puntatoreCalcolo()->get_columns_description();
+                for (unsigned int t=0;t<tmax;t++) {
+                    for (unsigned int r=0;r<gofrt;r++) {
+                        std::cout << t << " " << r;
+                        for (unsigned int itype=0;itype<ntyp;itype++) {
+                            std::cout << " "<< gofr.media()->elemento(
+                                             t*ntyp*gofrt+
+                                             gofrt*itype+
+                                             r)
+                                      << " "<< gofr.varianza()->elemento(
+                                             t*ntyp*gofrt+
+                                             gofrt*itype+
+                                             r);
+                        }
+                        std::cout << "\n";
+                    }
+                    std::cout << "\n\n";
+                }
+
+
+            }else if (sph>0) {
+                if (factors_input.size()!=2){
+                    std::cerr << "Errore: specificare il valore minimo è masimo delle distanze da utilizzare per costruire la funzione di correlazione con le armoniche sferiche con l'opzione -F.\n";
+                    abort();
+                }
+                std::cerr << "Inizio del calcolo delle funzioni di correlazione della densità sviluppata in armoniche sferiche...\n";
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
