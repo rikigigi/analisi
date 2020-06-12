@@ -92,9 +92,23 @@
 #  define PYBIND11_DEPRECATED(reason) __attribute__((deprecated(reason)))
 #endif
 
+#if defined(PYBIND11_CPP17)
+#  define PYBIND11_MAYBE_UNUSED [[maybe_unused]]
+#elif defined(_MSC_VER) && !defined(__clang__)
+#  define PYBIND11_MAYBE_UNUSED
+#else
+#  define PYBIND11_MAYBE_UNUSED __attribute__ ((__unused__))
+#endif
+
 #define PYBIND11_VERSION_MAJOR 2
-#define PYBIND11_VERSION_MINOR 4
-#define PYBIND11_VERSION_PATCH dev3
+#define PYBIND11_VERSION_MINOR 5
+#define PYBIND11_VERSION_PATCH dev1
+
+/* Don't let Python.h #define (v)snprintf as macro because they are implemented
+   properly in Visual Studio since 2015. */
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#  define HAVE_SNPRINTF 1
+#endif
 
 /// Include Python header, disable linking to pythonX_d.lib on Windows in debug mode
 #if defined(_MSC_VER)
@@ -103,7 +117,7 @@
 #  endif
 #  pragma warning(push)
 #  pragma warning(disable: 4510 4610 4512 4005)
-#  if defined(_DEBUG)
+#  if defined(_DEBUG) && !defined(Py_DEBUG)
 #    define PYBIND11_DEBUG_MARKER
 #    undef _DEBUG
 #  endif
@@ -113,6 +127,9 @@
 #include <frameobject.h>
 #include <pythread.h>
 
+/* Python #defines overrides on all sorts of core functions, which
+   tends to weak havok in C++ codebases that expect these to work
+   like regular functions (potentially with several overloads) */
 #if defined(isalnum)
 #  undef isalnum
 #  undef isalpha
@@ -121,6 +138,10 @@
 #  undef isupper
 #  undef tolower
 #  undef toupper
+#endif
+
+#if defined(copysign)
+#  undef copysign
 #endif
 
 #if defined(_MSC_VER)
@@ -164,9 +185,10 @@
 #define PYBIND11_STR_TYPE ::pybind11::str
 #define PYBIND11_BOOL_ATTR "__bool__"
 #define PYBIND11_NB_BOOL(ptr) ((ptr)->nb_bool)
-// Providing a separate declaration to make Clang's -Wmissing-prototypes happy
+// Providing a separate declaration to make Clang's -Wmissing-prototypes happy.
+// See comment for PYBIND11_MODULE below for why this is marked "maybe unused".
 #define PYBIND11_PLUGIN_IMPL(name) \
-    extern "C" PYBIND11_EXPORT PyObject *PyInit_##name();   \
+    extern "C" PYBIND11_MAYBE_UNUSED PYBIND11_EXPORT PyObject *PyInit_##name(); \
     extern "C" PYBIND11_EXPORT PyObject *PyInit_##name()
 
 #else
@@ -190,13 +212,14 @@
 #define PYBIND11_STR_TYPE ::pybind11::bytes
 #define PYBIND11_BOOL_ATTR "__nonzero__"
 #define PYBIND11_NB_BOOL(ptr) ((ptr)->nb_nonzero)
-// Providing a separate PyInit decl to make Clang's -Wmissing-prototypes happy
+// Providing a separate PyInit decl to make Clang's -Wmissing-prototypes happy.
+// See comment for PYBIND11_MODULE below for why this is marked "maybe unused".
 #define PYBIND11_PLUGIN_IMPL(name) \
-    static PyObject *pybind11_init_wrapper();               \
-    extern "C" PYBIND11_EXPORT void init##name();           \
-    extern "C" PYBIND11_EXPORT void init##name() {          \
-        (void)pybind11_init_wrapper();                      \
-    }                                                       \
+    static PyObject *pybind11_init_wrapper();                           \
+    extern "C" PYBIND11_MAYBE_UNUSED PYBIND11_EXPORT void init##name(); \
+    extern "C" PYBIND11_EXPORT void init##name() {                      \
+        (void)pybind11_init_wrapper();                                  \
+    }                                                                   \
     PyObject *pybind11_init_wrapper()
 #endif
 
@@ -211,6 +234,8 @@ extern "C" {
 #define PYBIND11_STRINGIFY(x) #x
 #define PYBIND11_TOSTRING(x) PYBIND11_STRINGIFY(x)
 #define PYBIND11_CONCAT(first, second) first##second
+#define PYBIND11_ENSURE_INTERNALS_READY \
+    pybind11::detail::get_internals();
 
 #define PYBIND11_CHECK_PYTHON_VERSION \
     {                                                                          \
@@ -257,6 +282,7 @@ extern "C" {
     static PyObject *pybind11_init();                                          \
     PYBIND11_PLUGIN_IMPL(name) {                                               \
         PYBIND11_CHECK_PYTHON_VERSION                                          \
+        PYBIND11_ENSURE_INTERNALS_READY                                        \
         try {                                                                  \
             return pybind11_init();                                            \
         } PYBIND11_CATCH_INIT_EXCEPTIONS                                       \
@@ -268,6 +294,10 @@ extern "C" {
     imports an extension module. The module name is given as the fist argument and it
     should not be in quotes. The second macro argument defines a variable of type
     `py::module` which can be used to initialize the module.
+
+    The entry point is marked as "maybe unused" to aid dead-code detection analysis:
+    since the entry point is typically only looked up at runtime and not referenced
+    during translation, it would otherwise appear as unused ("dead") code.
 
     .. code-block:: cpp
 
@@ -281,9 +311,11 @@ extern "C" {
         }
 \endrst */
 #define PYBIND11_MODULE(name, variable)                                        \
+    PYBIND11_MAYBE_UNUSED                                                      \
     static void PYBIND11_CONCAT(pybind11_init_, name)(pybind11::module &);     \
     PYBIND11_PLUGIN_IMPL(name) {                                               \
         PYBIND11_CHECK_PYTHON_VERSION                                          \
+        PYBIND11_ENSURE_INTERNALS_READY                                        \
         auto m = pybind11::module(PYBIND11_TOSTRING(name));                    \
         try {                                                                  \
             PYBIND11_CONCAT(pybind11_init_, name)(m);                          \
@@ -674,6 +706,7 @@ PYBIND11_RUNTIME_EXCEPTION(key_error, PyExc_KeyError)
 PYBIND11_RUNTIME_EXCEPTION(value_error, PyExc_ValueError)
 PYBIND11_RUNTIME_EXCEPTION(type_error, PyExc_TypeError)
 PYBIND11_RUNTIME_EXCEPTION(buffer_error, PyExc_BufferError)
+PYBIND11_RUNTIME_EXCEPTION(import_error, PyExc_ImportError)
 PYBIND11_RUNTIME_EXCEPTION(cast_error, PyExc_RuntimeError) /// Thrown when pybind11::cast or handle::call fail due to a type casting error
 PYBIND11_RUNTIME_EXCEPTION(reference_cast_error, PyExc_RuntimeError) /// Used internally
 

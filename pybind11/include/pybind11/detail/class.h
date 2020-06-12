@@ -491,6 +491,13 @@ extern "C" inline int pybind11_getbuffer(PyObject *obj, Py_buffer *view, int fla
     view->len = view->itemsize;
     for (auto s : info->shape)
         view->len *= s;
+    view->readonly = info->readonly;
+    if ((flags & PyBUF_WRITABLE) == PyBUF_WRITABLE && info->readonly) {
+        if (view)
+            view->obj = nullptr;
+        PyErr_SetString(PyExc_BufferError, "Writable buffer requested for readonly storage");
+        return -1;
+    }
     if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
         view->format = const_cast<char *>(info->format.c_str());
     if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES) {
@@ -597,10 +604,12 @@ inline PyObject* make_new_python_type(const type_record &rec) {
 #endif
 
     /* Flags */
-    type->tp_flags |= Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
+    type->tp_flags |= Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE;
 #if PY_MAJOR_VERSION < 3
     type->tp_flags |= Py_TPFLAGS_CHECKTYPES;
 #endif
+    if (!rec.is_final)
+        type->tp_flags |= Py_TPFLAGS_BASETYPE;
 
     if (rec.dynamic_attr)
         enable_dynamic_attributes(heap_type);
