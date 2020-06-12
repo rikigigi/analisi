@@ -46,21 +46,15 @@ public:
     double * posizioni_cm(const int & timestep, const int & tipo);
     double * velocita_cm(const int & timestep, const int & tipo);
     double *scatola_last();
-    int get_ntypes ();
-    std::vector<unsigned int> get_types();
-    unsigned int get_type(const unsigned int &atomo);
 
     using TraiettoriaBase<Traiettoria>::Errori;
     Traiettoria::Errori imposta_dimensione_finestra_accesso(const int & timesteps);
     Traiettoria::Errori imposta_inizio_accesso(const int & timesteps);
     int64_t get_timestep_lammps(unsigned int timestep);
     void index_all();
-    void set_pbc_wrap(bool);
 //    void set_calculate_center_of_mass(bool);
 //    bool get_calculate_center_of_mass();
 private:
-    std::vector<unsigned int> types;
-    std::map<int,unsigned int>type_map;
     std::map<int,unsigned int>id_map;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
     int64_t * timesteps_lammps; // timesteps secondo lammps
@@ -73,7 +67,7 @@ private:
     char * file;
     int timestep_corrente,timestep_finestra,timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
-    bool triclinic,wrap_pbc;
+    bool triclinic;
     bool calculate_center_of_mass;
     long pagesize;
     size_t allinea_offset(const size_t & offset, size_t & differenza);

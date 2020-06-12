@@ -134,7 +134,6 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                 //azzera per tutti i tipi
                 azzera(index(dt,0,0),index(dt,ntypes-1,ntypes-1));
 
-                TFLOAT incr=1.0/int(ntimesteps/skip);
                 //average loop
                 for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
                     //center atom loop for the snapshot at imedia
@@ -156,6 +155,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     for (int iatom=0;iatom<natoms;++iatom) { // loop over center atoms and average correlation functions according to their type
                         int itype=t.get_type(iatom);
                         avecont[itype]++;
+                        //TODO: here we have to average first over l... (otherwise we calculate an average of something that is not invariant under rotation, so we probably get something that always decays to zero, unless we are in a crystal
                         for (int ll=0;ll<sh_single_type_size;++ll){
                             int idx=itype*sh_single_type_size+ll;
                             aveTypes[idx]+=(aveWork1[sh_single_type_size*iatom+ll]-aveTypes[idx])/TFLOAT(avecont[itype]);

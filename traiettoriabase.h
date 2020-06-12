@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 #include <stdlib.h>
+#include <map>
+#include <algorithm>
 
 
 #define DECL_ARG(a,b) a b
@@ -25,6 +27,12 @@ class TraiettoriaBase {
 
 public:
 
+    TraiettoriaBase() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},
+    wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
+    buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
+    buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
+    buffer_tipi{nullptr},buffer_tipi_id{nullptr} {}
+
     //double * posizioni (const int & timestep, const int & atomo) { return static_cast<T*>(this)->posizioni(timestep,atomo);}
     DECL_CALL_BASE_2(double *, posizioni, (const int &, timestep), (const int &, atomo))
     DECL_CALL_BASE_2(double *, velocita,(const int &, timestep), (const int &, atomo) )
@@ -32,16 +40,69 @@ public:
     DECL_CALL_BASE_2(double *, posizioni_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_2(double *, velocita_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_0(double *,scatola_last)
-    std::vector<unsigned int> get_types();
-    unsigned int get_type(const unsigned int &atomo);
+    std::vector<unsigned int> get_types(){
+        get_ntypes();
+        return types;
+
+    }
+    unsigned int get_type(const unsigned int &atomo){
+        if (atomo < natoms) {
+            return buffer_tipi_id[atomo];
+        } else {
+            std::cerr << "Errore: tipo atomo fuori dal range! ("<< atomo <<" su un massimo di "<<natoms<<")\n";
+            abort();
+            return 0;
+        }
+    }
     enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
-    Errori imposta_dimensione_finestra_accesso(const int & timesteps){std::cerr << "Warning: doing nothing (reading not in blocks)"<<std::endl; return Errori::Ok;}
-    Errori imposta_inizio_accesso(const int & timesteps){std::cerr << "Warning: doing nothing (reading not in blocks)"<<std::endl;return Errori::Ok;}
+    Errori imposta_dimensione_finestra_accesso(const int & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
+    Errori imposta_inizio_accesso(const int & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
     //void index_all();
-    void set_pbc_wrap(bool);
+
+    //this can produce multiple bugs: what happen if I call it in the wrong moment?
+    void set_pbc_wrap(bool p){
+        wrap_pbc=p;
+    }
 
 
-    int get_ntypes (){return ntypes;}
+    int get_ntypes (){
+        if (ntypes==0) {
+            types.clear();
+            min_type=buffer_tipi[0];
+            max_type=buffer_tipi[0];
+            bool *duplicati = new bool[natoms];
+            for (unsigned int i=0;i<natoms;i++)
+                duplicati[i]=false;
+            for (unsigned int i=0;i<natoms;i++) {
+                if (!duplicati[i]) {
+                    if (buffer_tipi[i]>max_type)
+                        max_type=buffer_tipi[i];
+                    if (buffer_tipi[i]<min_type)
+                        min_type=buffer_tipi[i];
+                    for (unsigned int j=i+1;j<natoms;j++){
+                        if (buffer_tipi[j]==buffer_tipi[i]){
+                            duplicati[j]=true;
+                        }
+                    }
+                    types.push_back(buffer_tipi[i]);
+                    ntypes++;
+                }
+            }
+            std::sort(types.begin(),types.end());
+            type_map.clear();
+            for (unsigned int i=0;i<types.size(); i++){
+                type_map[types[i]]=i;
+            }
+            delete [] duplicati;
+            masse = new double [ntypes];
+            cariche = new double [ntypes];
+
+            for (unsigned int i=0;i<natoms;i++) {
+                buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
+            }
+        }
+        return ntypes;
+    }
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
     int get_type_min() {return min_type;}
@@ -85,7 +146,11 @@ protected:
 
     int * buffer_tipi,*buffer_tipi_id;
     int natoms,ntypes,min_type,max_type,n_timesteps;
+    bool wrap_pbc;
 
+
+    std::vector<unsigned int> types;
+    std::map<int,unsigned int>type_map;
 };
 
 #endif // TRAIETTORIABASE_H

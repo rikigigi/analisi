@@ -166,9 +166,6 @@ void Traiettoria::init_buffer_tipi() {
         }
 
    get_ntypes();
-   for (unsigned int i=0;i<natoms;i++) {
-       buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
-   }
 
    for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
        for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
@@ -194,9 +191,6 @@ bool Traiettoria::get_calculate_center_of_mass(){
 
 }
 */
-void Traiettoria::set_pbc_wrap(bool p) {
-    wrap_pbc=p;
-}
 
 /**
   * Restituisce l'indirizzo allineato alla memoria.
@@ -830,57 +824,4 @@ double * Traiettoria::scatola_last() {
     }
 }
 
-unsigned int Traiettoria::get_type(const unsigned int &atomo) {
-    if (atomo < natoms) {
-        return buffer_tipi_id[atomo];
-    } else {
-        std::cerr << "Errore: tipo atomo fuori dal range! ("<< atomo <<" su un massimo di "<<natoms<<")\n";
-        abort();
-        return 0;
-    }
-}
 
-std::vector<unsigned int> Traiettoria::get_types(){
-    get_ntypes();
-    return types;
-}
-
-///conta il numero di tipi di atomi nel primo modo che mi è venuto in mente
-int Traiettoria::get_ntypes(){
-
-    if (ntypes==0) {
-        ntypes=0;
-        types.clear();
-        min_type=buffer_tipi[0];
-        max_type=buffer_tipi[0];
-        bool *duplicati = new bool[natoms];
-        for (unsigned int i=0;i<natoms;i++)
-            duplicati[i]=false;
-        for (unsigned int i=0;i<natoms;i++) {
-            if (!duplicati[i]) {
-                if (buffer_tipi[i]>max_type)
-                    max_type=buffer_tipi[i];
-                if (buffer_tipi[i]<min_type)
-                    min_type=buffer_tipi[i];
-                for (unsigned int j=i+1;j<natoms;j++){
-                    if (buffer_tipi[j]==buffer_tipi[i]){
-                        duplicati[j]=true;
-                    }
-                }
-                types.push_back(buffer_tipi[i]);
-                ntypes++;
-            }
-        }
-        std::sort(types.begin(),types.end());
-        type_map.clear();
-        for (unsigned int i=0;i<types.size(); i++){
-            type_map[types[i]]=i;
-        }
-        delete [] duplicati;
-        masse = new double [ntypes];
-        cariche = new double [ntypes];
-    }
-
-    return ntypes;
-
-}
