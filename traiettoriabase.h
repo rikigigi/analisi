@@ -16,11 +16,6 @@
 #define DECL_CALL_BASE_3(ret, fname, arg1, arg2, arg3) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3 ); }
 #define DECL_CALL_BASE_4(ret, fname, arg1, arg2, arg3, arg4) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4 ); }
 #define DECL_CALL_BASE_5(ret, fname, arg1, arg2, arg3, arg4, arg5) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5 ); }
-#define DECL_CALL_BASE_6(ret, fname, arg1, arg2, arg3, arg4, arg5, arg6) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5, DECL_ARG arg6) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5, NAME_ARG arg6 ); }
-#define DECL_CALL_BASE_7(ret, fname, arg1, arg2, arg3, arg4, arg5, arg6, arg7) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5, DECL_ARG arg6, DECL_ARG arg7) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5, NAME_ARG arg6, NAME_ARG arg7 ); }
-#define DECL_CALL_BASE_8(ret, fname, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5, DECL_ARG arg6, DECL_ARG arg7, DECL_ARG arg8) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5, NAME_ARG arg6, NAME_ARG arg7, NAME_ARG arg8 ); }
-#define DECL_CALL_BASE_9(ret, fname, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5, DECL_ARG arg6, DECL_ARG arg7, DECL_ARG arg8, DECL_ARG arg9) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5, NAME_ARG arg6, NAME_ARG arg7, NAME_ARG arg8, NAME_ARG arg9 ); }
-
 
 template <class T>
 class TraiettoriaBase {

@@ -121,8 +121,29 @@ int main(int argc, char ** argv)
     Mp::mpi(&argc,&argv);
 #endif
 
+    std::cerr << "cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2020\n=========\n";
+    std::cerr << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags (Release)"
 
-    boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
+                 CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_RELEASE " (Debug) " CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_DEBUG " (build type was " CMAKE_BUILD_TYPE ")"
+                 " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR <<
+#ifdef PYTHON_SUPPORT
+           "\nWith python support: " PYTHON_SUPPORT <<
+#endif
+#ifdef MPI
+           "\nWith MPI support" <<
+#endif
+#ifdef XDR_FILE
+           "\nWith gromacs XDR file conversion support" <<
+#endif
+                 std::endl;
+
+    std::cerr << "arguments (enclosed by '') were:";
+    for (int i=0;i<argc;++i) {
+        std::cerr <<" '"<< argv[i]<<"'";
+    }
+    std::cerr << std::endl;
+
+    boost::program_options::options_description options("Program to analyze of molecular dynamics trajectories, with multithread and MPI block averages.\n\nAllowed options:");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0;
@@ -205,14 +226,12 @@ int main(int argc, char ** argv)
         boost::program_options::notify(vm);
 
         if (( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( (output_conversion==""&& output_conversion_gro.size()==0) && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
-            std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
         }
 
         if (cvar_list.size()%2 != 0) {
             std::cout << "Errore: la lista degli indici delle covarianze deve contenere un numero pari di numeri\n";
-            std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
         } else {
@@ -227,7 +246,6 @@ int main(int argc, char ** argv)
 
     catch (boost::program_options::error const &e) {
         std::cerr << e.what() << '\n';
-        std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
         std::cerr << options;
         return 1;
     }

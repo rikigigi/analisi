@@ -25,8 +25,16 @@ public:
         OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);
         return *this;
     }
-    std::vector<ssize_t> get_shape();
-    std::vector<ssize_t> get_stride();
+    std::vector<ssize_t> get_shape()const { return {leff,ntypes,ntypes,nbin,(l+1)*(l+1)};}
+    std::vector<ssize_t> get_stride()const {
+        auto s=get_shape();
+        s[s.size()-1]=sizeof (TFLOAT);
+        for (int i=s.size()-2;i>=0;++i) {
+            s[i]*=s[i+1];
+        }
+        return s;
+    }
+
     std::string get_columns_description() {return c_descr;}
     inline int index(const int t, const int type1, const int type2,const int ibin=0) const noexcept {
         return (l+1)*(l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);

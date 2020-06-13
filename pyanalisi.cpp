@@ -12,6 +12,8 @@
 #include "centerdiff.h"
 #include "centerofmassdiff.h"
 #include "msd.h"
+#include "traiettoria_numpy.h"
+#include "sphericalcorrelations.h"
 
 namespace py = pybind11;
 
@@ -20,7 +22,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def(py::init<std::string>(),R"begend(
                  Parameters
                  ----------
-                 name pf the binary file to open
+                 name of the binary file to open
 )begend")
             .def("setWrapPbc",&Traiettoria::set_pbc_wrap,R"begend(
                  wrap all the atomic coordinate inside the simulation box, red from the binary file
@@ -113,7 +115,6 @@ PYBIND11_MODULE(pyanalisi,m) {
                 c.get_stride()
         );
             });
-
     py::class_<Gofrt<double> >(m,"Gofrt", py::buffer_protocol())
             .def(py::init<Traiettoria*,double,double,unsigned int, unsigned int, unsigned int,unsigned int, bool>(),R"begend(
                  calculates g(r) and, in general, g(r,t). Interesting dynamical property
@@ -209,4 +210,40 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("__exit__",[](MSD & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
             ;
 
+    py::class_<Traiettoria_numpy>(m,"Trajectory")
+            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,bool,bool>(),R"lol(
+                Parameters
+                ----------
+                positions (double) python array (ntimesteps,natoms,3)
+                velocities (double) python array (ntimesteps,natoms,3)
+                types (int) python array (natoms)
+                lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
+)lol");
+    using SHC = SphericalCorrelations<10,double,Traiettoria_numpy>;
+    py::class_< SHC >(m,"ShpericalCorrelations")
+            .def(py::init<Traiettoria_numpy*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,bool>(),R"lol(
+                 Parameters
+                 ----------
+                 Trajectory instance
+                 rmin
+                 rmax
+                 nbin
+                 maximum time lag
+                 number of threads
+                 time skip
+                 debug flag
+)lol")
+            .def("reset",&SHC::reset)
+            .def("calculate", &SHC::calcola)
+            .def_buffer([](SHC & m) -> py::buffer_info {
+        return py::buffer_info(
+                    m.accesso_lista(),
+                    sizeof(double),
+                    py::format_descriptor<double>::format(),
+                    m.get_shape().size(),
+                    m.get_shape(),
+                    m.get_stride()
+                    );
+
+    });
 }

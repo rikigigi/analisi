@@ -95,18 +95,32 @@ set (ANALISI_LIB
     sphericalcorrelations.cpp
     )
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/pybind11/tools")
+
+#check python
+# Add a CMake parameter for choosing a desired Python version
+if(NOT PYBIND11_PYTHON_VERSION)
+  set(PYBIND11_PYTHON_VERSION "" CACHE STRING "Python version to use for compiling modules")
+endif()
+find_package(PythonLibsNew ${PYBIND11_PYTHON_VERSION} REQUIRED)
+
+
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
+if (${PYTHONLIBS_FOUND})
 #python interface
+set (PYTHON_SUPPORT ${PYTHON_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${PYTHON_LIBRARIES})
+INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS})
 include_directories(pybind11/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory( pybind11 )
 pybind11_add_module(pyanalisi pyanalisi.cpp)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
-
+endif()
 
 if (FFTW_OMP)
     set (FFTW_MT "${FFTW_OMP}" )

@@ -3,6 +3,7 @@
 #include <vector>
 #include <thread>
 #include <sstream>
+#include "config.h"
 
 template <int l, class TFLOAT, class T>
 SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
@@ -52,11 +53,6 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
-}
-
-template <int l, class TFLOAT, class T>
-std::vector<ssize_t> SphericalCorrelations<l,TFLOAT,T>::get_shape() {
-    return {leff,ntypes,ntypes,nbin,(l+1)*(l+1)};
 }
 
 
@@ -183,3 +179,8 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 }
 
 template class SphericalCorrelations<10,double,Traiettoria>;
+
+#ifdef PYTHON_SUPPORT
+#include "traiettoria_numpy.h"
+template class SphericalCorrelations<10,double,Traiettoria_numpy>;
+#endif
