@@ -73,6 +73,11 @@ struct MultiVal {
         val_.apply_f(f,args...);
     }
 
+    void inline running_average_m_zero_vector(T* average, const T & counter) const {
+        average[0]+=(val[0]-average[0])/counter;
+        val_.running_average_m_zero_vector(average+1,counter);
+    }
+
     void inline sum_in_m_zero() noexcept {
         for (int m=0;m<l;++m) { //negative m
             val[0]+=val_minus[m];
@@ -113,6 +118,9 @@ struct MultiVal<0,T> {
     inline void apply_f ( T f(int,int,T,Args...) , Args...args)  noexcept{
         val[0]=f(0,0,val[0],args...);
     }
+    void inline running_average_m_zero_vector(T* average, const T & counter) const {
+        average[0]+=(val[0]-average[0])/counter;
+    }
     void inline sum_in_m_zero() noexcept {}
     void copy_mplus_mminus(){}
     void print(std::ostream & out) {
@@ -152,6 +160,11 @@ struct MultiVal {
             val_minus[m]=f(l,-1-m,val_minus[m],args...);
         }
         val_.apply_f(f,args...);
+    }
+
+    void inline running_average_m_zero_vector(T* average, const T & counter) const {
+        average[0]+=(val[0]-average[0])/counter;
+        val_.running_average_m_zero_vector(average+1,counter);
     }
 
     void inline copy_mplus_mminus() noexcept{
@@ -197,6 +210,9 @@ struct MultiVal<0,T> {
     template <typename ...Args>
     inline void apply_f ( T f(int,int,T,Args...) , Args...args)  noexcept{
         val[0]=f(0,0,val[0],args...);
+    }
+    void inline running_average_m_zero_vector(T* average, const T & counter) const {
+        average[0]+=(val[0]-average[0])/counter;
     }
     void inline sum_in_m_zero() noexcept {}
     void copy_mplus_mminus()noexcept{}
