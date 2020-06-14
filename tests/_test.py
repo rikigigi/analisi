@@ -8,7 +8,7 @@ types = np.zeros(pos.shape[1], dtype = np.int32)
 types[-8:]=1                                           
 params= [pos, vel, types, box]
 traj=pyanalisi.Trajectory(*params,True, True)
-test=pyanalisi.ShpericalCorrelations(traj,0.5,5.0,2,10,1,1,False)
+test=pyanalisi.ShpericalCorrelations(traj,0.5,5.0,2,10,4,1,False)
 test.reset(100)
 test.calculate(0)
 print(np.array(test,copy=False))
