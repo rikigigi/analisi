@@ -12,46 +12,45 @@
 
 #ifndef CORRELATORESPAZIALE_H
 #define CORRELATORESPAZIALE_H
-
+#include "calcolamultithread.h"
 #include "operazionisulista.h"
+#include <vector>
 
-#ifdef HAVEfftw3
-#include <fftw3.h>
-#else
-#include <fftw.h>
-#endif
 
 class Traiettoria;
 
 
-class CorrelatoreSpaziale : public OperazioniSuLista<CorrelatoreSpaziale, double>
+class CorrelatoreSpaziale : public CalcolaMultiThread, public OperazioniSuLista<CorrelatoreSpaziale,double>
 {
 public:
     CorrelatoreSpaziale(Traiettoria *t,
-                        unsigned int n,
+                        std::vector< std::array<double,3> >  k,
                         double sigma2,
                         unsigned int nthreads=0,
                         unsigned int skip=1,
                         bool debug=false
             );
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 0;}
-    void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
-    void s_fac_k(double  k[3], unsigned int i_t,fftw_complex * out );
-    double corr(unsigned int rx, unsigned int ry, unsigned int rz, unsigned int itype, unsigned int idim=0);
-    CorrelatoreSpaziale & operator = (const CorrelatoreSpaziale &);
+    virtual unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) final {return 1;}
+    virtual void reset(const unsigned int numeroTimestepsPerBlocco) final;
+    virtual void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith) noexcept;
+    void s_fac_k(const double  k[3], const unsigned int i_t,double * out ) const;
+    int get_sfac_size()const {return size_sfac;}
+    void print(std::ostream & out);
+    using CalcolaMultiThread::operator=;
     ~CorrelatoreSpaziale();
-private:
-    using OperazioniSuLista<CorrelatoreSpaziale, double>::lista;
-    using OperazioniSuLista<CorrelatoreSpaziale, double>::lunghezza_lista;
+    virtual std::vector<ssize_t> get_shape() const final;
+    virtual std::vector<ssize_t> get_stride() const final;
 
-    fftw_complex * sfac;
-    double sigma2;
-    unsigned int size;
-    unsigned int nthreads,nk,skip,tipi_atomi,ntimesteps;
-    bool debug;
+private:
+    using OperazioniSuLista<CorrelatoreSpaziale,double>::lista;
+    using OperazioniSuLista<CorrelatoreSpaziale,double>::lunghezza_lista;
     Traiettoria *t;
-    static fftw_plan fftw3;
+    double * sfac;
+    std::vector< std::array<double,3> > klist;
+    double sigma2;
+    unsigned int size_sfac,size_k;
+    unsigned int nk,tipi_atomi,ntimesteps;
+    bool debug;
 };
 
 #endif // CORRELATORESPAZIALE_H

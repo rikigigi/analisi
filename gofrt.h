@@ -34,6 +34,9 @@ public:
     void calcola(unsigned int);
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
     Gofrt<TFLOAT> & operator =(const Gofrt<TFLOAT> & destra);
+    std::vector<ssize_t> get_shape();
+    std::vector<ssize_t> get_stride();
+    std::string get_columns_description() {return c_descr;}
 
 private:
     using OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT>::lista;
@@ -43,6 +46,8 @@ private:
     Traiettoria * traiettoria;
     unsigned int nbin,ntimesteps,lmax,leff,skip,nthreads;
     TFLOAT * gofr(unsigned int ts, unsigned int itype=0, unsigned int r=0);
+    std::string c_descr;
+    unsigned int get_itype(unsigned int &t1, unsigned int &t2) const;
 
 };
 

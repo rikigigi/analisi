@@ -15,6 +15,7 @@
 #include<thread>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
 #ifdef USE_MPI
 #include "mp.h"
@@ -25,6 +26,8 @@ template <class TFLOAT> Gofrt<TFLOAT>::Gofrt(Traiettoria *t, TFLOAT rmin, TFLOAT
 {
 
     dr=(rmax-rmin)/nbin;
+
+
 }
 
 template <class TFLOAT> Gofrt<TFLOAT>::~Gofrt() {
@@ -37,6 +40,16 @@ template <class TFLOAT> unsigned int Gofrt<TFLOAT>::numeroTimestepsOltreFineBloc
 
 template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
+    std::stringstream descr;
+    descr << "# every column is followed by the variance. Then you have the following: "<<std::endl;
+    for (unsigned int t1=0;t1<traiettoria->get_ntypes();t1++) {
+        for (unsigned int t2=t1;t2<traiettoria->get_ntypes();t2++){
+            descr << "#g("<<t1<<", "<<t2<<"), different atom index: "<<get_itype(t1,t2)*2<<std::endl;
+            descr << "#g("<<t1<<", "<<t2<<"), same atom index: "<<(get_itype(t1,t2)+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2)*2<<std::endl;
+        }
+    }
+    c_descr=descr.str();
+
     //lunghezza in timestep
     leff =(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     //numero di timestep su cui fare la media
@@ -45,8 +58,14 @@ template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimes
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
+}
 
-
+template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_shape(){
+    return {leff,traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1),nbin};
+}
+template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_stride(){
+    return {static_cast<long>(traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin*sizeof(TFLOAT)),
+             static_cast<long>(nbin*sizeof(TFLOAT)), sizeof(TFLOAT)};
 }
 
 template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {
@@ -60,12 +79,34 @@ template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned in
     return &lista[idx];
 }
 
+template <class TFLOAT> unsigned int Gofrt<TFLOAT>::get_itype(unsigned int & type1,unsigned int & type2) const {
+     /*
+     * xxxxx  ntypes*(ntypes+1)/2 - (m+2)*(m+1)/2 +
+     * xxxxo  + altra coordinata (che deve essere la più grande)
+     * xxxoo  = indice della coppia nella memoria
+     * xxooo
+     * xoooo
+     *
+     * xx
+     * x
+    */
+    if (type2<type1) {
+        unsigned int tmp=type2;
+        type2=type1;
+        type1=tmp;
+    }
+    return traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2
+            -(type2+1)*(type2+2)/2 +type1;
+}
+
 template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
 
     if (nthreads<=1){
         std::cerr << "Attenzione: sto usando un solo thread.\n";
         nthreads=1;
     }
+
+
 
     unsigned int npassith=leff/nthreads;
     std::vector<std::thread> threads;
@@ -92,23 +133,7 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
                         for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
                             unsigned int type1=traiettoria->get_type(iatom);
                             unsigned int type2=traiettoria->get_type(jatom);
-                            if (type2<type1) {
-                                unsigned int tmp=type2;
-                                type2=type1;
-                                type1=tmp;
-                            }
-                            /*
-                             * xxxxx  ntypes*(ntypes+1)/2 - (m+2)*(m+1)/2 +
-                             * xxxxo  + altra coordinata (che deve essere la più grande)
-                             * xxxoo  = indice della coppia nella memoria
-                             * xxooo
-                             * xoooo
-                             *
-                             * xx
-                             * x
-                            */
-                            unsigned int itype=traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2
-                                    -(type2+1)*(type2+2)/2 +type1;
+                            unsigned int itype=get_itype(type1,type2);
                             if (iatom==jatom){
                                 itype=itype+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;
                             }

@@ -166,9 +166,6 @@ void Traiettoria::init_buffer_tipi() {
         }
 
    get_ntypes();
-   for (unsigned int i=0;i<natoms;i++) {
-       buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
-   }
 
    for (unsigned int ichunk=0;ichunk<intestazione->nchunk;ichunk++){
        for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
@@ -194,9 +191,6 @@ bool Traiettoria::get_calculate_center_of_mass(){
 
 }
 */
-void Traiettoria::set_pbc_wrap(bool p) {
-    wrap_pbc=p;
-}
 
 /**
   * Restituisce l'indirizzo allineato alla memoria.
@@ -473,7 +467,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 #endif
         //indicizza i timesteps che mancano
         for (int itimestep=timestep_indicizzato+1;itimestep<=timestep;itimestep++){
-            Intestazione_timestep * intestazione=0;
+            Intestazione_timestep * intestazione=nullptr;
             size_t offset = leggi_pezzo_intestazione(timesteps[itimestep-1],intestazione);
             timesteps[itimestep]=timesteps[itimestep-1]+offset;
             timesteps_lammps[itimestep-1]=intestazione->timestep;
@@ -485,7 +479,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     int res=madvise(file,timesteps[timestep],MADV_DONTNEED);
     if ( res==-1) {
         std::cerr << "Errore in madvise MADV_DONTNEED: "<< res<<"\n";
-        perror(0);
+        perror(nullptr);
     }
 
     if (timestep < timestep_corrente && timesteps[timestep]+tstep_size*timestep_finestra*2 < fsize ) { // avviso che le zone di memoria successive non mi servono
@@ -612,14 +606,12 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 }
                 for (unsigned int icoord=0;icoord<3;icoord++)
                     buffer_velocita[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].velocita[icoord];
-                if (false) {
+
+                if (buffer_tipi[id]!= tipo) {
+                    std::cerr << "Errore: il tipo di atomo per l'id "<<id<<"e' cambiato da "<<buffer_tipi[id]<< " a "<<tipo<<" !\n";
                     buffer_tipi[id]=tipo;
-                } else {
-                    if (buffer_tipi[id]!= tipo) {
-                        std::cerr << "Errore: il tipo di atomo per l'id "<<id<<"e' cambiato da "<<buffer_tipi[id]<< " a "<<tipo<<" !\n";
-                        buffer_tipi[id]=tipo;
-                    }
                 }
+
                 //aggiorna la media delle posizioni e delle velocità del centro di massa
                 unsigned int tipo_id=buffer_tipi_id[id];
                 cont_cm[tipo_id]++;
@@ -654,22 +646,6 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 #endif
 
     return Ok;
-}
-double Traiettoria::d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l){
-    double d2=0.0,x;
-    double *xi=posizioni(itimestep,i);
-    double *xj=posizioni(jtimestep,j);
-    for (unsigned int idim=0;idim<3;idim++) {
-        x=xi[idim]-xj[idim];
-        if (x >   l[idim] * 0.5) x = x - l[idim];
-        if (x <= -l[idim] * 0.5) x = x + l[idim];
-        d2+=x*x;
-    }
-    return d2;
-}
-
-double Traiettoria::d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l){
-    return d2_minImage(i,j,itimestep,itimestep,l);
 }
 
 double * Traiettoria::posizioni(const int &timestep, const int &atomo){
@@ -848,57 +824,4 @@ double * Traiettoria::scatola_last() {
     }
 }
 
-unsigned int Traiettoria::get_type(const unsigned int &atomo) {
-    if (atomo < natoms) {
-        return buffer_tipi_id[atomo];
-    } else {
-        std::cerr << "Errore: tipo atomo fuori dal range! ("<< atomo <<" su un massimo di "<<natoms<<")\n";
-        abort();
-        return 0;
-    }
-}
 
-std::vector<unsigned int> Traiettoria::get_types(){
-    get_ntypes();
-    return types;
-}
-
-///conta il numero di tipi di atomi nel primo modo che mi è venuto in mente
-int Traiettoria::get_ntypes(){
-
-    if (ntypes==0) {
-        ntypes=0;
-        types.clear();
-        min_type=buffer_tipi[0];
-        max_type=buffer_tipi[0];
-        bool *duplicati = new bool[natoms];
-        for (unsigned int i=0;i<natoms;i++)
-            duplicati[i]=false;
-        for (unsigned int i=0;i<natoms;i++) {
-            if (!duplicati[i]) {
-                if (buffer_tipi[i]>max_type)
-                    max_type=buffer_tipi[i];
-                if (buffer_tipi[i]<min_type)
-                    min_type=buffer_tipi[i];
-                for (unsigned int j=i+1;j<natoms;j++){
-                    if (buffer_tipi[j]==buffer_tipi[i]){
-                        duplicati[j]=true;
-                    }
-                }
-                types.push_back(buffer_tipi[i]);
-                ntypes++;
-            }
-        }
-        std::sort(types.begin(),types.end());
-        type_map.clear();
-        for (unsigned int i=0;i<types.size(); i++){
-            type_map[types[i]]=i;
-        }
-        delete [] duplicati;
-        masse = new double [ntypes];
-        cariche = new double [ntypes];
-    }
-
-    return ntypes;
-
-}

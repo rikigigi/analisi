@@ -20,8 +20,13 @@ template <class TFLOAT=double>
 class ReadLog
 {
 public:
-    ReadLog(std::string filename, Traiettoria * t=0, unsigned int skip=1,unsigned int nthreads=0, unsigned int nbatch=200,
-            std::vector<std::string> req_headers=std::vector<std::string>());
+    ReadLog(std::string filename,
+            Traiettoria * t=0,
+            unsigned int skip=1,
+            unsigned int nthreads=0,
+            unsigned int nbatch=200,
+            std::vector<std::string> req_headers=std::vector<std::string>()
+            );
     ~ReadLog();
     TFLOAT * line(unsigned int index);
     unsigned int n_timestep(){return data.size()/data_size;}

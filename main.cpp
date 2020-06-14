@@ -11,13 +11,14 @@
 
 
 #include <iostream>
+#include <array>
 #include <fstream>
 #include <boost/program_options.hpp>
-//#include "interfaccia.h"
 #include "testtraiettoria.h"
 #include "spettrovibrazionale.h"
 #include "modivibrazionali.h"
 #include "boost/version.hpp"
+#include <boost/lexical_cast.hpp>
 #include "config.h"
 #include "istogrammavelocita.h"
 #include "greenkubo2componentionicfluid.h"
@@ -29,6 +30,7 @@
 #include "gofrt.h"
 #include <functional>
 #include "correlatorespaziale.h"
+#include "sphericalcorrelations.h"
 #ifdef HAVEfftw3
 #include <fftw3.h>
 #else
@@ -42,6 +44,75 @@
 #include "mp.h"
 #endif
 
+namespace std{
+
+template<typename A, typename B>
+std::ostream & operator << (std::ostream & out, const std::pair<A,B> & p) {
+    out << p.first << " "<<p.second;
+    return out;
+}
+
+
+/*
+template <typename A,typename B>
+std::istream & operator >> (std::istream & in, std::pair<A,B> & p) {
+    in >> p.first >> p.second;
+    return in;
+}
+*/
+
+template<typename A,std::size_t N>
+std::ostream & operator << (std::ostream &out, const std::array<A,N> &c) {
+    for (unsigned int i=0;i<N;++i) {
+        out << c[i] << " ";
+    }
+    return out;
+}
+
+template<typename A,std::size_t N >
+std::ostream & operator << (std::ostream &out, const boost::array<A,N> &c) {
+    for (unsigned int i=0;i<N;++i) {
+        out << c[i] << " ";
+    }
+    return out;
+}
+
+/*
+template<typename A, std::size_t N>
+std::istream & operator >> (std::istream &in, std::array<A,N> &c) {
+    for (unsigned int i=0;i<N;++i) {
+        in >> c[i];
+    }
+    return in;
+}
+*/
+template<typename A, std::size_t N>
+void validate (boost::any& v,
+               const std::vector<std::string>& values,
+               std::array<A,N> *,int) {
+    if (values.size()!=N) {
+        throw std::runtime_error("std::array<A,N> needs N arguments");
+    }
+    std::array<A,N> res;
+    for (unsigned int i=0;i<N;++i) {
+        res[i]=boost::lexical_cast<A>(values[i]);
+    }
+    v=res;
+}
+
+template<typename A, typename B>
+void validate (boost::any& v,
+               const std::vector<std::string>& values,
+               std::pair<A,B>*, int) {
+    if (values.size()!=2){
+        throw std::runtime_error("pair<A,B> needs two arguments");
+    }
+    std::pair<A,B> res;
+    res.first = boost::lexical_cast<A>(values[0]);
+    res.second = boost::lexical_cast<B>(values[1]);
+    v=res;
+}
+}
 
 int main(int argc, char ** argv)
 {
@@ -50,13 +121,36 @@ int main(int argc, char ** argv)
     Mp::mpi(&argc,&argv);
 #endif
 
+    std::cerr << "cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2020\n=========\n";
+    std::cerr << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags (Release)"
 
-    boost::program_options::options_description options("Riccardo Bertossa, (c) 2018\nProgramma per l'analisi di traiettorie di LAMMPS, principalmente finalizzato al calcolo del coefficiente di conducibilità termica e a proprietà di trasporto tramite l'analisi a blocchi.\n\nOpzioni consentite");
+                 CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_RELEASE " (Debug) " CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_DEBUG " (build type was " CMAKE_BUILD_TYPE ")"
+                 " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR <<
+#ifdef PYTHON_SUPPORT
+           "\nWith python support: " PYTHON_SUPPORT <<
+#endif
+#ifdef MPI
+           "\nWith MPI support" <<
+#endif
+#ifdef XDR_FILE
+           "\nWith gromacs XDR file conversion support" <<
+#endif
+                 std::endl;
+
+    std::cerr << "arguments (enclosed by '') were:";
+    for (int i=0;i<argc;++i) {
+        std::cerr <<" '"<< argv[i]<<"'";
+    }
+    std::cerr << std::endl;
+
+    boost::program_options::options_description options("Program to analyze of molecular dynamics trajectories, with multithread and MPI block averages.\n\nAllowed options:");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
-    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0,nk=0;
-    unsigned int n_seg=0,gofrt=0,read_lines_thread=200;
+    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
+    unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
+    std::pair<int,double> nk;
+    std::array<double,3> kdir;
     std::vector<unsigned int > cvar_list,kk_l;
     std::vector<double> factors_input;
     std::vector<std::string> headers,output_conversion_gro;
@@ -98,7 +192,7 @@ int main(int argc, char ** argv)
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per ogni atomo di ciascuna specie atomica")
             ("mean-square-displacement-cm,Q",boost::program_options::bool_switch(&msd_cm)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio per centro di massa di ciascuna specie atomica")
             ("mean-square-displacement-self",boost::program_options::bool_switch(&msd_self)->default_value(false),"calcola e stampa nell'output lo spostamento quadratico medio di ciascuna specie atomica calcolato nel sistema di riferimento del rispettivo centro di massa")
-            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti. Se è impostato il calcolo della g(r,t), indica gli estremi dell'istogramma.")
+            ("factors,F",boost::program_options::value<std::vector<double> >(&factors_input)->multitoken(),"imposta i fattori dall'esterno. (in ordine: fattore, fattore di integrazione). Le funzioni di autocorrelazione vengono moltiplicate per il fattore, e gli integrali per fattore*fattore di integrazione. Legge solo le colonne delle correnti. Se è impostato il calcolo della g(r,t), indica gli estremi dell'istogramma. Se impostato --spherical-harmonics-correlation Indica gli estremi delle distanze radiali da considerare.")
             ("subtract-mean",boost::program_options::bool_switch(&sub_mean)->default_value(false),"sottrae la media dalla funzione di correlazione, calcolata a partire dal timestep specificato con -u")
             ("subtract-mean-start,u",boost::program_options::value<int>(&sub_mean_start)->default_value(0),"timestep nella funzione di correlazione a partire dal quale iniziare a calcolare la media")
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"opzione di ottimizzazione del calcolo della funzione di correlazione. Indica in quanti blocchetti suddividere il calcolo delle medie(influenza l'efficienza della cache della CPU)")
@@ -108,8 +202,10 @@ int main(int argc, char ** argv)
             ("binary-convert-gromacs",boost::program_options::value<std::vector<std::string>>(&output_conversion_gro)->multitoken(),"esegui la conversione nel formato binario di lammps del file trr specificato come input. Qui specificare il nome del file di output e il file dei tipi con formato:\n id0 type0\n ...\nidN typeN\nnello stesso ordine degli atomi del file trr.")
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
+            ("spherical-harmonics-correlation,Y",boost::program_options::value<unsigned int>(&sph)->default_value(0),"Se >0 imposta il calcolo della funzione di correlazione della densità atomica, suddivisa per tipo di atomo, sviluppata in armoniche sferiche. Indica il numero di intervalli da usare nella suddivisione radiale. Specificare il raggio minimo e massimo con l'opzione -F.")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
-            ("spatial-correlator,A",boost::program_options::value<int> (&nk)->default_value(0),"Numero di punti della griglia ...")
+            ("spatial-correlator,A",boost::program_options::value(&nk)->default_value({0,0.0})->multitoken(),"Numero di punti della griglia ...")
+            ("spatial-correlator-dir",boost::program_options::value(&kdir)->default_value({1.0,0.0,0.0})->multitoken(),"Direzione di k")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"test vari")
             ("test-debug2",boost::program_options::bool_switch(&debug2)->default_value(false),"scrive nello standard output le colonne lette dal file di log specificato. Se viene specificato anche il calcolo delle correnti con l'opzione -a ( per esempio, se ho due specie atomiche, -a '#J 2 1.0 0.0' '#J 2 0.0 1.0' calcola la velocità del centro di massa della prima specie e della seconda specie), scrive anche le correnti calcolate nell'ordine in cui sono state specificate. In questo caso è necessario fornire anche il file binario della traiettoria con -i")
@@ -130,14 +226,12 @@ int main(int argc, char ** argv)
         boost::program_options::notify(vm);
 
         if (( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( (output_conversion==""&& output_conversion_gro.size()==0) && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
-            std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
         }
 
         if (cvar_list.size()%2 != 0) {
             std::cout << "Errore: la lista degli indici delle covarianze deve contenere un numero pari di numeri\n";
-            std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
             std::cout << options << "\n";
             return 1;
         } else {
@@ -152,7 +246,6 @@ int main(int argc, char ** argv)
 
     catch (boost::program_options::error const &e) {
         std::cerr << e.what() << '\n';
-        std::cout << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags " CMAKE_CXX_FLAGS  " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR ".\n";
         std::cerr << options;
         return 1;
     }
@@ -444,6 +537,7 @@ int main(int argc, char ** argv)
                 unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
                 unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
 
+                std::cout << gofr.puntatoreCalcolo()->get_columns_description();
                 for (unsigned int t=0;t<tmax;t++) {
                     for (unsigned int r=0;r<gofrt;r++) {
                         std::cout << t << " " << r;
@@ -460,6 +554,32 @@ int main(int argc, char ** argv)
                         std::cout << "\n";
                     }
                     std::cout << "\n\n";
+                }
+
+
+            }else if (sph>0) {
+                if (factors_input.size()!=2){
+                    std::cerr << "Errore: specificare il valore minimo è masimo delle distanze da utilizzare per costruire la funzione di correlazione con le armoniche sferiche con l'opzione -F.\n";
+                    abort();
+                }
+                std::cerr << "Inizio del calcolo delle funzioni di correlazione della densità sviluppata in armoniche sferiche...\n";
+                Traiettoria tr(input);
+                tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
+
+                MediaBlocchi<SphericalCorrelations<10,double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                        sh(&tr,blocknumber);
+                sh.calcola(factors_input[0],factors_input[1],sph,stop_acf,numero_thread,skip,dumpGK);
+
+                auto shape= sh.media()->get_shape();
+
+                std::cout << sh.puntatoreCalcolo()->get_columns_description();
+                auto line_size=shape[1]*shape[2]*shape[3]*shape[4];
+                for (unsigned int t=0;t<shape[0];t++) {
+                    for (unsigned int r=0;r<line_size;r++) {
+                        std::cout << sh.media()->elemento(t*line_size+r) << " "<<
+                                     sh.varianza()->elemento(t*line_size+r) << " ";
+                    }
+                    std::cout << std::endl;
                 }
 
 
@@ -528,43 +648,36 @@ int main(int argc, char ** argv)
                     std::cout << "\n";
                 }
 
-            } else if (nk>0) {
+            } else if (nk.first>0) {
                 std::cerr << "Inizio del calcolo delle correlazioni spaziali delle velocità...\n";
-                Traiettoria t(input);
-                MediaBlocchi<CorrelatoreSpaziale,unsigned int, double, unsigned int, unsigned int, bool> blocchi_corr_spaziale(&t,blocknumber);
-                blocchi_corr_spaziale.calcola(nk,0,numero_thread,skip,false);
-
-                unsigned int col=4;
-                std::cout << "#Colonna di output: descrizione; \n# ";
-                std::cout << "1: rx; 2: ry; 3: rz; 4: r**2; ";
-                for (unsigned int i=0;i<t.get_ntypes();i++)
-                    for (unsigned int j=0;j<=i;j++){
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") x; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") x_var; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") y; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") y_var; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") z; ";
-                        col++;
-                        std::cout << col <<": ("<<i<<", "<<j<<") z_var; ";
+                //generate k-list
+                std::vector<std::array<double,3> > klist;
+                klist.reserve(nk.first);
+                for (unsigned int i=0;i<nk.first;++i){
+                    auto k=kdir;
+                    for (auto & ki : k) {
+                        ki=ki*nk.second*double(i)/double(nk.first);
                     }
+                    klist.push_back(k);
+                }
+                Traiettoria t(input);
+                t.set_pbc_wrap(true);
 
-                std::cout << "\n";
-
-                for (unsigned int rx=0;rx<nk;rx++)
-                    for (unsigned int ry=0;ry<nk;ry++)
-                        for (unsigned int rz=0;rz<nk;rz++){
-                            std::cout<< rx<<" "<<ry<<" "<<rz<< " "<<rx*rx+ry*ry+rz*rz<<" ";
-                            for (unsigned int itype=0;itype<t.get_ntypes()*(1+t.get_ntypes())/2;itype++){
-                                for (unsigned int idim=0;idim<3;idim++)
-                                    std::cout<< blocchi_corr_spaziale.media()->corr(rx,ry,rz,itype,idim) << " " << blocchi_corr_spaziale.varianza()->corr(rx,ry,rz,itype,idim)<< " ";
-                            }
-                            std::cout << "\n";
-                        }
+                CorrelatoreSpaziale corr(&t,klist,0.0,numero_thread,skip,false);
+                unsigned int nt=t.get_ntimesteps(),
+                        s=(nt-1)/blocknumber;
+                corr.reset(s);
+                t.imposta_dimensione_finestra_accesso(s+corr.numeroTimestepsOltreFineBlocco(blocknumber));
+                //print stuff
+                std::cout << "#kdir= "<<kdir[0]<<" "<<kdir[1]<<" "<<kdir[2]<<std::endl
+                          << "#dk= "<<nk.second<<std::endl
+                          << "#nk= "<<nk.first<<std::endl;
+                for (unsigned int i=0;i<blocknumber;++i) {
+                    unsigned int ts=s*i;
+                    t.imposta_inizio_accesso(ts);
+                    corr.calcola(ts);
+                    corr.print(std::cout);
+                }
             }
     }
 

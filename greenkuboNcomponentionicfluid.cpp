@@ -132,6 +132,15 @@ template< class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<TF
         lista[i]=0.0;
     }
 }
+template< class TFLOAT, class TFLOAT_READ>
+std::vector<ssize_t> GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>::get_shape(){
+    return {leff,narr};
+}
+template< class TFLOAT, class TFLOAT_READ>
+std::vector<ssize_t> GreenKuboNComponentIonicFluid<TFLOAT,TFLOAT_READ>::get_stride(){
+    return {static_cast<long>(narr*sizeof(TFLOAT)),sizeof(TFLOAT)};
+}
+
 
 template< class TFLOAT, class TFLOAT_READ> TFLOAT_READ * GreenKuboNComponentIonicFluid<TFLOAT, TFLOAT_READ>::jN(unsigned int N,unsigned int ts){
     return&traiettoria->line(ts)[idx_j[N]];
