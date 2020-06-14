@@ -141,6 +141,19 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                         aveWork1[i]*=aveWork2[i];
                     }
 
+                    //here we have to average first over m... (otherwise we calculate an average of something that is not invariant under rotation, so we probably get something that always decays to zero, unless we are in a crystal
+                    //sum over m: sum everything in m=0
+                    using MultiVal = SpecialFunctions::MultiValDynamic::MultiVal<lmax,TFLOAT>;
+                    MultiVal v;
+                    for (int iatom=0;iatom<natoms;++iatom) {
+                        for (int jtype=0;jtype<ntypes;++jtype){
+                            for (int ibin=0;ibin<nbin;++ibin){
+                                v.init(aveWork1+index_wrk(iatom,jtype,ibin));
+                                v.sum_in_m_zero();
+                            }
+                        }
+                    }
+
                     //do averages over atomic types
                     for (int i=0;i<ntypes;++i){
                         avecont[i]=0;
@@ -151,7 +164,6 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     for (int iatom=0;iatom<natoms;++iatom) { // loop over center atoms and average correlation functions according to their type
                         int itype=t.get_type(iatom);
                         avecont[itype]++;
-                        //TODO: here we have to average first over l... (otherwise we calculate an average of something that is not invariant under rotation, so we probably get something that always decays to zero, unless we are in a crystal
                         for (int ll=0;ll<sh_single_type_size;++ll){
                             int idx=itype*sh_single_type_size+ll;
                             aveTypes[idx]+=(aveWork1[sh_single_type_size*iatom+ll]-aveTypes[idx])/TFLOAT(avecont[itype]);
@@ -159,7 +171,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     }
                     //finally add to big average (imedia loop over averages of atomic type) -- I know, there are a lot of averages and sums and stuff
                     for (int ll=0;ll<sh_final_size;++ll){
-                        lista[index(dt,0,0)+ll]+=(aveTypes[ll]-lista[index(dt,0,0)+ll])/TFLOAT(imedia/skip);
+                        lista[index(dt,0,0)+ll]+=(aveTypes[ll]-lista[index(dt,0,0)+ll])/TFLOAT((imedia/skip)+1);
                     }
 
                 }

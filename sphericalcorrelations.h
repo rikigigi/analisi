@@ -25,12 +25,15 @@ public:
         OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);
         return *this;
     }
-    std::vector<ssize_t> get_shape()const { return {leff,ntypes,ntypes,nbin,(l+1)*(l+1)};}
-    std::vector<ssize_t> get_stride()const {
+    const std::vector<ssize_t> get_shape()const { return {leff,ntypes,ntypes,nbin,(l+1)*(l+1)};}
+    const std::vector<ssize_t> get_stride()const {
         auto s=get_shape();
+        auto s_old=s[s.size()-1];
         s[s.size()-1]=sizeof (TFLOAT);
-        for (int i=s.size()-2;i>=0;++i) {
-            s[i]*=s[i+1];
+        for (int i=s.size()-2;i>=0;--i) {
+            auto t=s_old*s[i+1];
+            s_old=s[i];
+            s[i]=t;
         }
         return s;
     }

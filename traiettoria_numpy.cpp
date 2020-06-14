@@ -59,7 +59,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buff
     //check unsupported stride
     if (!has_no_stride<double>(info_box))
         throw std::runtime_error("Unsupported stride in box array");
-    if (!has_no_stride<double>(info_types))
+    if (!has_no_stride<int>(info_types))
         throw std::runtime_error("Unsupported stride in types array");
     if (!has_no_stride<double>(info_vel))
         throw std::runtime_error("Unsupported stride in vel array");
@@ -96,10 +96,12 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buff
             double * cur_box=static_cast<double*>(info_box.ptr)+9*i;
             for (int l=0;l<3;++l){
                 for (int m=l+1;m<3;++m) {
-                    if (cur_box[l*3+m] != 0.0){
+                    if (cur_box[l*3+m] != 0.0 || cur_box[m*3+l] != 0.0){
                         throw std::runtime_error("Non orthogonal cell (or rotated orthogonal one) not implemented");
                     }
                 }
+                buffer_scatola[i*6+2*l]=0.0;
+                buffer_scatola[i*6+2*l+1]=cur_box[3*l+l];
             }
         }
     }

@@ -73,6 +73,15 @@ struct MultiVal {
         val_.apply_f(f,args...);
     }
 
+    void inline sum_in_m_zero() noexcept {
+        for (int m=0;m<l;++m) { //negative m
+            val[0]+=val_minus[m];
+        }
+        for (int m=0;m<l;++m) { //positives m
+            val[0]+=val[m+1];
+        }
+        val_.sum_in_m_zero();
+    }
     void inline copy_mplus_mminus() noexcept{
         for (int m=1;m<l+1;++m) {
             val_minus[m-1]=val[m];
@@ -104,6 +113,7 @@ struct MultiVal<0,T> {
     inline void apply_f ( T f(int,int,T,Args...) , Args...args)  noexcept{
         val[0]=f(0,0,val[0],args...);
     }
+    void inline sum_in_m_zero() noexcept {}
     void copy_mplus_mminus(){}
     void print(std::ostream & out) {
         out << "(l,m) = ("<<0<<","<<0 <<"): "<< val[0]<<std::endl;
@@ -151,6 +161,16 @@ struct MultiVal {
         val_.copy_mplus_mminus();
     }
 
+    void inline sum_in_m_zero() noexcept {
+        for (int m=0;m<l;++m) { //negative m
+            val[0]+=val_minus[m];
+        }
+        for (int m=0;m<l;++m) { //positives m
+            val[0]+=val[m+1];
+        }
+        val_.sum_in_m_zero();
+    }
+
     void print(std::ostream & out) {
         val_.print(out);
         for (int m=0;m<l;m++){
@@ -178,7 +198,8 @@ struct MultiVal<0,T> {
     inline void apply_f ( T f(int,int,T,Args...) , Args...args)  noexcept{
         val[0]=f(0,0,val[0],args...);
     }
-    void copy_mplus_mminus(){}
+    void inline sum_in_m_zero() noexcept {}
+    void copy_mplus_mminus()noexcept{}
     void print(std::ostream & out) {
         out << "(l,m) = ("<<0<<","<<0 <<"): "<< val[0]<<std::endl;
     }

@@ -220,7 +220,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                 lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
 )lol");
     using SHC = SphericalCorrelations<10,double,Traiettoria_numpy>;
-    py::class_< SHC >(m,"ShpericalCorrelations")
+    py::class_< SHC >(m,"ShpericalCorrelations",py::buffer_protocol())
             .def(py::init<Traiettoria_numpy*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,bool>(),R"lol(
                  Parameters
                  ----------
@@ -236,6 +236,13 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("reset",&SHC::reset)
             .def("calculate", &SHC::calcola)
             .def_buffer([](SHC & m) -> py::buffer_info {
+        std::cerr <<"shape ("<< m.get_shape().size() << "): ";
+        for (auto & n: m.get_shape()) std::cerr << n << " ";
+        std::cerr <<std::endl<< m.lunghezza()<<std::endl;
+        std::cerr << "allocated memory from"<<m.accesso_lista() << " to " <<m.accesso_lista() + m.lunghezza()<<std::endl;
+        std::cerr <<"strides ("<<  m.get_stride().size() << "): ";
+        for (auto & n: m.get_stride()) std::cerr << n << " ";
+        std::cerr << std::endl;
         return py::buffer_info(
                     m.accesso_lista(),
                     sizeof(double),
