@@ -15,7 +15,7 @@ public:
     double * posizioni_cm(const int & timestep, const int & tipo){throw std::runtime_error("Center of mass positions not implemented");}
     double * velocita_cm(const int & timestep, const int & tipo){throw std::runtime_error("Center of mass velocities not implemented");}
     double *scatola_last(){return buffer_scatola + (n_timesteps-1)*6; }
-    using TraiettoriaBase<Traiettoria_numpy>::get_ntimesteps;
+    void dump_lammps_bin_traj(const std::string &fname);
 
 private:
     bool lammps_box,posizioni_allocated;

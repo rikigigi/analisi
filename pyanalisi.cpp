@@ -218,7 +218,8 @@ PYBIND11_MODULE(pyanalisi,m) {
                 velocities (double) python array (ntimesteps,natoms,3)
                 types (int) python array (natoms)
                 lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
-)lol");
+)lol")
+            .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj);
     using SHC = SphericalCorrelations<10,double,Traiettoria_numpy>;
     py::class_< SHC >(m,"ShpericalCorrelations",py::buffer_protocol())
             .def(py::init<Traiettoria_numpy*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,bool>(),R"lol(
