@@ -243,7 +243,7 @@ struct AssociatedLegendrePoly
     static inline void calc1(const T &x, MultiVal<lmax,T,dynamic> & res) noexcept {
         /* l+1,l step:
          * Implements the following:
-         * P^{l+1}_{l+1}=-(2l+1)\sqrt{1-x^2}P^l_l(x)
+         * P^{l}_{l+1}=(2l+1) x P^l_l(x)
         */
         res.template valm<l>().val[m]=
                 res.template valm<l-1>().val[m] *x*(2*m+1);

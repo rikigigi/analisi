@@ -17,6 +17,65 @@
 
 namespace py = pybind11;
 
+template <class T>
+void gofrt(py::module & m, std::string typestr){
+    py::class_<Gofrt<double,T> >(m,(std::string("Gofrt")+typestr).c_str(), py::buffer_protocol())
+            .def(py::init<T*,double,double,unsigned int, unsigned int, unsigned int,unsigned int, bool>(),R"begend(
+                                                                                                          calculates g(r) and, in general, g(r,t). Interesting dynamical property
+                                                                                                          Parameters                                                                                                          ----------                                                                                                         Trajectory instance                                                                                                          rmin                                                                                                          rmax                                                                                                          nbin                                                                                                          maximum time lag                                                                                                          number of threads                                                                                                          time skip                                                                                            debug flag                                                                                                          )begend")
+            .def("reset",& Gofrt<double,T>::reset,R"begend()begend")
+            .def("getNumberOfExtraTimestepsNeeded",&Gofrt<double,T>::numeroTimestepsOltreFineBlocco ,R"begend()begend")
+            .def("calculate", & Gofrt<double,T>::calcola,R"begend()begend")
+            .def_buffer([](Gofrt<double,T> & g) -> py::buffer_info {
+        return py::buffer_info(
+                    g.accesso_lista(),                               /* Pointer to buffer */
+                    sizeof(double),                          /* Size of one scalar */
+                    py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
+                    g.get_shape().size(),                                      /* Number of dimensions */
+                    g.get_shape(),                 /* Buffer dimensions */
+                    g.get_stride());
+    });
+}
+
+template <class T>
+void shcorr(py::module & m, std::string typestr){
+    using SHC = SphericalCorrelations<10,double,T>;
+    py::class_< SHC >(m,(std::string("SphericalCorrelations")+typestr).c_str(),py::buffer_protocol())
+            .def(py::init<T*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,bool>(),R"lol(
+                 Parameters
+                 ----------
+                 Trajectory instance
+                 rmin
+                 rmax
+                 nbin
+                 maximum time lag
+                 number of threads
+                 time skip
+                 debug flag
+)lol")
+            .def("reset",&SHC::reset)
+            .def("calculate", &SHC::calcola)
+            .def_buffer([](SHC & m) -> py::buffer_info {
+        /*
+        std::cerr <<"shape ("<< m.get_shape().size() << "): ";
+        for (auto & n: m.get_shape()) std::cerr << n << " ";
+        std::cerr <<std::endl<< m.lunghezza()<<std::endl;
+        std::cerr << "allocated memory from"<<m.accesso_lista() << " to " <<m.accesso_lista() + m.lunghezza()<<std::endl;
+        std::cerr <<"strides ("<<  m.get_stride().size() << "): ";
+        for (auto & n: m.get_stride()) std::cerr << n << " ";
+        std::cerr << std::endl;*/
+        return py::buffer_info(
+                    m.accesso_lista(),
+                    sizeof(double),
+                    py::format_descriptor<double>::format(),
+                    m.get_shape().size(),
+                    m.get_shape(),
+                    m.get_stride()
+                    );
+
+    });
+}
+
 PYBIND11_MODULE(pyanalisi,m) {
     py::class_<Traiettoria>(m,"Traj")
             .def(py::init<std::string>(),R"begend(
@@ -115,22 +174,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                 c.get_stride()
         );
             });
-    py::class_<Gofrt<double> >(m,"Gofrt", py::buffer_protocol())
-            .def(py::init<Traiettoria*,double,double,unsigned int, unsigned int, unsigned int,unsigned int, bool>(),R"begend(
-                 calculates g(r) and, in general, g(r,t). Interesting dynamical property
-)begend")
-            .def("reset",& Gofrt<double>::reset,R"begend()begend")
-            .def("getNumberOfExtraTimestepsNeeded",&Gofrt<double>::numeroTimestepsOltreFineBlocco ,R"begend()begend")
-            .def("calculate", & Gofrt<double>::calcola,R"begend()begend")
-            .def_buffer([](Gofrt<double> & g) -> py::buffer_info {
-                return py::buffer_info(
-                g.accesso_lista(),                               /* Pointer to buffer */
-                sizeof(double),                          /* Size of one scalar */
-                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
-                g.get_shape().size(),                                      /* Number of dimensions */
-                g.get_shape(),                 /* Buffer dimensions */
-                g.get_stride());
-            });
+
 
     using GK = GreenKuboNComponentIonicFluid<double,double>;
     py::class_<GK>(m,"GreenKubo", py::buffer_protocol())
@@ -218,39 +262,11 @@ PYBIND11_MODULE(pyanalisi,m) {
                 velocities (double) python array (ntimesteps,natoms,3)
                 types (int) python array (natoms)
                 lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
-)lol");
-    using SHC = SphericalCorrelations<10,double,Traiettoria_numpy>;
-    py::class_< SHC >(m,"ShpericalCorrelations",py::buffer_protocol())
-            .def(py::init<Traiettoria_numpy*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,bool>(),R"lol(
-                 Parameters
-                 ----------
-                 Trajectory instance
-                 rmin
-                 rmax
-                 nbin
-                 maximum time lag
-                 number of threads
-                 time skip
-                 debug flag
 )lol")
-            .def("reset",&SHC::reset)
-            .def("calculate", &SHC::calcola)
-            .def_buffer([](SHC & m) -> py::buffer_info {
-        std::cerr <<"shape ("<< m.get_shape().size() << "): ";
-        for (auto & n: m.get_shape()) std::cerr << n << " ";
-        std::cerr <<std::endl<< m.lunghezza()<<std::endl;
-        std::cerr << "allocated memory from"<<m.accesso_lista() << " to " <<m.accesso_lista() + m.lunghezza()<<std::endl;
-        std::cerr <<"strides ("<<  m.get_stride().size() << "): ";
-        for (auto & n: m.get_stride()) std::cerr << n << " ";
-        std::cerr << std::endl;
-        return py::buffer_info(
-                    m.accesso_lista(),
-                    sizeof(double),
-                    py::format_descriptor<double>::format(),
-                    m.get_shape().size(),
-                    m.get_shape(),
-                    m.get_stride()
-                    );
+            .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj);
 
-    });
+    gofrt<Traiettoria>(m,"_lammps");
+    gofrt<Traiettoria_numpy>(m,"");
+    shcorr<Traiettoria>(m,"_lammps");
+    shcorr<Traiettoria_numpy>(m,"");
 }

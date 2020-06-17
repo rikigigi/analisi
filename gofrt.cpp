@@ -16,12 +16,13 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include "config.h"
 
 #ifdef USE_MPI
 #include "mp.h"
 #endif
 
-template <class TFLOAT> Gofrt<TFLOAT>::Gofrt(Traiettoria *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip, bool debug) :
+template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip, bool debug) :
     traiettoria(t),rmin(rmin),rmax(rmax),nbin(nbin), skip(skip), lmax(tmax), nthreads(nthreads), debug(debug)
 {
 
@@ -30,15 +31,15 @@ template <class TFLOAT> Gofrt<TFLOAT>::Gofrt(Traiettoria *t, TFLOAT rmin, TFLOAT
 
 }
 
-template <class TFLOAT> Gofrt<TFLOAT>::~Gofrt() {
+template <class TFLOAT, class T> Gofrt<TFLOAT,T>::~Gofrt() {
 
 }
 
-template <class TFLOAT> unsigned int Gofrt<TFLOAT>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
     return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
 
-template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimestepsPerBlocco) {
+template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
     std::stringstream descr;
     descr << "# every column is followed by the variance. Then you have the following: "<<std::endl;
@@ -60,15 +61,15 @@ template <class TFLOAT> void Gofrt<TFLOAT>::reset(const unsigned int numeroTimes
     lista=new TFLOAT [lunghezza_lista];
 }
 
-template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_shape(){
+template <class TFLOAT, class T> std::vector<ssize_t> Gofrt<TFLOAT,T>::get_shape(){
     return {leff,traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1),nbin};
 }
-template <class TFLOAT> std::vector<ssize_t> Gofrt<TFLOAT>::get_stride(){
+template <class TFLOAT, class T> std::vector<ssize_t> Gofrt<TFLOAT,T>::get_stride(){
     return {static_cast<long>(traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin*sizeof(TFLOAT)),
              static_cast<long>(nbin*sizeof(TFLOAT)), sizeof(TFLOAT)};
 }
 
-template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {
+template <class TFLOAT, class T> TFLOAT * Gofrt<TFLOAT,T>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {
     unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin
                      +nbin * itype
                      +r;
@@ -79,7 +80,7 @@ template <class TFLOAT> TFLOAT * Gofrt<TFLOAT>::gofr(unsigned int ts,unsigned in
     return &lista[idx];
 }
 
-template <class TFLOAT> unsigned int Gofrt<TFLOAT>::get_itype(unsigned int & type1,unsigned int & type2) const {
+template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::get_itype(unsigned int & type1,unsigned int & type2) const {
      /*
      * xxxxx  ntypes*(ntypes+1)/2 - (m+2)*(m+1)/2 +
      * xxxxo  + altra coordinata (che deve essere la più grande)
@@ -99,7 +100,7 @@ template <class TFLOAT> unsigned int Gofrt<TFLOAT>::get_itype(unsigned int & typ
             -(type2+1)*(type2+2)/2 +type1;
 }
 
-template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
+template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int primo) {
 
     if (nthreads<=1){
         std::cerr << "Attenzione: sto usando un solo thread.\n";
@@ -182,10 +183,13 @@ template <class TFLOAT> void Gofrt<TFLOAT>::calcola(unsigned int primo) {
 
 }
 
-template <class TFLOAT> Gofrt<TFLOAT> & Gofrt<TFLOAT>::operator =(const Gofrt<TFLOAT> &destra) {
-    OperazioniSuLista<Gofrt<TFLOAT>,TFLOAT >::operator = (destra);
+template <class TFLOAT, class T> Gofrt<TFLOAT,T> & Gofrt<TFLOAT,T>::operator =(const Gofrt<TFLOAT,T> &destra) {
+    OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT >::operator = (destra);
     return *this;
 }
 
-template class Gofrt<double>;
-template class Gofrt<long double>;
+template class Gofrt<double,Traiettoria>;
+#ifdef PYTHON_SUPPORT
+#include "traiettoria_numpy.h"
+template class Gofrt<double, Traiettoria_numpy>;
+#endif

@@ -1,4 +1,6 @@
 #include "traiettoria_numpy.h"
+#include <fstream>
+#include "lammps_struct.h"
 
 template <typename T>
 bool has_no_stride(const pybind11::buffer_info & buf) {
@@ -110,6 +112,43 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buff
     buffer_tipi=static_cast<int*>(info_types.ptr);
     buffer_tipi_id=new int[natoms];
     get_ntypes(); //init type ids
+}
+
+void
+Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname){
+
+    std::ofstream out(fname,std::ofstream::binary);
+    for (unsigned int t=0;t<n_timesteps;++t){
+        Intestazione_timestep head;
+        head.natoms=natoms;
+        for (unsigned int i=0;i<6;++i)
+            head.scatola[i]=scatola(t)[i];
+        head.timestep=t;
+        head.triclinic=false;
+        head.condizioni_al_contorno[0][0]=0;
+        head.condizioni_al_contorno[1][0]=0;
+        head.condizioni_al_contorno[2][0]=0;
+        head.condizioni_al_contorno[0][1]=0;
+        head.condizioni_al_contorno[1][1]=0;
+        head.condizioni_al_contorno[2][1]=0;
+        head.dimensioni_riga_output=8;
+        head.nchunk=1;
+        int n_data=head.natoms*head.dimensioni_riga_output;
+        //write timestep header
+        out.write((char*) &head,sizeof(Intestazione_timestep));
+        out.write((char*) &n_data,sizeof(int));
+
+        for (unsigned int iatom=0;iatom<head.natoms;++iatom) {
+            double data[8];
+            data[0]=iatom;
+            data[1]=get_type(iatom);
+            for (int i=0;i<3;++i){
+                data[2+i]=posizioni(t,iatom)[i];
+                data[5+i]=velocita(t,iatom)[i];
+            }
+            out.write((char*) data,sizeof(double)*8);
+        }
+    }
 }
 
 Traiettoria_numpy::~Traiettoria_numpy() {
