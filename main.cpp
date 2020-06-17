@@ -530,7 +530,7 @@ int main(int argc, char ** argv)
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<Gofrt<double>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                MediaBlocchi<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
                         gofr(&tr,blocknumber);
                 gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,dumpGK);
 
