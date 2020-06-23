@@ -45,13 +45,15 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
 endif()
 
-find_library( BPO NAMES boost_program_options)
 
-if (BPO)
-    message (STATUS "boost_program_options library found: ${BPO}")
-else()
-    message (FATAL_ERROR "boost_program_options library not found!")
-endif()
+add_subdirectory(program_options)
+#find_library( BPO NAMES boost_program_options)
+
+#if (BPO)
+#    message (STATUS "program_options library found: ${BPO}")
+#else()
+#    message (FATAL_ERROR "boost_program_options library not found!")
+#endif()
 
 
 
@@ -144,7 +146,7 @@ else ()
     message(STATUS "WARNING: xdrfile library not found (conversion from gromacs file disabled)")
 endif()
 
-target_link_libraries(${PROJECT_NAME} "${BPO}" "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
+target_link_libraries(${PROJECT_NAME} boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 target_link_libraries(${PROJECT_NAME}_lib "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)
 #add_definitions(-DANALISI)
