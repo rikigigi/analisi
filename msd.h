@@ -14,13 +14,13 @@
 #define MSD_H
 
 #include "operazionisulista.h"
-#include "traiettoria.h"
 #include <vector>
 
-class MSD : public OperazioniSuLista<MSD>
+template <class T>
+class MSD : public OperazioniSuLista<MSD<T> >
 {
 public:
-    MSD(Traiettoria *t,
+    MSD(T *t,
         unsigned int skip=1,
         unsigned int tmax=0,
         unsigned int nthreads=0,
@@ -32,11 +32,13 @@ public:
     std::vector<ssize_t> get_stride() const { return { static_cast<ssize_t> (ntypes*f_cm*sizeof(double)),static_cast<ssize_t>(ntypes*sizeof (double)),static_cast<ssize_t>(sizeof(double))};}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
-    MSD & operator =(const MSD & destra);
+    MSD<T> & operator =(const MSD<T> & destra);
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
 
 private:
-    Traiettoria * traiettoria;
+    using OperazioniSuLista<MSD<T> >::lista;
+    using OperazioniSuLista<MSD<T> >::lunghezza_lista;
+    T * traiettoria;
     unsigned int ntimesteps,skip,lmax,leff,nthread,f_cm,ntypes;
     bool cm_msd,cm_self,debug;
 };

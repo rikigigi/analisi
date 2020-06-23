@@ -511,7 +511,7 @@ int main(int argc, char ** argv)
                 }
 
                 Traiettoria test(input);
-
+                using MSD=MSD<Traiettoria>;
                 MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);
                 Msd.calcola(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);
                 for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {

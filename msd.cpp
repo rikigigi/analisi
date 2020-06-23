@@ -10,17 +10,19 @@
 
 
 
-#include "msd.h"
 #include <cmath>
 #include<thread>
 #include <vector>
 #include <fstream>
+#include "msd.h"
+#include "config.h"
+#include "traiettoria.h"
 
 #ifdef USE_MPI
 #include "mp.h"
 #endif
-
-MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa, bool calcola_msd_nel_sistema_del_centro_di_massa, bool debug) :
+template <class T>
+MSD<T>::MSD(T *t, unsigned int skip, unsigned int tmax, unsigned int nthreads, bool calcola_msd_centro_di_massa, bool calcola_msd_nel_sistema_del_centro_di_massa, bool debug) :
     traiettoria(t), lmax(tmax),skip(skip),nthread(nthreads), cm_msd(calcola_msd_centro_di_massa),debug(debug),cm_self(calcola_msd_nel_sistema_del_centro_di_massa),ntypes{0}
 {
     if (calcola_msd_centro_di_massa)
@@ -28,12 +30,12 @@ MSD::MSD(Traiettoria *t, unsigned int skip, unsigned int tmax, unsigned int nthr
     else
         f_cm=1;
 }
-
-unsigned int MSD::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+template <class T>
+unsigned int MSD<T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
     return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
-
-void MSD::reset(const unsigned int numeroTimestepsPerBlocco) {
+template <class T>
+void MSD<T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     ntypes=traiettoria->get_ntypes();
@@ -44,8 +46,8 @@ void MSD::reset(const unsigned int numeroTimestepsPerBlocco) {
     lista=new double [lunghezza_lista];
 }
 
-
-void MSD::calcola(unsigned int primo) {
+template <class T>
+void MSD<T>::calcola(unsigned int primo) {
 
 
 
@@ -162,8 +164,14 @@ void MSD::calcola(unsigned int primo) {
 
     }
 }
-
-MSD & MSD::operator=(const MSD & destra) {
-    OperazioniSuLista<MSD>::operator =( destra);
+template <class T>
+MSD<T> & MSD<T>::operator=(const MSD<T> &destra) {
+    OperazioniSuLista<MSD<T> >::operator =( destra);
     return *this;
 }
+
+template class MSD<Traiettoria>;
+#ifdef PYTHON_SUPPORT
+#include "traiettoria_numpy.h"
+template class MSD<Traiettoria_numpy>;
+#endif

@@ -75,6 +75,28 @@ void shcorr(py::module & m, std::string typestr){
 
     });
 }
+template <class T>
+void msd(py::module & m, std::string typestr){
+    using MSD=MSD<T>;
+    py::class_<MSD>(m,(std::string("MeanSquareDisplacement")+typestr).c_str(),py::buffer_protocol())
+            .def(py::init<T *, unsigned int, unsigned int, unsigned int , bool, bool,bool>())
+            .def("reset",&MSD::reset)
+            .def("getNumberOfExtraTimestepsNeeded",&MSD::numeroTimestepsOltreFineBlocco)
+            .def("calculate", &MSD::calcola)
+            .def_buffer([](MSD & m) -> py::buffer_info {
+                return py::buffer_info(
+                            m.accesso_lista(),
+                            sizeof(double),
+                            py::format_descriptor<double>::format(),
+                            m.get_shape().size(),
+                            m.get_shape(),
+                            m.get_stride()
+                            );
+            })
+            .def("__enter__",[](MSD & m) -> MSD & {return m;})
+            .def("__exit__",[](MSD & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
+            ;
+}
 
 PYBIND11_MODULE(pyanalisi,m) {
     py::class_<Traiettoria>(m,"Traj")
@@ -235,24 +257,6 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("__enter__",[](CenterOfMassDiff & c) -> CenterOfMassDiff & { return c;} )
             .def("__exit__",[](CenterOfMassDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
 
-    py::class_<MSD>(m,"MeanSquareDisplacement",py::buffer_protocol())
-            .def(py::init<Traiettoria *, unsigned int, unsigned int, unsigned int , bool, bool,bool>())
-            .def("reset",&MSD::reset)
-            .def("getNumberOfExtraTimestepsNeeded",&MSD::numeroTimestepsOltreFineBlocco)
-            .def("calculate", &MSD::calcola)
-            .def_buffer([](MSD & m) -> py::buffer_info {
-                return py::buffer_info(
-                            m.accesso_lista(),
-                            sizeof(double),
-                            py::format_descriptor<double>::format(),
-                            m.get_shape().size(),
-                            m.get_shape(),
-                            m.get_stride()
-                            );
-            })
-            .def("__enter__",[](MSD & m) -> MSD & {return m;})
-            .def("__exit__",[](MSD & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
-            ;
 
     py::class_<Traiettoria_numpy>(m,"Trajectory")
             .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,bool,bool>(),R"lol(
@@ -269,4 +273,6 @@ PYBIND11_MODULE(pyanalisi,m) {
     gofrt<Traiettoria_numpy>(m,"");
     shcorr<Traiettoria>(m,"_lammps");
     shcorr<Traiettoria_numpy>(m,"");
+    msd<Traiettoria>(m,"_lammps");
+    msd<Traiettoria_numpy>(m,"");
 }

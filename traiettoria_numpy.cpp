@@ -112,8 +112,38 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buff
     buffer_tipi=static_cast<int*>(info_types.ptr);
     buffer_tipi_id=new int[natoms];
     get_ntypes(); //init type ids
+
+    //
+    //calculate center of mass velocity and position (without pbc)
+    calc_cm_pos_vel(static_cast<double*>(info_pos.ptr),buffer_posizioni_cm);
+    calc_cm_pos_vel(static_cast<double*>(info_vel.ptr),buffer_velocita_cm);
 }
 
+void
+Traiettoria_numpy::calc_cm_pos_vel(double * a, double * cm){
+    if (cm==nullptr){
+        cm=new double[3*n_timesteps*ntypes];
+    } else {
+        return;
+    }
+    int *cont=new int[ntypes];
+    for (int i=0;i<n_timesteps;++i) {
+        for (int itype=0;itype<ntypes;++itype) {
+            cont[itype]=0;
+            for (int icoord=0;icoord<3;icoord++){
+                cm[(i*ntypes+itype)*3+icoord]=0.0;
+            }
+        }
+        for (int iatom=0;iatom<natoms;++iatom){
+            int itype=get_type(iatom);
+            cont[itype]++;
+            for (int icoord=0;icoord<3;icoord++){
+                cm[(i*ntypes+itype)*3+icoord]+=(a[(i*natoms+iatom)*3+icoord]-cm[(i*ntypes+itype)*3+icoord])/double(cont[itype]);
+            }
+        }
+    }
+    delete [] cont;
+}
 void
 Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname){
 
@@ -160,5 +190,7 @@ Traiettoria_numpy::~Traiettoria_numpy() {
     delete [] buffer_tipi_id;
     delete [] masse;
     delete [] cariche;
+    delete [] buffer_posizioni_cm;
+    delete [] buffer_velocita_cm;
 
 }
