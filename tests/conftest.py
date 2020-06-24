@@ -1,6 +1,10 @@
 import pytest
 import os
 
+import faulthandler
+faulthandler.enable()
+
+
 @pytest.fixture(scope='session')
 def filepath_tests():
     """Return the absolute filepath of the `tests` folder.
@@ -12,7 +16,7 @@ def filepath_tests():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def numpy_traj(filepath_tests):
     import numpy as np
     pos = np.load(filepath_tests + '/data/positions.npy')
@@ -22,7 +26,7 @@ def numpy_traj(filepath_tests):
     types[-8:]=1
     return [pos, vel, types, box]
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def analisi_traj(numpy_traj):
     import pyanalisi
     return pyanalisi.Trajectory(*numpy_traj,True, False)

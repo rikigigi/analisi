@@ -19,7 +19,7 @@ public:
 
 private:
     bool lammps_box,posizioni_allocated;
-    void calc_cm_pos_vel(double * a, double * cm);
+    void calc_cm_pos_vel(double * a, double *&cm);
 };
 
 #endif // TRAIETTORIA_NUMPY_H

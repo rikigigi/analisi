@@ -85,6 +85,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buff
             }
         }
     }else {
+        posizioni_allocated=false;
         buffer_posizioni=static_cast<double*>(info_pos.ptr);
     }
     buffer_velocita=static_cast<double*>(info_vel.ptr);
@@ -120,7 +121,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buff
 }
 
 void
-Traiettoria_numpy::calc_cm_pos_vel(double * a, double * cm){
+Traiettoria_numpy::calc_cm_pos_vel(double * a, double * & cm){
     if (cm==nullptr){
         cm=new double[3*n_timesteps*ntypes];
     } else {
