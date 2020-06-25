@@ -121,21 +121,7 @@ int main(int argc, char ** argv)
     Mp::mpi(&argc,&argv);
 #endif
 
-    std::cerr << "cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2020\n=========\n";
-    std::cerr << "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags (Release)"
-
-                 CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_RELEASE " (Debug) " CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_DEBUG " (build type was " CMAKE_BUILD_TYPE ")"
-                 " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR <<
-#ifdef PYTHON_SUPPORT
-           "\nWith python support: " PYTHON_SUPPORT <<
-#endif
-#ifdef MPI
-           "\nWith MPI support" <<
-#endif
-#ifdef XDR_FILE
-           "\nWith gromacs XDR file conversion support" <<
-#endif
-                 std::endl;
+    std::cerr << _info_msg<<  std::endl;
 
     std::cerr << "arguments (enclosed by '') were:";
     for (int i=0;i<argc;++i) {

@@ -14,6 +14,7 @@
 #include "msd.h"
 #include "traiettoria_numpy.h"
 #include "sphericalcorrelations.h"
+#include "config.h"
 
 namespace py = pybind11;
 
@@ -275,4 +276,7 @@ PYBIND11_MODULE(pyanalisi,m) {
     shcorr<Traiettoria_numpy>(m,"");
     msd<Traiettoria>(m,"_lammps");
     msd<Traiettoria_numpy>(m,"");
+    m.def("info",[]() -> std::string{
+        return _info_msg ;
+    });
 }

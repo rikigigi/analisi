@@ -121,8 +121,11 @@ public:
         double *xj=posizioni(jtimestep,j);
         for (unsigned int idim=0;idim<3;idim++) {
             x[idim]=xi[idim]-xj[idim];
+            int k= (x[idim]/l[idim] + ((x[idim]>=0.0) ? 0.5 : -0.5));
+            x[idim]-=l[idim]*k;
+            /*
             if (x[idim] >   l[idim] * 0.5) x[idim] = x[idim] - l[idim];
-            if (x[idim] <= -l[idim] * 0.5) x[idim] = x[idim] + l[idim];
+            if (x[idim] <= -l[idim] * 0.5) x[idim] = x[idim] + l[idim];*/
             d2+=x[idim]*x[idim];
         }
         return d2;
