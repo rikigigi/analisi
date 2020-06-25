@@ -37,7 +37,7 @@
 #define XDR_FILE
 #endif
 
-const char * _info_msg=
+const static char * _info_msg=
 "cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2020\n=========\n"
  "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags (Release)"
              CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_RELEASE " (Debug) " CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_DEBUG " (build type was " CMAKE_BUILD_TYPE ")"
