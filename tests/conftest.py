@@ -23,7 +23,10 @@ def numpy_traj(filepath_tests):
     vel = np.load(filepath_tests + '/data/velocities.npy')
     box = np.load(filepath_tests + '/data/cells.npy')
     types = np.zeros(pos.shape[1], dtype = np.int32)
-    types[-8:]=1
+    types[-16:-8]=1
+    types[-8:]=2
+    print('position array shape is {}'.format(pos.shape))
+    print('first cell matrix is {}'.format(box[0]))
     return [pos, vel, types, box]
 
 @pytest.fixture(scope='session')
