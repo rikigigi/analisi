@@ -153,7 +153,7 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
     if (stop_ts<=0)
         stop_ts=n_timesteps;
     std::ofstream out(fname,std::ofstream::binary);
-    for (int t=0;t<stop_ts;++t){
+    for (int t=start_ts;t<stop_ts;++t){
         Intestazione_timestep head;
         head.natoms=natoms;
         for (unsigned int i=0;i<6;++i)
