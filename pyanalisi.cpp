@@ -268,7 +268,13 @@ PYBIND11_MODULE(pyanalisi,m) {
                 types (int) python array (natoms)
                 lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
 )lol")
-            .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj);
+            .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj,R"lol(
+                 Parameters
+                 ----------
+                 file name (string)
+                 starting timestep (int)
+                 end timestep (int)  -- if < 0 it will dump all the trajectory
+)lol");
 
     gofrt<Traiettoria>(m,"_lammps");
     gofrt<Traiettoria_numpy>(m,"");

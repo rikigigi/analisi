@@ -146,10 +146,14 @@ Traiettoria_numpy::calc_cm_pos_vel(double * a, double * & cm){
     delete [] cont;
 }
 void
-Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname){
-
+Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts){
+    if (start_ts<0 || start_ts>=n_timesteps){
+        throw std::runtime_error("You must provide a starting timestep between 0 and the number of timesteps!");
+    }
+    if (stop_ts<=0)
+        stop_ts=n_timesteps;
     std::ofstream out(fname,std::ofstream::binary);
-    for (unsigned int t=0;t<n_timesteps;++t){
+    for (int t=0;t<stop_ts;++t){
         Intestazione_timestep head;
         head.natoms=natoms;
         for (unsigned int i=0;i<6;++i)

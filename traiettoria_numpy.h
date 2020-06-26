@@ -15,7 +15,7 @@ public:
     double * posizioni_cm(const int & timestep, const int & tipo){return buffer_posizioni_cm+timestep*ntypes*3 + tipo*3;}
     double * velocita_cm(const int & timestep, const int & tipo){return buffer_velocita_cm+timestep*ntypes*3 + tipo*3;}
     double *scatola_last(){return buffer_scatola + (n_timesteps-1)*6; }
-    void dump_lammps_bin_traj(const std::string &fname);
+    void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);
 
 private:
     bool lammps_box,posizioni_allocated;

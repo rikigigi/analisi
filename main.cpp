@@ -40,6 +40,9 @@
 #ifdef DEBUG
 #include "readlog.h"
 #endif
+#ifndef NDEBUG
+#include <fenv.h>
+#endif
 #ifdef USE_MPI
 #include "mp.h"
 #endif
@@ -119,6 +122,10 @@ int main(int argc, char ** argv)
 
 #ifdef USE_MPI
     Mp::mpi(&argc,&argv);
+#endif
+
+#ifndef NDEBUG
+    feenableexcept(FE_INVALID | FE_OVERFLOW);
 #endif
 
     std::cerr << _info_msg<<  std::endl;
@@ -550,7 +557,7 @@ int main(int argc, char ** argv)
                 }
                 std::cerr << "Inizio del calcolo delle funzioni di correlazione della densità sviluppata in armoniche sferiche...\n";
                 Traiettoria tr(input);
-                tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
+                tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
                 MediaBlocchi<SphericalCorrelations<10,double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
                         sh(&tr,blocknumber);
