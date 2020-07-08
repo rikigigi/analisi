@@ -45,7 +45,7 @@ const static char * _info_msg=
 #ifdef PYTHON_SUPPORT
        "\nWith python support: " PYTHON_SUPPORT
 #endif
-#ifdef MPI
+#ifdef USE_MPI
 "\nWith MPI support"
 #endif
 #ifdef XDR_FILE
