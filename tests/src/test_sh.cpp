@@ -24,14 +24,22 @@ struct TrajSetup{
 };
 
 struct DataRegression{
-    DataRegression(): path{base_path.path + "cpp_regression_data/"} {}
+    DataRegression():path{base_path.path + "cpp_regression_data/"}, max_double_relative_error{1e-10} {}
     TestPath base_path;
     std::string path;
+    double max_double_relative_error;
+    bool is_same(double a, double b) {
+        double max=fabs(a)>fabs(b) ? a : b;
+        double min=fabs(a)>fabs(b) ? b : a;
+        if (a==0 and b==0) return true;
+        if ((max-min)/max > max_double_relative_error) return false;
+        return true;
+    }
     bool test_regression(std::string name, double * data, size_t size) {
 	if (size==0) {
 	   BOOST_TEST_MESSAGE("zero size data not supported");
            return false;
-	}
+    }
 	std::ifstream from_fs(path+name, std::ios::binary);
         std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(from_fs), {});
 	if (buffer.size()==0) {
@@ -52,8 +60,14 @@ struct DataRegression{
 	    return false;
 	}
 	double * data_fs= (double*) buffer.data();
-	for (size_t i=0;i<size;++i){
-	    if (data_fs[i]!=data[i]) return false;
+    for (size_t i=0;i<size;++i){
+        if (! is_same(data_fs[i],data[i])) {
+            BOOST_TEST_MESSAGE("data differs: " <<data_fs[i] << " " << data[i]<<" " <<data[i]-data[i] );
+            for (size_t j=0;j<size;j++){
+                BOOST_TEST_MESSAGE(data_fs[j] << " " << data[j]<<" " <<data[j]-data[j] );
+            }
+            return false;
+        }
 	}
 	return true;
     }
