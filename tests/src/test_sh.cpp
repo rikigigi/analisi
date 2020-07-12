@@ -62,9 +62,9 @@ struct DataRegression{
 	double * data_fs= (double*) buffer.data();
     for (size_t i=0;i<size;++i){
         if (! is_same(data_fs[i],data[i])) {
-            BOOST_TEST_MESSAGE("data differs: " <<data_fs[i] << " " << data[i]<<" " <<data[i]-data[i] );
+            BOOST_TEST_MESSAGE("data differs: " <<data_fs[i] << " " << data[i]<<" " <<data_fs[i]-data[i] );
             for (size_t j=0;j<size;j++){
-                BOOST_TEST_MESSAGE(data_fs[j] << " " << data[j]<<" " <<data[j]-data[j] );
+                BOOST_TEST_MESSAGE(data_fs[j] << " " << data[j]<<" " <<data_fs[j]-data[j] );
             }
             return false;
         }
@@ -100,24 +100,57 @@ struct ShFixture{
     }
 };
 
+typedef ShFixture<10,1> ShFix10_1 ;
 typedef ShFixture<10,2> ShFix10_2 ;
-typedef ShFixture<10,2> ShFix10_3 ;
+typedef ShFixture<10,3> ShFix10_3 ;
 
 #define TESTS(T)\
 BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
-BOOST_AUTO_TEST_CASE(test_single_snapshot ## T)\
+BOOST_AUTO_TEST_CASE(test_single_snapshot)\
 {\
     double * res = new_res_array();\
     calc(0,res);\
     BOOST_TEST(data.test_regression("test_single_snapshot",res,new_res_array_size()));\
     delete [] res;\
 }\
-BOOST_AUTO_TEST_CASE(test_calcola ## t)\
+BOOST_AUTO_TEST_CASE(test_calcola)\
 {\
     sh.calcola(0);\
     BOOST_TEST(data.test_regression("test_calcola",sh.accesso_lista(),sh.lunghezza()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 
+TESTS(ShFix10_1)
 TESTS(ShFix10_2)
 TESTS(ShFix10_3)
+
+
+#include "calc_buffer.h"
+
+struct FakeCalc{
+    FakeCalc(): n_eval{0},n_check{0} {}
+    void calc(int k, int* res) {
+        *res=k*42;
+        n_eval++;
+    }
+    bool check(int k, int* res) {
+        n_check++;
+        return *res == k*42;
+    }
+    int n_eval,n_check;
+};
+
+
+
+BOOST_AUTO_TEST_CASE(test_buffer){
+    CalcBuffer<int> test(29,1);
+    FakeCalc calculator;
+    for (int i=35;i<97;++i){
+        for (int j=i-1;j<i+33;++j){
+            BOOST_TEST(calculator.check(i,test.buffer_calc(calculator,i)));
+            BOOST_TEST(calculator.check(j,test.buffer_calc(calculator,j)));
+        }
+    }
+    BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);
+}
+
