@@ -123,6 +123,9 @@ set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
+add_executable(test_sh tests/src/test_sh.cpp)
+target_link_libraries(test_sh ${PROJECT_NAME}_lib)
+
 if (${PYTHONLIBS_FOUND})
 #python interface
 set (PYTHON_SUPPORT ${PYTHON_LIBRARIES})
@@ -134,6 +137,7 @@ add_subdirectory( pybind11 )
 pybind11_add_module(pyanalisi pyanalisi.cpp)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
 endif()
+
 
 if (FFTW_OMP)
     set (FFTW_MT "${FFTW_OMP}" )
@@ -220,7 +224,7 @@ if (C_COMPILER_SUPPORTS_LTO AND CXX_COMPILER_SUPPORTS_LTO AND CMAKE_BUILD_TYPE S
     set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto")
 endif()
 
-
+set(PROJ_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 

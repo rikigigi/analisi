@@ -43,6 +43,7 @@ public:
         return (l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);
     }
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
+    inline void sh_snapshot(int timestep, TFLOAT * workspace, TFLOAT * cheby, TFLOAT * result, double *) ;
 private:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
@@ -52,7 +53,6 @@ private:
         return (l+1)*(l+1)*(nbin*(ntypes*iatom+jtype)+ibin);
     }
 
-    inline void sh_snapshot(int timestep, TFLOAT * workspace, TFLOAT * cheby, TFLOAT * result, double *) ;
 
     TFLOAT rmin, rmax,dr;
     unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms;
