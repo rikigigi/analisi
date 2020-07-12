@@ -127,9 +127,8 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             int sh_final_size=sh_single_type_size*ntypes/(lmax+1); // remember: we sum over m before averaging on central atoms
 
             //allocate space
-            TFLOAT *aveWork=new TFLOAT[sh_snap_size +sh_final_size];
-            TFLOAT *aveWork1=aveWork;
-            TFLOAT *aveTypes=aveWork+  sh_snap_size;
+            TFLOAT *aveWork1=new TFLOAT[sh_snap_size];
+            TFLOAT *aveTypes=new TFLOAT[sh_final_size];
             int *avecont=new int[ntypes];
 
             //buffer for few sh calculations
@@ -147,24 +146,11 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     TFLOAT * sh1=
                     buffer.buffer_calc(*this,imedia+primo,workspace,cheby,l);
 
-                    calc(imedia+primo,aveWork1,workspace,cheby,l);
-                    for (int i=0;i<sh_snap_size;++i){
-                        if (sh1[i]!=aveWork1[i]){
-                            std::cerr << "Error in comparison: it is a bug\n";
-                            abort();
-                        }
-                    }
                     //center atom loop for the snapshot at imedia+dt
                     TFLOAT * sh2=
                     buffer.buffer_calc(*this,imedia+primo+dt,workspace,cheby,l);
 
                     calc(imedia+primo+dt,aveWork1,workspace,cheby,l);
-                    for (int i=0;i<sh_snap_size;++i){
-                        if (sh2[i]!=aveWork1[i]){
-                            std::cerr << "Error in comparison: it is a bug\n";
-                            abort();
-                        }
-                    }
                     //compute correlations -- this is simple!
                     for (int i=0;i<sh_snap_size;++i) {
                         aveWork1[i]=sh1[i]*sh2[i];
@@ -221,7 +207,8 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
             }
 
-            delete [] aveWork;
+            delete [] aveWork1;
+            delete [] aveTypes;
             delete [] avecont;
 
         }));
