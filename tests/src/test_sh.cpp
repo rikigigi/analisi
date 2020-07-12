@@ -73,9 +73,9 @@ struct DataRegression{
     }
 };
 
-template <int l>
+template <int l,int NTH>
 struct ShFixture{
-    ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), 0.5, 3.0, nbin, 17, 2, 13, false} {
+    ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), 0.5, 3.0, nbin, 17, NTH, 13, false} {
 	    sh.reset(100);
             data.path=data.path+"sh/";
     }
@@ -100,17 +100,24 @@ struct ShFixture{
     }
 };
 
+typedef ShFixture<10,2> ShFix10_2 ;
+typedef ShFixture<10,2> ShFix10_3 ;
 
-BOOST_FIXTURE_TEST_SUITE(sh, ShFixture<10>)
-    
-    BOOST_AUTO_TEST_CASE(test_single_snapshot)
-    {
-	double * res = new_res_array();
-        calc(0,res);
-	BOOST_TEST(data.test_regression("test_single_snapshot",res,new_res_array_size()));
-
-    }
-
+#define TESTS(T)\
+BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
+BOOST_AUTO_TEST_CASE(test_single_snapshot ## T)\
+{\
+    double * res = new_res_array();\
+    calc(0,res);\
+    BOOST_TEST(data.test_regression("test_single_snapshot",res,new_res_array_size()));\
+    delete [] res;\
+}\
+BOOST_AUTO_TEST_CASE(test_calcola ## t)\
+{\
+    sh.calcola(0);\
+    BOOST_TEST(data.test_regression("test_calcola",sh.accesso_lista(),sh.lunghezza()));\
+}\
 BOOST_AUTO_TEST_SUITE_END()
 
-
+TESTS(ShFix10_2)
+TESTS(ShFix10_3)
