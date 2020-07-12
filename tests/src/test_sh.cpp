@@ -76,7 +76,7 @@ struct ShFixture{
 	double l_[3]={traj.traj.scatola(timestep)[1]-traj.traj.scatola(timestep)[0],
                      traj.traj.scatola(timestep)[3]-traj.traj.scatola(timestep)[2],
                      traj.traj.scatola(timestep)[5]-traj.traj.scatola(timestep)[4]};
-        sh.sh_snapshot(timestep, workspace,cheby, res,l_);
+	    sh.calc(timestep, res, workspace,cheby,l_);
     }
     size_t new_res_array_size(){
 	return (l+1)*(l+1)*natoms*nbin*ntypes;
