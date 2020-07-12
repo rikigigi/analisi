@@ -53,6 +53,7 @@ private:
         return (l+1)*(l+1)*(nbin*(ntypes*iatom+jtype)+ibin);
     }
 
+
     TFLOAT rmin, rmax,dr;
     unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms;
     bool debug;

@@ -33,6 +33,7 @@
 #cmakedefine CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}"
 #cmakedefine USE_MPI
 #cmakedefine HAVE_XDRFILE
+#cmakedefine PROJ_DIR "${PROJ_DIR}"
 #ifdef HAVE_XDRFILE
 #define XDR_FILE
 #endif
