@@ -4,6 +4,7 @@
 #include <thread>
 #include <sstream>
 #include "config.h"
+#include "calc_buffer.h"
 
 template <int l, class TFLOAT, class T>
 SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
@@ -57,7 +58,7 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
 
 template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::sh_snapshot(int timestep, TFLOAT *workspace, TFLOAT * cheby, TFLOAT *result, double *l) {
+void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby, double *l) {
     //zero result
     for (int i=0;i<(lmax+1)*(lmax+1)*natoms*nbin*ntypes;++i) {
         result[i]=0;
@@ -126,10 +127,13 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             int sh_final_size=sh_single_type_size*ntypes/(lmax+1); // remember: we sum over m before averaging on central atoms
 
             //allocate space
-            TFLOAT *aveWork=new TFLOAT[sh_snap_size*2 +sh_final_size];
-            TFLOAT *aveWork1=aveWork, *aveWork2=aveWork+sh_snap_size;
-            TFLOAT *aveTypes=aveWork+  sh_snap_size*2;
+            TFLOAT *aveWork=new TFLOAT[sh_snap_size +sh_final_size];
+            TFLOAT *aveWork1=aveWork;
+            TFLOAT *aveTypes=aveWork+  sh_snap_size;
             int *avecont=new int[ntypes];
+
+            //buffer for few sh calculations
+           CalcBuffer<TFLOAT> buffer(30,sh_snap_size);
 
             //loop over time differences -- eheh, did you forgot about time lags?
             for (unsigned int dt=npassith*ith;dt<ultimo;dt++){
@@ -140,12 +144,30 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                 //average over starting timestep
                 for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
                     //center atom loop for the snapshot at imedia
-                    sh_snapshot(imedia+primo,workspace,cheby,aveWork1,l);
+                    TFLOAT * sh1=
+                    buffer.buffer_calc(*this,imedia+primo,workspace,cheby,l);
+
+                    calc(imedia+primo,aveWork1,workspace,cheby,l);
+                    for (int i=0;i<sh_snap_size;++i){
+                        if (sh1[i]!=aveWork1[i]){
+                            std::cerr << "Error in comparison: it is a bug\n";
+                            abort();
+                        }
+                    }
                     //center atom loop for the snapshot at imedia+dt
-                    sh_snapshot(imedia+primo+dt,workspace,cheby,aveWork2,l);
+                    TFLOAT * sh2=
+                    buffer.buffer_calc(*this,imedia+primo+dt,workspace,cheby,l);
+
+                    calc(imedia+primo+dt,aveWork1,workspace,cheby,l);
+                    for (int i=0;i<sh_snap_size;++i){
+                        if (sh2[i]!=aveWork1[i]){
+                            std::cerr << "Error in comparison: it is a bug\n";
+                            abort();
+                        }
+                    }
                     //compute correlations -- this is simple!
                     for (int i=0;i<sh_snap_size;++i) {
-                        aveWork1[i]*=aveWork2[i];
+                        aveWork1[i]=sh1[i]*sh2[i];
                     }
 
                     //here we have to average first over m... (otherwise we calculate an average of something that is not invariant under rotation, so we probably get something that always decays to zero, unless we are in a crystal

@@ -4,7 +4,6 @@
 #include "operazionisulista.h"
 
 
-
 template <int l,class TFLOAT, class T>
 class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>
 {
@@ -43,6 +42,8 @@ public:
         return (l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);
     }
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
+    inline void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby, double *) ;
+
 private:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
@@ -51,8 +52,6 @@ private:
     inline int index_wrk(const int iatom,const int jtype,const int ibin=0) const noexcept {
         return (l+1)*(l+1)*(nbin*(ntypes*iatom+jtype)+ibin);
     }
-
-    inline void sh_snapshot(int timestep, TFLOAT * workspace, TFLOAT * cheby, TFLOAT * result, double *) ;
 
     TFLOAT rmin, rmax,dr;
     unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms;
