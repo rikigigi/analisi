@@ -28,11 +28,30 @@ struct DataRegression{
     TestPath base_path;
     std::string path;
     double max_double_relative_error;
+    void fuzz(double *a,size_t size) {
+        static double s=0.76;
+        for (size_t i=0;i<size;++i) {
+            s=3.78*s*(1.0-s);
+            a[i]=s;
+        }
+    }
     bool is_same(double a, double b) {
         double max=fabs(a)>fabs(b) ? a : b;
         double min=fabs(a)>fabs(b) ? b : a;
         if (a==0 and b==0) return true;
         if ((max-min)/max > max_double_relative_error) return false;
+        return true;
+    }
+    bool is_same(double *a, double *b, size_t size) {
+        for (size_t i=0;i<size;++i){
+            if (! is_same(a[i],b[i])) {
+                BOOST_TEST_MESSAGE("data differs: " <<a[i] << " " << b<<" " <<a[i]-b[i] );
+                for (size_t j=0;j<size;j++){
+                    BOOST_TEST_MESSAGE(a[j] << " " << b[j]<<" " <<a[j]-b[j] );
+                }
+                return false;
+            }
+        }
         return true;
     }
     bool test_regression(std::string name, double * data, size_t size) {
@@ -59,17 +78,8 @@ struct DataRegression{
         BOOST_TEST_MESSAGE(buffer.size());
 	    return false;
 	}
-	double * data_fs= (double*) buffer.data();
-    for (size_t i=0;i<size;++i){
-        if (! is_same(data_fs[i],data[i])) {
-            BOOST_TEST_MESSAGE("data differs: " <<data_fs[i] << " " << data[i]<<" " <<data_fs[i]-data[i] );
-            for (size_t j=0;j<size;j++){
-                BOOST_TEST_MESSAGE(data_fs[j] << " " << data[j]<<" " <<data_fs[j]-data[j] );
-            }
-            return false;
-        }
-	}
-	return true;
+    double * data_fs= (double*) buffer.data();
+    return is_same(data_fs,data,size);
     }
 };
 
@@ -106,13 +116,6 @@ typedef ShFixture<10,3> ShFix10_3 ;
 
 #define TESTS(T)\
 BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
-BOOST_AUTO_TEST_CASE(test_single_snapshot)\
-{\
-    double * res = new_res_array();\
-    calc(0,res);\
-    BOOST_TEST(data.test_regression("test_single_snapshot",res,new_res_array_size()));\
-    delete [] res;\
-}\
 BOOST_AUTO_TEST_CASE(test_calcola)\
 {\
     sh.calcola(0);\
@@ -123,6 +126,57 @@ BOOST_AUTO_TEST_SUITE_END()
 TESTS(ShFix10_1)
 TESTS(ShFix10_2)
 TESTS(ShFix10_3)
+
+BOOST_FIXTURE_TEST_SUITE(sh_snapshots, ShFix10_1)
+BOOST_AUTO_TEST_CASE(test_single_snapshot)
+{
+    BOOST_TEST(new_res_array_size()==sh.get_snap_size());
+    double * res = new_res_array();
+    calc(0,res);
+    BOOST_TEST(data.test_regression("test_single_snapshot",res,new_res_array_size()));
+    calc(0,res);
+    BOOST_TEST(data.test_regression("test_single_snapshot",res,new_res_array_size()));
+    delete [] res;
+}
+BOOST_AUTO_TEST_CASE(test_corr_consistency){
+    double *sh1= new_res_array();
+    double *sh2= new_res_array();
+    double *sh3= new_res_array();
+    double *res1= new double[sh.get_final_snap_size()];
+    double *res2= new double[sh.get_final_snap_size()];
+    int * cont=new int[traj.traj.get_ntypes()];
+    data.fuzz(sh1,sh.get_snap_size());
+    data.fuzz(sh2,sh.get_snap_size());
+    data.fuzz(sh3,sh.get_snap_size());
+    data.fuzz(res1,sh.get_final_snap_size());
+    data.fuzz(res2,sh.get_final_snap_size());
+    calc(2,sh1);
+    data.fuzz(sh3,sh.get_snap_size());
+    data.fuzz(res1,sh.get_final_snap_size());
+    data.fuzz(res2,sh.get_final_snap_size());
+    calc(17,sh2);
+    data.fuzz(sh3,sh.get_snap_size());
+    data.fuzz(res1,sh.get_final_snap_size());
+    data.fuzz(res2,sh.get_final_snap_size());
+    sh.corr_sh_calc(sh1,sh2,res1,sh3,sh.get_snap_size(),sh.get_final_snap_size(),cont);
+    data.fuzz(sh3,sh.get_snap_size());
+    data.fuzz(res2,sh.get_final_snap_size());
+    sh.corr_sh_calc(sh1,sh2,res2,sh3,sh.get_snap_size(),sh.get_final_snap_size(),cont);
+    BOOST_TEST(data.is_same(res1,res2,sh.get_final_snap_size()));
+    data.fuzz(sh3,sh.get_snap_size());
+    data.fuzz(res2,sh.get_final_snap_size());
+    sh.corr_sh_calc(sh1,sh2,res2,sh1,sh.get_snap_size(),sh.get_final_snap_size(),cont);
+    BOOST_TEST(data.is_same(res1,res2,sh.get_final_snap_size()));
+
+    delete [] sh1;
+    delete [] sh2;
+    delete [] sh3;
+    delete [] res1;
+    delete [] res2;
+    delete [] cont;
+
+}
+BOOST_AUTO_TEST_SUITE_END()
 
 
 #include "calc_buffer.h"
@@ -147,8 +201,10 @@ BOOST_AUTO_TEST_CASE(test_buffer){
     FakeCalc calculator;
     for (int i=35;i<97;++i){
         for (int j=i-1;j<i+33;++j){
-            BOOST_TEST(calculator.check(i,test.buffer_calc(calculator,i)));
-            BOOST_TEST(calculator.check(j,test.buffer_calc(calculator,j)));
+            int * a=test.buffer_calc(calculator,i),
+                * b=test.buffer_calc(calculator,j);
+            BOOST_TEST(calculator.check(i,a));
+            BOOST_TEST(calculator.check(j,b));
         }
     }
     BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);

@@ -42,7 +42,17 @@ public:
         return (l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);
     }
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
-    inline void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby, double *) ;
+    int get_single_type_size() const {
+        return (l+1)*(l+1)*nbin*ntypes;
+    }
+    int get_snap_size()const{
+        return get_single_type_size()*natoms;
+    }
+    int get_final_snap_size() const {
+        return get_single_type_size()*ntypes/(l+1);
+    }
+    inline void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby, double *) const;
+    void corr_sh_calc(const TFLOAT * sh1, const TFLOAT *sh2, TFLOAT * aveTypes, TFLOAT * aveWork1, int sh_snap_size , int sh_final_size, int *avecont) const noexcept;
 
 private:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
@@ -52,6 +62,9 @@ private:
     inline int index_wrk(const int iatom,const int jtype,const int ibin=0) const noexcept {
         return (l+1)*(l+1)*(nbin*(ntypes*iatom+jtype)+ibin);
     }
+
+
+
 
 
     TFLOAT rmin, rmax,dr;

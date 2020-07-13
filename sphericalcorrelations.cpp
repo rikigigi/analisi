@@ -57,8 +57,9 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 }
 
 
+
 template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby, double *l) {
+void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby, double *l) const {
     //zero result
     for (int i=0;i<(lmax+1)*(lmax+1)*natoms*nbin*ntypes;++i) {
         result[i]=0;
@@ -103,8 +104,6 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     unsigned int npassith=leff/nthreads;
     std::vector<std::thread> threads;
 
-
-
     for (unsigned int  ith=0;ith<nthreads;ith++) {
         threads.push_back(std::thread([&,ith](){
             unsigned int ultimo= (ith != nthreads-1 )?npassith*(ith+1):leff;
@@ -119,26 +118,26 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             //working space for averages of correlations over atomic types
             //for every atom I have to allocate space for the (l,m) matrix of coefficients (used to describe the environment around it)
             //then I calculate separately the (l,m) matrix for each type in the environment and for different values of the radial distance (bins)
-            int sh_single_type_size=(lmax+1)*(lmax+1)*nbin*ntypes;
+
             //this is for all atoms. I will compute correlations of objects that are such big
-            int sh_snap_size=sh_single_type_size*natoms;
+            int sh_snap_size=get_snap_size();
             //at the end I will first sum over all m: the (l,m) matrix will become an (l) vector
             //then I do the average over the central atoms of the same type: the size of the result (for each time lag) is:
-            int sh_final_size=sh_single_type_size*ntypes/(lmax+1); // remember: we sum over m before averaging on central atoms
+            int sh_final_size=get_final_snap_size(); // remember: we sum over m before averaging on central atoms
 
             //allocate space
             TFLOAT *aveWork1=new TFLOAT[sh_snap_size];
             TFLOAT *aveTypes=new TFLOAT[sh_final_size];
             int *avecont=new int[ntypes];
-
             //buffer for few sh calculations
-           CalcBuffer<TFLOAT> buffer(30,sh_snap_size);
+            CalcBuffer<TFLOAT> buffer(30,sh_snap_size);
+
 
             //loop over time differences -- eheh, did you forgot about time lags?
             for (unsigned int dt=npassith*ith;dt<ultimo;dt++){
 
                 //set to zero the result for this time lag
-                azzera(index(dt,0,0),index(dt,ntypes-1,ntypes-1));
+                azzera(index(dt,0,0),index(dt+1,0,0));
 
                 //average over starting timestep
                 for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
@@ -150,54 +149,8 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     TFLOAT * sh2=
                     buffer.buffer_calc(*this,imedia+primo+dt,workspace,cheby,l);
 
-                    calc(imedia+primo+dt,aveWork1,workspace,cheby,l);
-                    //compute correlations -- this is simple!
-                    for (int i=0;i<sh_snap_size;++i) {
-                        aveWork1[i]=sh1[i]*sh2[i];
-                    }
+                    corr_sh_calc(sh1,sh2,aveTypes,aveWork1, sh_snap_size, sh_final_size, avecont);
 
-                    //here we have to average first over m... (otherwise we calculate an average of something that is not invariant under rotation, so we probably get something that always decays to zero, unless we are in a crystal
-                    //sum over m: sum everything and put it where the m=0 was placed before
-                    //use a nice recurrent structure to keep track of the location of the data
-                    using MultiVal = SpecialFunctions::MultiValDynamic::MultiVal<lmax,TFLOAT>;
-                    MultiVal v;
-                    for (int iatom=0;iatom<natoms;++iatom) {
-                        for (int jtype=0;jtype<ntypes;++jtype){
-                            for (int ibin=0;ibin<nbin;++ibin){
-                                v.init(aveWork1+index_wrk(iatom,jtype,ibin));
-                                v.sum_in_m_zero();
-                            }
-                        }
-                    }
-
-                    //do averages over atomic types
-                    for (int i=0;i<ntypes;++i){
-                        avecont[i]=0;
-                    }
-                    for (int i=0;i<sh_final_size;++i) {
-                        aveTypes[i]=0.0;
-                    }
-                    for (int iatom=0;iatom<natoms;++iatom) { // loop over center atoms and average correlation functions according to their type
-                        int itype=t.get_type(iatom);
-                        avecont[itype]++;
-                        //average only the sum over m value, that is placed in the memory location corresponding to m=0.
-                        // Loop over chunks of (l,m) coefficients ( (l+1)^2 numbers)
-                        for (int jtype=0;jtype<ntypes;++jtype)
-                            for (int ibin=0;ibin<nbin;++ibin) {
-                                v.init(aveWork1+index_wrk(iatom,jtype,ibin)); //set the nice recursive structure that gives some order to the coefficients
-                                //the following does: average += (value-average)/counter.
-                                //A nice recursive function is used to avoid error prone indexes of arrays with different strides.
-                                // (it use metaprogramming tecniques: it should unroll with compiler optimization on!)
-                                v.running_average_m_zero_vector(aveTypes+index(0,itype,jtype,ibin),TFLOAT(avecont[itype]));
-                            }
-//                            for (int ll=0;ll<lmax;++ll){
-//                                aveTypes[index(0,itype,jtype,ibin)+ll]+=(aveWork1[index_wrk(iatom,jtype,ibin)+__LL__]-aveTypes[index(0,itype,jtype,ibin)+ll])/TFLOAT(avecont[itype]);
-//                            }
-//                        for (int ll=0;ll<sh_single_type_size;++ll){
-//                            int idx=itype*sh_single_type_size+ll;
-//                            aveTypes[idx]+=(aveWork1[sh_single_type_size*iatom+ll]-aveTypes[idx])/TFLOAT(avecont[itype]);
-//                        }
-                    }
                     //finally add to big average over starting timestep (imedia loop) -- I know, there are a lot of averages and sums and stuff
                     for (int ll=0;ll<sh_final_size;++ll){
                         lista[index(dt,0,0)+ll]+=(aveTypes[ll]-lista[index(dt,0,0)+ll])/TFLOAT((imedia/skip)+1);
@@ -219,6 +172,50 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     threads.clear();
 
 
+}
+
+
+template <int lmax, class TFLOAT, class T>
+void SphericalCorrelations<lmax,TFLOAT,T>::corr_sh_calc(const TFLOAT * sh1, const TFLOAT *sh2, TFLOAT * aveTypes, TFLOAT * aveWork1, int sh_snap_size, int sh_final_size, int *avecont ) const noexcept{
+
+    for (int i=0;i<sh_snap_size;++i) {
+        aveWork1[i]=sh1[i]*sh2[i];
+    }
+    //here we have to average first over m... (otherwise we calculate an average of something that is not invariant under rotation, so we probably get something that always decays to zero, unless we are in a crystal
+    //sum over m: sum everything and put it where the m=0 was placed before
+    //use a nice recurrent structure to keep track of the location of the data
+    using MultiVal = SpecialFunctions::MultiValDynamic::MultiVal<lmax,TFLOAT>;
+    MultiVal v;
+    for (int iatom=0;iatom<natoms;++iatom) {
+        for (int jtype=0;jtype<ntypes;++jtype){
+            for (int ibin=0;ibin<nbin;++ibin){
+                v.init(aveWork1+index_wrk(iatom,jtype,ibin));
+                v.sum_in_m_zero();
+            }
+        }
+    }
+
+    //do averages over atomic types
+    for (int i=0;i<ntypes;++i){
+        avecont[i]=0;
+    }
+    for (int i=0;i<sh_final_size;++i) {
+        aveTypes[i]=0.0;
+    }
+    for (int iatom=0;iatom<natoms;++iatom) { // loop over center atoms and average correlation functions according to their type
+        int itype=t.get_type(iatom);
+        avecont[itype]++;
+        //average only the sum over m value, that is placed in the memory location corresponding to m=0.
+        // Loop over chunks of (l,m) coefficients ( (l+1)^2 numbers)
+        for (int jtype=0;jtype<ntypes;++jtype)
+            for (int ibin=0;ibin<nbin;++ibin) {
+                v.init(aveWork1+index_wrk(iatom,jtype,ibin)); //set the nice recursive structure that gives some order to the coefficients
+                //the following does: average += (value-average)/counter.
+                //A nice recursive function is used to avoid error prone indexes of arrays with different strides.
+                // (it use metaprogramming tecniques: it should unroll with compiler optimization on!)
+                v.running_average_m_zero_vector(aveTypes+index(0,itype,jtype,ibin),TFLOAT(avecont[itype]));
+            }
+    }
 }
 
 template class SphericalCorrelations<10,double,Traiettoria>;

@@ -3,12 +3,16 @@
 
 #include <unordered_map>
 #include <vector>
-#include <stack>
+#include <deque>
+#include <algorithm>
 
 template <class Data, class K = int, class Container=std::unordered_map<K,size_t> >
 class CalcBuffer {
 public:
-    CalcBuffer(const size_t & max_size_, const size_t & chunk_size_):data{nullptr} {
+    CalcBuffer(const size_t & max_size_, const size_t & chunk_size_, const size_t & n_valid_last=2):data{nullptr},n_valid_last{n_valid_last} {
+        if (n_valid_last>=max_size_) {
+            throw std::runtime_error("cannot ask for more elements than the size of the buffer");
+        }
         set_max_size(max_size_, chunk_size_);
     }
     ~CalcBuffer(){
@@ -16,14 +20,26 @@ public:
     }
     template< class Calculator, class ...Args >
     Data * buffer_calc(Calculator & c, const K & key, Args ... args){
+        requested_keys.push_back(key);
+        if (requested_keys.size()>n_valid_last){
+            requested_keys.pop_front();
+        }
         auto element=buffer.find(key);
         if (element!=buffer.end()) {
             return data+element->second;
         } else {
             if (buffer.size()>=max_size){
                 //delete something
-                if (!remove_last_discarded() && buffer.size()>0)
-                    remove_item(buffer.begin()->first);
+                if (!remove_last_discarded() && buffer.size()>0){
+                    auto rkey=buffer.begin();
+                    while ( std::find(requested_keys.begin(),requested_keys.end(),rkey->first ) != requested_keys.end()){
+                        ++rkey;
+                        if (rkey==buffer.end()){
+                            throw std::runtime_error("error: cannot find a element to delete in the buffer");
+                        }
+                    }
+                    remove_item(rkey->first);
+                }
             }
             //get space for result
             size_t idx=add_item(key);
@@ -66,11 +82,12 @@ public:
         buffer.erase(key);
     }
 private:
-    size_t max_size,chunk_size;
+    size_t max_size,chunk_size,n_valid_last;
     Container buffer;
     Data* data;
     std::vector<size_t> free_idxs;
     std::vector<K> discard_first;
+    std::deque<K> requested_keys;
 };
 
 #endif // CALC_BUFFER_H
