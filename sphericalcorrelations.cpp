@@ -129,7 +129,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             TFLOAT *aveWork1=new TFLOAT[sh_snap_size];
             TFLOAT *aveTypes=new TFLOAT[sh_final_size];
             int *avecont=new int[ntypes];
-            //buffer for few sh calculations
+            //buffer for few sh calculations -- note that only the last 2 requests must be in the returned pointer at the same time
             CalcBuffer<TFLOAT> buffer(30,sh_snap_size);
 
 

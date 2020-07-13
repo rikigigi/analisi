@@ -14,7 +14,7 @@ struct TestPath{
 };
 
 struct TrajSetup{
-    TrajSetup(): traj{path.path+"lammps.bin"}{
+    TrajSetup(): traj{path.path+"data/lammps.bin"}{
 	traj.imposta_dimensione_finestra_accesso(150);
 	traj.imposta_inizio_accesso(0);
     }
