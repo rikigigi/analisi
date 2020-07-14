@@ -211,6 +211,36 @@ BOOST_AUTO_TEST_CASE(test_buffer){
     }
     BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);
 }
+BOOST_AUTO_TEST_CASE(test_buffer_discard){
+    CalcBuffer<int> test(29,1);
+    FakeCalc calculator;
+    for (int i=35;i<97;++i){
+        for (int j=i-1;j<i+33;++j){
+            if (j==i+3)
+                test.discard(42);
+            int * a=test.buffer_calc(calculator,i),
+                * b=test.buffer_calc(calculator,j);
+            BOOST_TEST(calculator.check(i,a));
+            BOOST_TEST(calculator.check(j,b));
+        }
+    }
+    BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);
+}
+BOOST_AUTO_TEST_CASE(test_buffer_discard_all){
+    CalcBuffer<int> test(29,1);
+    FakeCalc calculator;
+    for (int i=35;i<97;++i){
+        for (int j=i-1;j<i+33;++j){
+            if (j==42)
+                test.discard();
+            int * a=test.buffer_calc(calculator,i),
+                * b=test.buffer_calc(calculator,j);
+            BOOST_TEST(calculator.check(i,a));
+            BOOST_TEST(calculator.check(j,b));
+        }
+    }
+    BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);
+}
 
 //double loop splitter test
 

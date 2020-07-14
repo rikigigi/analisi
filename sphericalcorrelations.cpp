@@ -151,7 +151,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             TFLOAT *aveTypes=new TFLOAT[sh_final_size];
             int *avecont=new int[ntypes];
             //buffer for few sh calculations -- note that only the last 2 requests must be in the returned pointer at the same time
-            CalcBuffer<TFLOAT> buffer(30,sh_snap_size);
+            CalcBuffer<TFLOAT,unsigned int > buffer(30,sh_snap_size);
 
 
             //loop over data -- splitted in an efficient (?) way see class TwoLoopSplit. it is the equivalent of the following:
@@ -161,9 +161,16 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     */
             //center atom loop for the snapshot at imedia
             bool finished=false;
+            unsigned int t1,t2,dt,t1_old=0;
+            task_distributer.get_withoud_advancing(ith,t1_old,t2);
             while(!finished){
-                unsigned int t1,t2,dt;
                 task_distributer.get_next_idx_pair(ith,t1,t2,finished);
+                if (t1 > t1_old) {
+                    buffer.discard(t1_old);
+                } else if (t1<t1_old) {
+                    buffer.discard();
+                }
+                t1_old=t1;
                 TFLOAT * sh1=
                         buffer.buffer_calc(*this,t1+primo,workspace,cheby,l);
 

@@ -72,6 +72,12 @@ public:
     }
 
 
+    bool get_withoud_advancing(const T iworker, T & idx1, T &idx2){
+        auto & state_ = state[iworker];
+        idx1=state_.idx1;
+        idx2=state_.idx2;
+    }
+
     /**
       * get next pair of points
       * if false the block is finished and the next result will be in the next block

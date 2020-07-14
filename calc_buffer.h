@@ -47,6 +47,12 @@ public:
             return data+idx;
         }
     }
+    void discard(){
+        discard_first.clear();
+        for (auto & b : buffer) {
+            discard_first.push_back(b.first);
+        }
+    }
     void discard(const K & key){
         discard_first.push_back(key);
     }
@@ -65,6 +71,11 @@ public:
     }
     bool remove_last_discarded(){
         if (discard_first.size()>0){
+            while (discard_first.size()>0 && (buffer.find(discard_first.back())==buffer.end() || std::find(requested_keys.begin(),requested_keys.end(),discard_first.back() ) != requested_keys.end())){
+                discard_first.pop_back();
+            }
+
+            if (discard_first.size()==0) return false;
             remove_item(discard_first.back());
             discard_first.pop_back();
             return true;
