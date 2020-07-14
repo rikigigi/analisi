@@ -233,13 +233,22 @@ bool test_double_loop(const T nworkers_, const T size1_, const T skip1_,const T 
         for (T idx2=idx1;idx2<size2_+idx1;idx2+=skip2_) {
             counter++;
             std::pair<T,T> e{idx1,idx2};
-            if (std::find(elements.begin(),elements.end(),e) == elements.end()) return false;
+            auto res=std::find(elements.begin(),elements.end(),e);
+            if (res == elements.end()) {
+                return false;
+            } else {
+                elements.erase(res);
+            }
         }
-    if (counter != elements.size()) return false;
+    if (0 != elements.size()) return false;
     return true;
 }
 
 BOOST_AUTO_TEST_CASE(twoloopsplit) {
     BOOST_TEST(test_double_loop<size_t>(2,10,1,5,10,1,5));
+    BOOST_TEST(test_double_loop<size_t>(2,10,2,5,10,1,5));
+    BOOST_TEST(test_double_loop<size_t>(2,10,1,5,10,2,5));
+    BOOST_TEST(test_double_loop<size_t>(2,10,2,5,10,2,5));
+    BOOST_TEST(test_double_loop<size_t>(3,17,3,5,29,2,7));
 }
 

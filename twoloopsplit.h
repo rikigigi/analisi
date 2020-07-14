@@ -26,7 +26,7 @@ public:
             T min_begin=size1,max_end=0,tot_elements=0;
             for (T i=idx2;i<idx2+block2;++i){
                 T begin1,end1,nelements;
-                row_begin_end(idx2,begin1,end1,nelements);
+                row_begin_end(i,begin1,end1,nelements);
                 if (nelements == 0) continue;
                 tot_elements+=nelements;
                 if (begin1<min_begin){
@@ -48,14 +48,15 @@ public:
         for (T i = 0; i<n_elements.size();++i){
             //see if by adding the next number of elements the counter is nearer and greater to the limit than the current one
             T cur_size=n_elements[i];
-            if (batch_size>points_per_worker && cur_size>points_per_worker && cur_worker_idx!=nworkers-1) {
+            if (batch_size>=points_per_worker && cur_size+batch_size>points_per_worker && cur_worker_idx!=nworkers-1) {
                 work[cur_worker_idx].second=batch_size;
-                batch_size=cur_size;
+                batch_size=0;
                 cur_worker_idx++;
             }
             work[cur_worker_idx].first.push_back(i);
             batch_size+=cur_size;
         }
+        work[cur_worker_idx].second=batch_size;
         //init worker state
         for (T i=0;i<nworkers;++i) {
             init_worker_state(i);
@@ -74,7 +75,7 @@ public:
         idx1=state_.idx1;
         idx2=state_.idx2;
         state_.idx2+=skip2;
-        if (state_.idx2>=state_.idx2_end || state_.idx2 > size2 + state_.idx1) {
+        if (state_.idx2>=state_.idx2_end || state_.idx2 >= size2 + state_.idx1) {
             state_.idx1+=skip1;
             if (state_.idx1>state_.idx1_end) {
                 end=!init_worker_state(iworker);
@@ -106,7 +107,7 @@ private:
     }
 
     T round_high2(const T idx1, const T idx2_begin){
-        return idx2_begin + (skip2+idx2_begin-idx1 - (idx2_begin-idx1)%skip2)%skip2;
+        return idx2_begin + (skip2-(idx2_begin-idx1)%skip2)%skip2;
     }
 
     T round_low1(const T idx, const T skip) {
@@ -122,7 +123,7 @@ private:
         nelements=0;
         for (T i=0;i<size1;++i){
             if (element_in_range(i,idx2)){
-                if (begin1==size1) begin1=i;
+                if (begin1>i) begin1=i;
                 end1=i;
                 ++nelements;
             }
