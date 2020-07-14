@@ -10,7 +10,7 @@
 
 struct TestPath{
 	TestPath(): path(PROJ_DIR "/tests/"){}
-	std::string path;
+    const std::string path;
 };
 
 struct TrajSetup{
@@ -18,14 +18,14 @@ struct TrajSetup{
 	traj.imposta_dimensione_finestra_accesso(150);
 	traj.imposta_inizio_accesso(0);
     }
-    TestPath path;
+    const TestPath path;
     Traiettoria traj;
 
 };
 
 struct DataRegression{
     DataRegression():path{base_path.path + "cpp_regression_data/"}, max_double_relative_error{1e-10} {}
-    TestPath base_path;
+    const TestPath base_path;
     std::string path;
     double max_double_relative_error;
     void fuzz(double *a,size_t size) {
@@ -179,6 +179,8 @@ BOOST_AUTO_TEST_CASE(test_corr_consistency){
 BOOST_AUTO_TEST_SUITE_END()
 
 
+//calc_buffer test -- eheh, this took 48 hours to work...
+
 #include "calc_buffer.h"
 
 struct FakeCalc{
@@ -208,5 +210,36 @@ BOOST_AUTO_TEST_CASE(test_buffer){
         }
     }
     BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);
+}
+
+//double loop splitter test
+
+#include "twoloopsplit.h"
+template <class T>
+bool test_double_loop(const T nworkers_, const T size1_, const T skip1_,const T block1_, const T size2_, const T skip2_, const T block2_) {
+
+    TwoLoopSplit test(nworkers_,size1_,skip1_,block1_,size2_,skip2_,block2_);
+    std::vector<std::pair<T,T> >elements;
+    for (T iw=0;iw<nworkers_;++iw) {
+        bool end=false;
+        while (!end){
+            T idx1,idx2;
+            test.get_next_idx_pair(iw,idx1,idx2,end);
+            elements.push_back({idx1,idx2});
+        }
+    }
+    T counter=0;
+    for (T idx1=0;idx1<size1_;idx1+=skip1_)
+        for (T idx2=idx1;idx2<size2_+idx1;idx2+=skip2_) {
+            counter++;
+            std::pair<T,T> e{idx1,idx2};
+            if (std::find(elements.begin(),elements.end(),e) == elements.end()) return false;
+        }
+    if (counter != elements.size()) return false;
+    return true;
+}
+
+BOOST_AUTO_TEST_CASE(twoloopsplit) {
+    BOOST_TEST(test_double_loop<size_t>(2,10,1,5,10,1,5));
 }
 
