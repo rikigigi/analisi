@@ -5,6 +5,7 @@
 #include <sstream>
 #include "config.h"
 #include "calc_buffer.h"
+#include "twoloopsplit.h"
 
 template <int l, class TFLOAT, class T>
 SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
@@ -101,16 +102,36 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
         nthreads=1;
     }
 
+    unsigned int buffer_size=20;
+
     unsigned int npassith=leff/nthreads;
     std::vector<std::thread> threads;
 
+    //wow! advanced work splitting procedure
+    unsigned int block_t=leff/nthreads;
+    //buffer_size should be block+1 for maximum efficiency
+    if (block_t>buffer_size){
+        block_t=buffer_size-1;
+    } else {
+        buffer_size=block_t+1;
+    }
+    TwoLoopSplit<unsigned int> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
+
+    //allocate space for per thread averages
+    TFLOAT * lista_th = new TFLOAT[lunghezza_lista*(nthreads-1)];
+    unsigned int * lista_th_counters = new unsigned int [leff*nthreads];
+
     for (unsigned int  ith=0;ith<nthreads;ith++) {
         threads.push_back(std::thread([&,ith](){
-            unsigned int ultimo= (ith != nthreads-1 )?npassith*(ith+1):leff;
-            unsigned int itimestep = primo;
-            double l[3]={t.scatola(itimestep)[1]-t.scatola(itimestep)[0],
-                         t.scatola(itimestep)[3]-t.scatola(itimestep)[2],
-                         t.scatola(itimestep)[5]-t.scatola(itimestep)[4]};
+            TFLOAT * lista_th_= ith >0 ? lista_th+lunghezza_lista*(ith-1) : lista;
+            unsigned int * lista_th_counters_ = lista_th_counters+leff*ith;
+
+            for (unsigned int i=0;i<lunghezza_lista;++i) lista_th_[i]=0.0;
+            for (unsigned int i=0;i<leff;++i) lista_th_counters_[i]=0;
+
+            double l[3]={t.scatola(primo)[1]-t.scatola(primo)[0],
+                         t.scatola(primo)[3]-t.scatola(primo)[2],
+                         t.scatola(primo)[5]-t.scatola(primo)[4]};
 
             //working space for spherical harmonics
             TFLOAT workspace[(lmax+1)*(lmax+1)];
@@ -133,30 +154,33 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             CalcBuffer<TFLOAT> buffer(30,sh_snap_size);
 
 
-            //loop over time differences -- eheh, did you forgot about time lags?
-            for (unsigned int dt=npassith*ith;dt<ultimo;dt++){
+            //loop over data -- splitted in an efficient (?) way see class TwoLoopSplit. it is the equivalent of the following:
+            /*
+            for (unsigned int dt=npassith*ith;dt<ultimo;dt++)
+                for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip)
+                    */
+            //center atom loop for the snapshot at imedia
+            bool finished=false;
+            while(!finished){
+                unsigned int t1,t2,dt;
+                task_distributer.get_next_idx_pair(ith,t1,t2,finished);
+                TFLOAT * sh1=
+                        buffer.buffer_calc(*this,t1+primo,workspace,cheby,l);
 
-                //set to zero the result for this time lag
-                azzera(index(dt,0,0),index(dt+1,0,0));
+                //center atom loop for the snapshot at imedia+dt
+                TFLOAT * sh2=
+                        buffer.buffer_calc(*this,t2+primo,workspace,cheby,l);
 
-                //average over starting timestep
-                for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
-                    //center atom loop for the snapshot at imedia
-                    TFLOAT * sh1=
-                    buffer.buffer_calc(*this,imedia+primo,workspace,cheby,l);
+                corr_sh_calc(sh1,sh2,aveTypes,aveWork1, sh_snap_size, sh_final_size, avecont);
 
-                    //center atom loop for the snapshot at imedia+dt
-                    TFLOAT * sh2=
-                    buffer.buffer_calc(*this,imedia+primo+dt,workspace,cheby,l);
-
-                    corr_sh_calc(sh1,sh2,aveTypes,aveWork1, sh_snap_size, sh_final_size, avecont);
-
-                    //finally add to big average over starting timestep (imedia loop) -- I know, there are a lot of averages and sums and stuff
-                    for (int ll=0;ll<sh_final_size;++ll){
-                        lista[index(dt,0,0)+ll]+=(aveTypes[ll]-lista[index(dt,0,0)+ll])/TFLOAT((imedia/skip)+1);
-                    }
-
+                dt=t2-t1;
+                lista_th_counters_[dt]++;
+                //finally add to big average over starting timestep (imedia loop) -- I know, there are a lot of averages and sums and stuff
+                for (int ll=0;ll<sh_final_size;++ll){
+                    lista_th_[index(dt,0,0)+ll]+=(aveTypes[ll]-lista_th_[index(dt,0,0)+ll])/TFLOAT(lista_th_counters_[dt]);
                 }
+
+
 
             }
 
@@ -170,6 +194,35 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     for (unsigned int  ith=0;ith<nthreads;ith++)
         threads[ith].join();
     threads.clear();
+
+    //sum up threads averages
+    //the data of the first thread is in place
+    for (unsigned int dt=0;dt<leff;++dt){
+        for (unsigned int ith=1;ith<nthreads;++ith){
+            TFLOAT * lista_th_=lista_th+lunghezza_lista*(ith-1);
+            unsigned int * lista_th_counters_ = lista_th_counters+leff*ith;
+            if (lista_th_counters_[dt]==0) continue;
+            //sum everything in lista, use lista_th_counters[0] as counter for that accumulator
+            if (lista_th_counters[dt]==0) { // just copy
+                for (unsigned int i=0;i<get_final_snap_size();++i){
+                    lista[index(dt,0,0)+i]=lista_th_[index(dt,0,0)+i];
+                }
+            } else if (fabs(double(lista_th_counters[dt])/double(lista_th_counters_[dt])-1.0)<0.01) { // use traditional algorithm to update the mean
+                for (unsigned int i=0;i<get_final_snap_size();++i){
+                    lista[index(dt,0,0)+i]=(lista[index(dt,0,0)+i]*lista_th_counters[dt]+ lista_th_[index(dt,0,0)+i]*lista_th_counters_[dt])/double(lista_th_counters_[dt]+lista_th_counters[dt]);
+                }
+            } else { // use delta algorithm
+                for (unsigned int i=0;i<get_final_snap_size();++i){
+                    lista[index(dt,0,0)+i] += (lista_th_[index(dt,0,0)+i]-lista[index(dt,0,0)+i])*lista_th_counters_[dt]/double(lista_th_counters_[dt]+lista_th_counters[dt]);
+                }
+            }
+            lista_th_counters[dt]+=lista_th_counters_[dt];
+        }
+    }
+
+
+    delete[] lista_th;
+    delete[] lista_th_counters;
 
 
 }

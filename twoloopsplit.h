@@ -17,7 +17,10 @@ struct WorkerState{
 template <class T>
 class TwoLoopSplit {
 public:
-    TwoLoopSplit(const T nworkers_, const T size1_, const T skip1_,const T block1_, const T size2_, const T skip2_, const T block2_ ) : size1{size1_}, skip1{skip1_}, block1{block1_}, size2{size2_}, skip2{skip2_}, block2{block2_},nworkers{nworkers_} {
+    /**
+      * WARNING: nworkers can be modified by this constructor if the block size is too big
+    **/
+    TwoLoopSplit(T & nworkers_, const T size1_, const T skip1_,const T block1_, const T size2_, const T skip2_, const T block2_ ) : size1{size1_}, skip1{skip1_}, block1{block1_}, size2{size2_}, skip2{skip2_}, block2{block2_},nworkers{nworkers_} {
         if (block1<skip1 || block2<skip2) {
             throw std::runtime_error("cannot have a block smaller than skip");
         }
@@ -48,6 +51,7 @@ public:
         for (T i = 0; i<n_elements.size();++i){
             //see if by adding the next number of elements the counter is nearer and greater to the limit than the current one
             T cur_size=n_elements[i];
+            if (cur_size==0) continue;
             if (batch_size>=points_per_worker && cur_size+batch_size>points_per_worker && cur_worker_idx!=nworkers-1) {
                 work[cur_worker_idx].second=batch_size;
                 batch_size=0;
@@ -57,6 +61,10 @@ public:
             batch_size+=cur_size;
         }
         work[cur_worker_idx].second=batch_size;
+        if (cur_worker_idx<nworkers_-1) {
+            nworkers=cur_worker_idx+1;
+            nworkers_=nworkers;
+        }
         //init worker state
         for (T i=0;i<nworkers;++i) {
             init_worker_state(i);
@@ -132,10 +140,11 @@ private:
 
     bool element_in_range(const T idx1, const T idx2) {
         if (idx1%skip1 != 0 || (idx2-idx1)%skip2 != 0) return false;
-        return idx2 < size1+idx1 && idx2>=idx1;
+        return idx2 < size2+idx1 && idx2>=idx1;
     }
 
-    const T size1,skip1,block1, size2,skip2,block2, nworkers;
+    const T size1,skip1,block1, size2,skip2,block2;
+    T nworkers;
     std::vector<std::pair<T,T>> row_begin_end1; // both begin and end are included in the range!
     std::vector<T> n_elements;
     std::vector<std::pair<std::vector<T>,T > > work;
