@@ -34,6 +34,7 @@
 
 #include "cronometro.h"
 #include "lammps_struct.h"
+#include <stdexcept>
 
 
 
@@ -73,27 +74,24 @@ Traiettoria::Traiettoria(std::string filename)
 
     fd=open(filename.c_str(), O_RDONLY);
     if (fd==-1) {
-        std::cerr << "Errore nell'apertura del file della traiettoria \""<<filename<<"\"\n";
-        return;
+        throw std::runtime_error("Error opening the trajectory \""+filename+"\"\n");
     }
 
     if (fstat(fd, &sb)==-1) {
-        std::cerr << "Errore nella determinazione delle dimensioni del file della traiettoria \""<<filename<<"\"\n";
         close(fd);
         fd=-1;
-        return;
+        throw std::runtime_error("Error in finding trajectory file size \""+filename+"\"\n");
     } else {
         fsize=sb.st_size;
-        std::cerr << "Dimensioni del file della traiettoria \""<< filename << "\": "<< fsize<<"\n";
+        std::cerr << "Trajectory file size \""<< filename << "\": "<< fsize<<"\n";
     }
 
     file = (char*) mmap(0,fsize,PROT_READ,MAP_PRIVATE,fd,0);
 
     if (file==MAP_FAILED) {
-        std::cerr << "Chiamata mmap fallita per il file \""<<filename<<"\".\n";
-        close(fd);
         fd=-1;
-        return;
+        close(fd);
+        throw std::runtime_error("Chiamata mmap fallita per il file \""+filename+"\".\n");
     }
 
     Intestazione_timestep * t0;
