@@ -108,6 +108,9 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int prim
     }
 
 
+    if (leff+ntimesteps+primo > traiettoria->get_ntimesteps()){
+        throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the time lag");
+    }
 
     unsigned int npassith=leff/nthreads;
     std::vector<std::thread> threads;

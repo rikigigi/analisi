@@ -97,6 +97,9 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TF
 template <int lmax, class TFLOAT, class T>
 void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
+    if (leff+ntimesteps+primo > t.get_ntimesteps()){
+        throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the correlation function");
+    }
 
     if (nthreads<=1){
         std::cerr << "Warning: I'm using a single thread.\n";

@@ -51,6 +51,9 @@ void MSD<T>::calcola(unsigned int primo) {
 
 
 
+    if (leff+ntimesteps+primo > traiettoria->get_ntimesteps()){
+        throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the time lag");
+    }
 
     if (nthread<1) {
         unsigned int *cont=new unsigned int [ntypes*f_cm];
