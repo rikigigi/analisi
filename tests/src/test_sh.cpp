@@ -85,7 +85,7 @@ struct DataRegression{
 
 template <int l,int NTH>
 struct ShFixture{
-    ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), 0.5, 3.0, nbin, 17, NTH, 13, false} {
+    ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), 0.5, 3.0, nbin, 17, NTH, 13, 10,false} {
 	    sh.reset(100);
             data.path=data.path+"sh/";
     }

@@ -99,8 +99,13 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
 
     if (nthreads<=1){
-        std::cerr << "Attenzione: sto usando un solo thread.\n";
+        std::cerr << "Warning: I'm using a single thread.\n";
         nthreads=1;
+    }
+
+    if (buffer_size<2){
+        std::cerr << "Warning: buffer size cannot be less than 2, setting it to 2"<<std::endl;
+        buffer_size=2;
     }
 
 
@@ -212,6 +217,8 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     }
     threads.clear();
     std::cerr << "Buffer miss/hit: "<<miss[0]<<"/"<<hit[0]<<std::endl;
+    delete [] hit;
+    delete [] miss;
     //sum up threads averages
     //the data of the first thread is in place
     for (unsigned int dt=0;dt<leff;++dt){
