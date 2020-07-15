@@ -53,7 +53,7 @@ else()
 endif()
 
 
-add_subdirectory(program_options)
+add_subdirectory(boost)
 #find_library( BPO NAMES boost_program_options)
 
 #if (BPO)
@@ -124,7 +124,7 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
 add_executable(test_sh tests/src/test_sh.cpp)
-target_link_libraries(test_sh ${PROJECT_NAME}_lib)
+target_link_libraries(test_sh ${PROJECT_NAME}_lib boost)
 
 if (${PYTHONLIBS_FOUND})
 #python interface
