@@ -72,7 +72,7 @@ public:
     }
 
 
-    bool get_withoud_advancing(const T iworker, T & idx1, T &idx2){
+    void get_withoud_advancing(const T iworker, T & idx1, T &idx2){
         auto & state_ = state[iworker];
         idx1=state_.idx1;
         idx2=state_.idx2;
