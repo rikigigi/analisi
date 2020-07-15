@@ -9,7 +9,7 @@
 template <class Data, class K = int, class Container=std::unordered_map<K,size_t> >
 class CalcBuffer {
 public:
-    CalcBuffer(const size_t & max_size_, const size_t & chunk_size_, const size_t & n_valid_last=2):data{nullptr},n_valid_last{n_valid_last} {
+    CalcBuffer(const size_t & max_size_, const size_t & chunk_size_, const size_t & n_valid_last=2):data{nullptr},n_valid_last{n_valid_last},hit{0}, miss{0} {
         if (n_valid_last>=max_size_) {
             throw std::runtime_error("cannot ask for more elements than the size of the buffer");
         }
@@ -26,6 +26,7 @@ public:
         }
         auto element=buffer.find(key);
         if (element!=buffer.end()) {
+            hit++;
             return data+element->second;
         } else {
             if (buffer.size()>=max_size){
@@ -44,6 +45,7 @@ public:
             //get space for result
             size_t idx=add_item(key);
             c.calc(key,data+idx, args...);
+            miss++;
             return data+idx;
         }
     }
@@ -92,8 +94,10 @@ public:
         free_idxs.push_back(buffer[key]);
         buffer.erase(key);
     }
+    size_t get_hit() {return hit;}
+    size_t get_miss(){ return miss;}
 private:
-    size_t max_size,chunk_size,n_valid_last;
+    size_t max_size,chunk_size,n_valid_last,hit,miss;
     Container buffer;
     Data* data;
     std::vector<size_t> free_idxs;

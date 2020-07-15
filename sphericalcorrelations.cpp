@@ -15,8 +15,9 @@ SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
                                                          unsigned int tmax,
                                                          unsigned int nthreads,
                                                          unsigned int skip,
+                                                         unsigned int buffer_size,
                                                          bool debug) :
-t{*t},rmin{rmin},rmax{rmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug}{
+t{*t},rmin{rmin},rmax{rmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}{
 
 }
 
@@ -102,7 +103,6 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
         nthreads=1;
     }
 
-    unsigned int buffer_size=20;
 
     unsigned int npassith=leff/nthreads;
     std::vector<std::thread> threads;
@@ -120,6 +120,9 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     //allocate space for per thread averages
     TFLOAT * lista_th = new TFLOAT[lunghezza_lista*(nthreads-1)];
     unsigned int * lista_th_counters = new unsigned int [leff*nthreads];
+    size_t * hit = new size_t[nthreads];
+    size_t * miss = new size_t[nthreads];
+
 
     for (unsigned int  ith=0;ith<nthreads;ith++) {
         threads.push_back(std::thread([&,ith](){
@@ -194,14 +197,21 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             delete [] aveWork1;
             delete [] aveTypes;
             delete [] avecont;
+            hit[ith]=buffer.get_hit();
+            miss[ith]=buffer.get_miss();
 
         }));
     }
     //Wasn't it multithreaded?
-    for (unsigned int  ith=0;ith<nthreads;ith++)
+    for (unsigned int  ith=0;ith<nthreads;ith++){
         threads[ith].join();
+        if (ith>0) {
+            hit[0]+=hit[ith];
+            miss[0]+=miss[ith];
+        }
+    }
     threads.clear();
-
+    std::cerr << "Buffer miss/hit: "<<miss[0]<<"/"<<hit[0]<<std::endl;
     //sum up threads averages
     //the data of the first thread is in place
     for (unsigned int dt=0;dt<leff;++dt){

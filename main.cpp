@@ -139,7 +139,7 @@ int main(int argc, char ** argv)
     boost::program_options::options_description options("Program to analyze of molecular dynamics trajectories, with multithread and MPI block averages.\n\nAllowed options:");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
-    unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0;
+    unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0,buffer_size=10;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::pair<int,double> nk;
@@ -196,6 +196,7 @@ int main(int argc, char ** argv)
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"Se impostato calcola l'istogramma del numero di vicini per tipo entro il raggio specificato.")
             ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"Se >0 imposta il calcolo della parte distintiva del correlatore di van Hove (quando t=0 è g(r) ). Indica il numero di intervalli da usare nell'istogramma. Specificare il raggio minimo e massimo con l'opzione -F.")
             ("spherical-harmonics-correlation,Y",boost::program_options::value<unsigned int>(&sph)->default_value(0),"Se >0 imposta il calcolo della funzione di correlazione della densità atomica, suddivisa per tipo di atomo, sviluppata in armoniche sferiche. Indica il numero di intervalli da usare nella suddivisione radiale. Specificare il raggio minimo e massimo con l'opzione -F.")
+            ("buffer-size",boost::program_options::value<unsigned int>(&buffer_size)->default_value(10),"Buffer size for sh frame values")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"Numero di linee del file con le serie temporali delle correnti da leggere alla volta per ogni thread")
             ("spatial-correlator,A",boost::program_options::value(&nk)->default_value({0,0.0})->multitoken(),"Numero di punti della griglia ...")
             ("spatial-correlator-dir",boost::program_options::value(&kdir)->default_value({1.0,0.0,0.0})->multitoken(),"Direzione di k")
@@ -559,9 +560,9 @@ int main(int argc, char ** argv)
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<SphericalCorrelations<10,double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                MediaBlocchi<SphericalCorrelations<10,double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int,bool>
                         sh(&tr,blocknumber);
-                sh.calcola(factors_input[0],factors_input[1],sph,stop_acf,numero_thread,skip,dumpGK);
+                sh.calcola(factors_input[0],factors_input[1],sph,stop_acf,numero_thread,skip,buffer_size,dumpGK);
 
                 auto shape= sh.media()->get_shape();
 

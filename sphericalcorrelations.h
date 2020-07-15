@@ -15,6 +15,7 @@ public:
                           unsigned int tmax=0,
                           unsigned int nthreads=0,
                           unsigned int skip=1,
+                          unsigned int buffer_size=10,
                           bool debug=false);
     ~SphericalCorrelations();
     void reset(const unsigned int numeroTimestepsPerBlocco);
@@ -68,7 +69,7 @@ private:
 
 
     TFLOAT rmin, rmax,dr;
-    unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms;
+    unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms,buffer_size;
     bool debug;
     std::string c_descr;
 
