@@ -2,7 +2,7 @@
 
 Fastest possible example usage:
 
-##command line
+## command line
 
 - mean square displacement
 ```
@@ -26,7 +26,7 @@ Fastest possible example usage:
 
 many others...
 
-##python
+## python
 
 ```
 #read trajectory
