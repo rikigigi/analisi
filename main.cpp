@@ -149,13 +149,8 @@ int main(int argc, char ** argv)
     std::vector<std::string> headers,output_conversion_gro;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
     options.add_options()
-        #if BOOST_VERSION >= 105600
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
-        #else
-            ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "file di input nel formato binario di LAMMPS: id type xu yu zu vx vy vz")
-            ("loginput,l",boost::program_options::value<std::string>(&log_input),"file di input con il log di LAMMPS e i dati termodinamici nel formato: Step Time PotEng TotEng Lx Press Temp c_flusso[1] c_flusso[2] c_flusso[3]")
-        #endif
             ("help,h", "messaggio di aiuto")
             ("thread,N",boost::program_options::value<int>(&numero_thread)->default_value(2),"numero di thread da usare (dove supportato)")
             ("timesteps,n",boost::program_options::value<int>(&numero_frame)->default_value(50000), "numero di timestep che il programma legge dal file")
@@ -219,7 +214,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( (output_conversion==""&& output_conversion_gro.size()==0) && !velocity_h) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
+        if (( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( debug2 || heat_coeff ) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << options << "\n";
             return 1;
         }
@@ -316,7 +311,7 @@ int main(int argc, char ** argv)
                 unsigned int idx_lx=0;
                 double media_=0.0;
                 double var_=0.0;
-                if (factors_input.size()==0){
+                if (factors_input.size()==1){
 
                     std::pair<unsigned int,bool> res=test.get_index_of("Temp");
                     idx_lx=res.first;
@@ -349,12 +344,17 @@ int main(int argc, char ** argv)
                     factor_conv2=const_charge*const_charge*dt*1e7 / ((pow(test.line(0)[idx_lx],3) )*const_boltzmann*media_);
                     factor_intToCorr=1.0/(1e-12*dt);
                 } else{
-                    if (factors_input.size()!=2){
+                    if (factors_input.size()>2){
                         std::cerr << "Errore: specificare 2 fattori, uno per le funzioni di correlazione e uno per il suo integrale.\n";
                         abort();
+                    } else if (factors_input.size()==2){
+
+                        factor_conv=factor_conv2=factors_input[0];
+                        factor_intToCorr=factors_input[1];
+                    } else {
+                        factor_conv=1.0;
+                        factor_intToCorr=1.0;
                     }
-                    factor_conv=factor_conv2=factors_input[0];
-                    factor_intToCorr=factors_input[1];
                     std::cout << "#Factors: "<<factor_conv<<", "<<factor_conv*factor_intToCorr<<"\n";
 
                 }

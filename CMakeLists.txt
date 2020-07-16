@@ -123,8 +123,16 @@ set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
+
+## test suite
+add_library(test_fixtures INTERFACE)
+target_include_directories(test_fixtures INTERFACE tests/src/)
 add_executable(test_sh tests/src/test_sh.cpp)
-target_link_libraries(test_sh ${PROJECT_NAME}_lib boost)
+target_link_libraries(test_sh ${PROJECT_NAME}_lib boost test_fixtures)
+add_executable(test_2loop tests/src/test_double_loop_splitter.cpp)
+target_link_libraries(test_2loop ${PROJECT_NAME}_lib boost test_fixtures)
+add_executable(test_calcBuffer tests/src/test_calc_buffer.cpp)
+target_link_libraries(test_calcBuffer ${PROJECT_NAME}_lib boost test_fixtures)
 
 if (${PYTHONLIBS_FOUND})
 #python interface
