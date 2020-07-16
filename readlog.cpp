@@ -29,7 +29,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     cronometro cron;
     cron.start();
 
-    if (nthreads<0)
+    if (nthreads<=0)
         nthreads=1;
     unsigned int lcont=0;
     std::string tmp,header;
@@ -47,8 +47,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     }
 
     if (header.size()==0) {
-        std::cerr << "Errore: non riesco a trovare l'intestazione delle colonne!\n";
-        abort();
+        throw std::runtime_error("Cannot find the column headers in file\""+filename+"\"\n");
     }
 
     //trova i nomi delle colonne e la colonna del timestep
@@ -68,12 +67,11 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
      }
      if (end!=start && start<header.length()) headers.push_back(header.substr(start, end - start));
      if (headers.size()<=0) {
-         std::cerr << "Errore: non ho trovato nessun header nel file '"<<filename<< "'\n";
-         abort();
+         throw std::runtime_error("Cannot find the column headers in file\""+filename+"\"\n");
      }
      if (headers.back()=="Step") step_index=headers.size()-1;
 #ifdef DEBUG
-     std::cerr << "Indice degli header:\n";
+     std::cerr << "Headers indexes:\n";
      for(int i=0;i<headers.size();i++){
          std::cerr << i << " " << headers.at(i)<<"\n";
      }
@@ -85,8 +83,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
      if (req_headers.size()>0){
          for (auto it = req_headers.begin();it!= req_headers.end();++it) {
              if (*it == "Step"){
-                 std::cerr << "Errore: non puoi chiedere di fare un analisi con al posto della corrente i timestep (colonna Step)\n";
-                 abort();
+                 throw std::runtime_error("\"Step\" columns header name is reserved for step number");
              }
              auto Qs=qs(*it);
              if (Qs.first !=""){
@@ -192,10 +189,10 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     delete [] TS;
     delete [] buffer;
     cron.stop();
-    std::cerr << "Tempo per la lettura dei dati: " << cron.time() << "s\n";
-    std::cerr << "Numero di dati letti dal file '"<<filename<<"': "<<data.size()/data_size<<"\n";
+    std::cerr << "Time for data reading: " << cron.time() << "s\n";
+    std::cerr << "Total data size of file '"<<filename<<"': "<<data.size()/data_size<<"\n";
     if (data.size()==0) {
-        std::cerr << "Attenzione: non sono riuscito a leggere alcun dato. (l'intestazione ha lo stesso numero di colonne dei dati?)\n";
+        std::cerr << "Warning: I was not able to read anything (does the header has the same number of columns of the data?)\n";
     }
 
 }
@@ -207,29 +204,14 @@ template <class TFLOAT> unsigned int ReadLog<TFLOAT>::get_calc_j_index(std::stri
             return i;
         }
     }
-    std::cerr << "Errore: impossibile trovare l'header "<< header<<" nella lista '";
+    std::cerr << "Error: cannot find the header \""<< header<<"\" in the list '";
     for (unsigned int i=0;i<q_current_type.size();i++) std::cerr << " '" << q_current_type[i].first<<"'";
     std::cerr << "\n";
-    abort();
+    throw std::runtime_error("Wrong header name");
 
     return q_current_type.size();
 }
-/*
-template <class TFLOAT> void ReadLog<TFLOAT>::write_currents(std::string filename) {
-    if (data_size_from_binary<=0) {
-        std::cerr << "Attenzione: non posso scrivere le correnti calcolate quando non ci sono!\n";
-        return;
-    }
 
-    std::ofstream out(filename);
-    for (unsigned int i=0;i<timesteps.size();i++) {
-        out << timesteps[i];
-        for (unsigned int j=0;j<data_size_from_binary;j++)
-            out <<" "<< data[i*data_size+data_size-data_size_from_binary+j];
-        out << "\n";
-    }
-}
-*/
 
 //questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
 template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLOAT>::qs(std::string header) {
@@ -238,20 +220,17 @@ template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLO
     std::stringstream iss(header);
     std::vector<std::string> t{std::istream_iterator<std::string>{iss},std::istream_iterator<std::string>{}};
     if (t.size()<3){
-        std::cerr <<"Errore nel formato dell'header '"<<header<<"'. Deve essere nella forma '#traj:JZ N q1 ... qN'.\n";
-        abort();
+        throw std::runtime_error("Error in header format '"+header+"'. It must be in the form '#traj:JZ N q1 ... qN'.\n");
     }
     int n_charges=std::strtol (t.at(1).c_str(),NULL,0);
     if (n_charges<=0 || errno == ERANGE || t.size() != n_charges + 2) {
-        std::cerr << "Errore nel formato dell'header '"<<header<<"'. Deve essere nella forma '#traj:JZ N q1 ... qN'.\n";
-        abort();
+        throw std::runtime_error("Error in header format '"+header+"'. It must be in the form '#traj:JZ N q1 ... qN'.\n");
     }
     std::vector <TFLOAT> c(n_charges);
     for (unsigned int i=2;i<n_charges+2;i++){
         c[i-2]=std::strtold(t.at(i).c_str(),NULL);
         if (errno == ERANGE){
-            std::cerr << "Errore nel formato dell'header '"<<header<<"'. Deve essere nella forma '#traj:JZ N q1 ... qN'.\n";
-            abort();
+            throw std::runtime_error("Error in header format '"+header+"'. It must be in the form '#traj:JZ N q1 ... qN'.\n");
         }
 
     }
@@ -280,8 +259,7 @@ template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsi
     //controlla che il numero di correnti corrisponda al numero di coefficienti forniti
     for (auto it = q_current_type.begin();it!=q_current_type.end();++it) {
         if ((*it).second.size()!=ntypes) {
-            std::cerr << "Errore: il numero di coefficienti specificati deve corrispondere al numero di tipi di atomi nella traiettoria!\n";
-            abort();
+            throw std::runtime_error("Cannot calculate current: number of coefficients must be equal to the number of atomic types in the trajectory!\n");
         }
     }
     traiettoria->imposta_dimensione_finestra_accesso(n_data_b);
@@ -315,7 +293,7 @@ template <class TFLOAT> std::pair<unsigned int, bool> ReadLog<TFLOAT>::get_index
 
     unsigned int idx=0;
     if (header.size()==0) {
-        std::cerr << "Errore: header di lunghezza nulla! (" __FILE__ <<":" <<__LINE__ <<")\n";
+        throw std::runtime_error("Error: zero sized header");
     }
     //TODO: questo va cambiato: l'header delle correnti calcolate è uno solo!
     if (header[0]!='#'){

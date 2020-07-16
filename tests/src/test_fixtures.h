@@ -6,7 +6,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include "config.h"
 #include "traiettoria.h"
-
+#include "readlog.h"
 
 struct TestPath{
 	TestPath(): path(PROJ_DIR "/tests/"){}
@@ -21,6 +21,12 @@ struct TrajSetup{
     const TestPath path;
     Traiettoria traj;
 
+};
+
+struct LogSetup{
+    LogSetup(): traj{path.path+"data/gk_integral.dat"} {}
+    const TestPath path;
+    ReadLog<double> traj;
 };
 
 struct DataRegression{

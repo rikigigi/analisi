@@ -133,6 +133,8 @@ add_executable(test_2loop tests/src/test_double_loop_splitter.cpp)
 target_link_libraries(test_2loop ${PROJECT_NAME}_lib boost test_fixtures)
 add_executable(test_calcBuffer tests/src/test_calc_buffer.cpp)
 target_link_libraries(test_calcBuffer ${PROJECT_NAME}_lib boost test_fixtures)
+add_executable(test_gk tests/src/test_gk.cpp)
+target_link_libraries(test_gk ${PROJECT_NAME}_lib boost test_fixtures)
 
 if (${PYTHONLIBS_FOUND})
 #python interface

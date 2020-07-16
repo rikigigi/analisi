@@ -220,7 +220,7 @@ int main(int argc, char ** argv)
         }
 
         if (cvar_list.size()%2 != 0) {
-            std::cout << "Errore: la lista degli indici delle covarianze deve contenere un numero pari di numeri\n";
+            std::cout << "Error: covariance indexes list must contain an even number of elements\n";
             std::cout << options << "\n";
             return 1;
         } else {
@@ -249,7 +249,7 @@ int main(int argc, char ** argv)
         }
         if (output_conversion_gro.size()>0) {
             if (output_conversion_gro.size() !=2) {
-                std::cerr << "Errore: specificare due file per la conversione dal formato di gromacs!\n";
+                std::cerr << "Error: you must specify 2 files for the gromacs conversion task!\n";
                 std::cerr << options;
                 return -1;
             } else {
@@ -263,7 +263,7 @@ int main(int argc, char ** argv)
 #ifdef FFTW3_THREADS
         fftw_init_threads();
         fftw_plan_with_nthreads(numero_thread);
-        std::cerr << "Uso " << numero_thread << " threads\n";
+        std::cerr << "I'm using " << numero_thread << " threads\n";
 #ifdef DEBUG
         if (debug) {
             TestTraiettoria ttest(input);
@@ -292,7 +292,7 @@ int main(int argc, char ** argv)
         } else
 #endif // DEBUG
             if (heat_coeff) {
-                std::cerr << "Inizio del calcolo del coefficiente di trasporto termico...\n";
+                std::cerr << "Green-Kubo heat transport coefficient calculation is beginning...\n";
                 ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
                 Traiettoria * binary_traj=NULL;
                 //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
@@ -400,9 +400,9 @@ int main(int argc, char ** argv)
                     convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
                     convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
                     if (factors_input.size()==0)
-                        std::cout << "# T T1sigma  atomi/volume factor1 factor2\n#"
+                        std::cout << "# T T1sigma  factor1 factor2\n#"
                               <<media_ << " " << sqrt(var_) << " "
-                             << test.get_natoms()/pow(test.line(0)[idx_lx] ,3)<< " "<< factor_conv<<" "<<factor_intToCorr<< "\n";
+                              << factor_conv<<" "<<factor_intToCorr<< "\n";
                     std::cout <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
 
                     std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
@@ -490,17 +490,17 @@ int main(int argc, char ** argv)
                 delete binary_traj;
 
             }else if (msd || msd_cm || msd_self){
-                std::cerr << "Inizio del calcolo dello spostamento quadratico medio ";
+                std::cerr << "Mean square displacement calculation ";
                 unsigned int f_cm=1;
                 if (msd_cm) {
-                     std::cerr << "per il centro di massa e per gli atomi...\n";
+                     std::cerr << "of the center of mass and of the atoms is beginning...\n";
                      f_cm=2;
                 }else{
-                     std::cerr << "per ciascun atomo...\n";
+                     std::cerr << " of the atoms is beginning...\n";
                      if (msd_self) {
-                         std::cerr << "Nel sistema di riferimento del centro di massa della rispettiva specie...\n";
+                         std::cerr << "In the reference system of each atomic type center of mass...\n";
                      } else {
-                         std::cerr << "Nel sistema di riferimento delle coordinate della cella...\n";
+                         std::cerr << "In the cell coordinate system...\n";
                      }
                 }
 
@@ -517,10 +517,9 @@ int main(int argc, char ** argv)
 
             }else if (gofrt>0) {
                 if (factors_input.size()!=2){
-                    std::cerr << "Errore: specificare il valore minimo è masimo delle distanze da utilizzare per costruire l'istogramma con l'opzione -F.\n";
-                    abort();
+                    throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
-                std::cerr << "Inizio del calcolo di g(r,t) -- parte distintiva e parte non distintiva del correlatore di van Hove...\n";
+                std::cerr << "Calculation of g(r,t) -- distinctive and non distinctive part of the van Hove function...\n";
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
@@ -553,10 +552,9 @@ int main(int argc, char ** argv)
 
             }else if (sph>0) {
                 if (factors_input.size()!=2){
-                    std::cerr << "Errore: specificare il valore minimo è masimo delle distanze da utilizzare per costruire la funzione di correlazione con le armoniche sferiche con l'opzione -F.\n";
-                    abort();
+                    throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
-                std::cerr << "Inizio del calcolo delle funzioni di correlazione della densità sviluppata in armoniche sferiche...\n";
+                std::cerr << "Calculation of spherical harmonic density correlation function is beginning (this can take a lot of time)...\n";
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
@@ -603,7 +601,7 @@ int main(int argc, char ** argv)
 
 
             }else if (velocity_h) {
-                std::cerr << "Inizio del calcolo dell'istogramma della velocità...\n";
+                std::cerr << "Velocity histogram...\n";
                 Traiettoria test(input);
                 MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
                 istogramma_vel.calcola(nbins,vmax_h);
@@ -619,7 +617,7 @@ int main(int argc, char ** argv)
                 }
 
             } else if (fononefile != "") {
-                std::cerr << "Inizio analisi dei modi normale di vibrazione del cristallo...\n";
+                std::cerr << "Normal mode coordinate transformation...\n";
                 Traiettoria test(input);
                 ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
                 test_normali.reset(numero_frame);
@@ -627,7 +625,7 @@ int main(int argc, char ** argv)
 
                 return 1;
             } else if (spettro_vibraz) {
-                std::cerr << "Inizio del calcolo dello spettro vibrazionale...\n";
+                std::cerr << "Vibrational spectrum...\n";
                 Traiettoria test(input);
                 //            SpettroVibrazionale test_spettro(&test);
                 MediaBlocchi<SpettroVibrazionale,bool> test_spettro_blocchi(&test,blocknumber);
