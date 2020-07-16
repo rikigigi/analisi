@@ -242,6 +242,33 @@ BOOST_AUTO_TEST_CASE(test_buffer_discard_all){
     BOOST_TEST_MESSAGE("times used: "<<calculator.n_check<<"; time calculated: "<< calculator.n_eval);
 }
 
+BOOST_AUTO_TEST_CASE(test_buffer_hit_miss) {
+
+    int t2_stop=20,t2_start=0;
+    int t1_start=0,t1_stop=10;
+    int overlap=t2_start< t1_stop ?t1_stop- t2_start : ( t1_start < t2_stop ?t2_stop -t1_start : 0 );
+    for (int istart=0;istart<10;istart++){
+        int start=istart*12345;
+        CalcBuffer<int> test(t2_stop-t2_start+1,1);
+        FakeCalc calculator;
+        for (int t1=t1_start;t1<t1_stop;++t1){
+            for (int t2=t2_start;t2<t2_stop;++t2){
+
+                int * a=test.buffer_calc(calculator,start+t1),
+                    * b=test.buffer_calc(calculator,start+t2);
+                BOOST_TEST(calculator.check(start+t1,a));
+                BOOST_TEST(calculator.check(start+t2,b));
+                if (t2==t2_stop-1){
+                    test.discard(start+t1);
+                }
+            }
+        }
+        BOOST_TEST(test.get_miss()==calculator.n_eval);
+        BOOST_TEST(test.get_hit()==calculator.n_check-calculator.n_eval);
+        BOOST_TEST(test.get_miss()==t1_stop-t1_start + t2_stop-t2_start - overlap);
+    }
+}
+
 //double loop splitter test
 
 #include "twoloopsplit.h"

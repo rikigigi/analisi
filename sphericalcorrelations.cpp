@@ -162,7 +162,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             TFLOAT *aveTypes=new TFLOAT[sh_final_size];
             int *avecont=new int[ntypes];
             //buffer for few sh calculations -- note that only the last 2 requests must be in the returned pointer at the same time
-            CalcBuffer<TFLOAT,unsigned int > buffer(30,sh_snap_size);
+            CalcBuffer<TFLOAT,unsigned int > buffer(buffer_size,sh_snap_size);
 
 
             //loop over data -- splitted in an efficient (?) way see class TwoLoopSplit. it is the equivalent of the following:
@@ -177,7 +177,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             while(!finished){
                 task_distributer.get_next_idx_pair(ith,t1,t2,finished);
                 if (t1 > t1_old) {
-                    buffer.discard(t1_old);
+                    buffer.discard(t1_old+primo);
                 } else if (t1<t1_old) {
                     buffer.discard();
                 }
