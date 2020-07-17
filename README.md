@@ -58,6 +58,21 @@ result=np.array(msd,copy=False)
 
 ```
 
+Heat transport coefficient calculation: correlation functions and gk integral for a multicomponent fluid example
+```
+import numpy as np
+with open(filepath_tests + '/data/gk_integral.dat', 'r') as flog:
+    headers = flog.readline().split()
+log = np.loadtxt(filepath_tests + '/data/gk_integral.dat', skiprows=1)
+
+import pyanalisi
+traj = pyanalisi.ReadLog(log, headers)
+gk = pyanalisi.GreenKubo(analisi_log,'',1,['c_flux[1]','c_vcm[1][1]'], False, 2000, 2,False,0,4,False,1,100)
+gk.reset(analisi_log.getNtimesteps()-2000)
+gk.calculate(0)
+result = np.array(gk,copy=False)
+
+```
 
 ## note
 
@@ -112,6 +127,72 @@ cd build
 cmake ../
 make
 ```
+
+# Documentation
+
+## MSD
+ TODO
+
+## GreenKubo
+ TODO
+
+## g(r,t)
+ TODO
+
+## Spherical harmonics correlations
+### Calculation procedure:
+The implemented formula for the real spherical harmonics is the following:
+$$
+Y_{\ell m} =
+\begin{cases}
+ \displaystyle (-1)^m\sqrt{2} \sqrt{{2\ell+1 \over 4\pi}{(\ell-|m|)!\over (\ell+|m|)!}} \ 
+ P_\ell^{|m|}(\cos \theta) \ \sin( |m|\varphi )  
+ &\mbox{if } m<0 
+ \\
+ \displaystyle \sqrt{{ 2\ell+1 \over 4\pi}} \ P_\ell^m(\cos \theta) 
+ & \mbox{if } m=0 
+ \\
+ \displaystyle (-1)^m\sqrt{2} \sqrt{{2\ell+1 \over 4\pi}{(\ell-m)!\over (\ell+m)!}} \ 
+ P_\ell^m(\cos \theta) \ \cos( m\varphi )
+ & \mbox{if } m>0 \,.
+\end{cases}
+$$
+Where $\cos \theta$, $\sin \varphi$, $\cos \varphi$ are calculated using cartesian components:
+$$
+\cos \theta = \frac{z}{\sqrt{x^2+y^2+z^2}}  \\
+\cos \varphi = \frac{x}{\sqrt{x^2+y^2}}  \\ 
+\sin \varphi = \frac{y}{\sqrt{x^2+y^2}} \\
+$$
+and $\sin |m|\varphi$, $\cos |m|\varphi$ are evaluated using Chebyshev polynomials with a recursive definition:
+$$
+\begin{cases}
+\cos m \varphi &= 2 \cos (m-1)\varphi \cos \varphi - \cos (m-2)\varphi \\
+\sin m \varphi &= 2 \cos \varphi \sin (m-1)\varphi - \sin (m-2)\varphi \\
+\end{cases}
+$$
+and $P_\ell^m$ are the associated Legendre polynomials, calculated with the following set of recursive definition:
+$$
+P_{\ell +1}^{\ell +1}(x) = - (2\ell+1) \sqrt{1-x^2} P_{\ell}^{\ell}(x) \\
+P_{\ell +1}^{\ell}(x) = x (2\ell+1) P_{\ell}^{\ell}(x) \\
+$$
+that allows us to calculate every $(\ell,\ell)$ and every $(\ell,\ell+1)$ element of the $(\ell,m)$ values. Then we have the recursion to go up in $\ell$, for any value of it:
+$$
+P^m_{\ell} = \frac{x(2\ell - 1)P^m_{\ell-1} - (\ell + m - 1)P^m_{\ell-2}}{\ell - m}
+$$
+
+The program, given a number $\ell_{max}$ and a triplet $(x,y,z)$, is able to calculate every value of $Y_{\ell m}(x,y,z) \forall \ell \in [0,\ell_{max}]$ and for all allowed values of $m$ with a single recursion. Let
+$$
+y_{\ell m}^{I j}(t) = \int_{V_I} \mathrm{d}\theta\mathrm{d}\varphi\mathrm{d}r \rho^j(r,\theta,\varphi,t) Y_{\ell m}(\theta,\varphi)
+$$
+for some timestep $t$ in some volume $V_I$ taken as a the difference of two concentric spheres centered on the atom $I$ of radius $r_{inner}$ and $r_{outer}$, and where $\rho_j$ is the atomic density of the species $j$. Since the densities are taken as sums of dirac delta functions, it is sufficient to evaluate the spherical harmonics functions at the position of the atoms.
+Then we calculate the following:
+$$
+c_\ell^{Jj}(t)=\langle \frac{1}{N_J}\sum_{I \text{ is of type } J}\sum_{m=-\ell}^{\ell} y_{\ell m}^{I j}(0) y_{\ell m}^{I j}(t) \rangle
+$$
+where $\langle \cdot \rangle$ is an average operator, and we do an additional average over all the $N_J$ central atoms of the type $J$. The $\langle \cdot \rangle$ average is implemented as an average over the starting timestep.
+
+### Library interface
+ TODO
 
 # Credits
 Written by Riccardo Bertossa during his lifetime at SISSA
