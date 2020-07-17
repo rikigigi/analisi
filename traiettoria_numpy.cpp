@@ -1,17 +1,7 @@
 #include "traiettoria_numpy.h"
 #include <fstream>
 #include "lammps_struct.h"
-
-template <typename T>
-bool has_no_stride(const pybind11::buffer_info & buf) {
-    ssize_t stride=sizeof (T);
-    for (int i=buf.ndim-1; i>=0; --i) {
-        if (buf.strides[i]!=stride)
-            return false;
-        stride*=buf.shape[i];
-    }
-    return true;
-}
+#include "buffer_utils.h"
 
 Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buffer buffer_vel, pybind11::buffer buffer_types, pybind11::buffer buffer_box, bool lammps_box, bool pbc_wrap) : lammps_box{lammps_box}
 {

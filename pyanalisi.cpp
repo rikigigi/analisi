@@ -13,13 +13,14 @@
 #include "centerofmassdiff.h"
 #include "msd.h"
 #include "traiettoria_numpy.h"
+#include "readlog_numpy.h"
 #include "sphericalcorrelations.h"
 #include "config.h"
 
 namespace py = pybind11;
 
 template <class T>
-void gofrt(py::module & m, std::string typestr){
+void define_atomic_traj(py::module & m, std::string typestr){
     py::class_<Gofrt<double,T> >(m,(std::string("Gofrt")+typestr).c_str(), py::buffer_protocol())
             .def(py::init<T*,double,double,unsigned int, unsigned int, unsigned int,unsigned int, bool>(),R"begend(
                                                                                                           calculates g(r) and, in general, g(r,t). Interesting dynamical property
@@ -36,10 +37,8 @@ void gofrt(py::module & m, std::string typestr){
                     g.get_shape(),                 /* Buffer dimensions */
                     g.get_stride());
     });
-}
 
-template <class T>
-void shcorr(py::module & m, std::string typestr){
+
     using SHC = SphericalCorrelations<10,double,T>;
     py::class_< SHC >(m,(std::string("SphericalCorrelations")+typestr).c_str(),py::buffer_protocol())
             .def(py::init<T*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,unsigned int, bool>(),R"lol(
@@ -76,9 +75,8 @@ void shcorr(py::module & m, std::string typestr){
                     );
 
     });
-}
-template <class T>
-void msd(py::module & m, std::string typestr){
+
+
     using MSD=MSD<T>;
     py::class_<MSD>(m,(std::string("MeanSquareDisplacement")+typestr).c_str(),py::buffer_protocol())
             .def(py::init<T *, unsigned int, unsigned int, unsigned int , bool, bool,bool>())
@@ -98,6 +96,30 @@ void msd(py::module & m, std::string typestr){
             .def("__enter__",[](MSD & m) -> MSD & {return m;})
             .def("__exit__",[](MSD & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
             ;
+}
+
+
+template <class T>
+void gk(py::module & m, std::string typestr){
+
+    using GK = GreenKuboNComponentIonicFluid<T,double,double>;
+    py::class_<GK>(m,("GreenKubo"+typestr).c_str(), py::buffer_protocol())
+            .def(py::init<T*, std::string, unsigned int, std::vector<std::string>, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int>(),R"begend()begend")
+            .def("getNumberOfExtraTimestepsNeeded",&GK::numeroTimestepsOltreFineBlocco,R"begend(
+                perform an efficient, multithreaded Green-Kubo calculations of the transport coefficient of a condensed matter system, given the currents.
+)begend")
+            .def("reset",&GK::reset,R"begend()begend")
+            .def("calculate",&GK::calcola,R"begend()begend")
+            .def_buffer([](GK & g) -> py::buffer_info {
+                return py::buffer_info(
+                g.accesso_lista(),                               /* Pointer to buffer */
+                sizeof(double),                          /* Size of one scalar */
+                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
+                g.get_shape().size(),                                      /* Number of dimensions */
+                g.get_shape(),                 /* Buffer dimensions */
+                g.get_stride());
+            });
+
 }
 
 PYBIND11_MODULE(pyanalisi,m) {
@@ -200,24 +222,6 @@ PYBIND11_MODULE(pyanalisi,m) {
             });
 
 
-    using GK = GreenKuboNComponentIonicFluid<double,double>;
-    py::class_<GK>(m,"GreenKubo", py::buffer_protocol())
-            .def(py::init<RL*, std::string, unsigned int, std::vector<std::string>, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int>(),R"begend()begend")
-            .def("getNumberOfExtraTimestepsNeeded",&GK::numeroTimestepsOltreFineBlocco,R"begend(
-                perform an efficient, multithreaded Green-Kubo calculations of the transport coefficient of a condensed matter system, given the currents.
-)begend")
-            .def("reset",&GK::reset,R"begend()begend")
-            .def("calculate",&GK::calcola,R"begend()begend")
-            .def_buffer([](GK & g) -> py::buffer_info {
-                return py::buffer_info(
-                g.accesso_lista(),                               /* Pointer to buffer */
-                sizeof(double),                          /* Size of one scalar */
-                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
-                g.get_shape().size(),                                      /* Number of dimensions */
-                g.get_shape(),                 /* Buffer dimensions */
-                g.get_stride());
-            });
-
     py::class_<CenterDiff>(m,"CenterDiff", py::buffer_protocol())
             .def(py::init<Traiettoria *,unsigned int,unsigned int, unsigned int,bool,bool>())
             .def("reset",&CenterDiff::reset)
@@ -277,12 +281,10 @@ PYBIND11_MODULE(pyanalisi,m) {
                  end timestep (int)  -- if < 0 it will dump all the trajectory
 )lol");
 
-    gofrt<Traiettoria>(m,"_lammps");
-    gofrt<Traiettoria_numpy>(m,"");
-    shcorr<Traiettoria>(m,"_lammps");
-    shcorr<Traiettoria_numpy>(m,"");
-    msd<Traiettoria>(m,"_lammps");
-    msd<Traiettoria_numpy>(m,"");
+    define_atomic_traj<Traiettoria>(m,"_lammps");
+    define_atomic_traj<Traiettoria_numpy>(m,"");
+    gk<ReadLog<> >(m,"_file");
+    gk<ReadLog<> >(m,"");
     m.def("info",[]() -> std::string{
         return _info_msg ;
     });

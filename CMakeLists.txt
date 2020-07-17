@@ -115,7 +115,7 @@ set(Python_ADDITIONAL_VERSIONS 3.9 3.8 3.7 3.6 3.5 3.4)
 find_package(PythonLibsNew ${PYBIND11_PYTHON_VERSION} REQUIRED)
 
 if (${PYTHONLIBS_FOUND})
-    set (ANALISI_LIB "${ANALISI_LIB}" traiettoria_numpy.cpp )
+    set (ANALISI_LIB "${ANALISI_LIB}" traiettoria_numpy.cpp readlog_numpy.cpp )
 endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})

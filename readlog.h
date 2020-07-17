@@ -28,8 +28,8 @@ public:
             std::vector<std::string> req_headers=std::vector<std::string>()
             );
     ~ReadLog();
-    TFLOAT * line(unsigned int index);
-    unsigned int n_timestep(){return data.size()/data_size;}
+    TFLOAT * line(unsigned int index); //
+    unsigned int n_timestep(){return data.size()/data_size;} //
     unsigned int n_data(){return data_size;}
     unsigned int timestep(unsigned int index);
 
@@ -37,7 +37,7 @@ public:
      *  introduco una sintassi strana per calcolare al volo la corrente di carica dal file binario della traiettoria:
      * "#traj:JZ N q1 ... qN" --> calcola la corrente dalla traiettoria utilizzando le N cariche per gli atomi q1 ... qN
     **/
-    std::pair<unsigned int,bool> get_index_of(std::string header);
+    std::pair<unsigned int,bool> get_index_of(std::string header); //
     int need_binary(std::vector<std::string> headers);
     void calc_currents(Traiettoria * t,unsigned int blocks);
 private:
