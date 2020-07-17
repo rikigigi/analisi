@@ -104,7 +104,24 @@ void gk(py::module & m, std::string typestr){
 
     using GK = GreenKuboNComponentIonicFluid<T,double,double>;
     py::class_<GK>(m,("GreenKubo"+typestr).c_str(), py::buffer_protocol())
-            .def(py::init<T*, std::string, unsigned int, std::vector<std::string>, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int>(),R"begend()begend")
+            .def(py::init<T*, std::string, unsigned int, std::vector<std::string>, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int, bool, unsigned int, unsigned int>(),
+                 R"begend(
+                 Parameters
+                 ----------
+                 ReadLog -> log object
+                 string -> dump file output name
+                 unsigned int -> skip in doing the trajectory average
+                 string list -> header list (first one is the heat current header). You have to specify the header of the first column of each triplet
+                 bool -> if true dump a file
+                 unsigned int -> max lenght of correlation function
+                 unsigned int -> number of threads
+                 bool -> if true subtract the average from the correlation function before integrating
+                 unsigned int -> calculate the average starting from this time
+                 unsigned int -> number of segments (it does impact only cache performance)
+                 bool -> do a benchmark
+                 unsigned int -> benchmark parameter start
+                 unsigned int -> benchmark parameter stop
+                 )begend")
             .def("getNumberOfExtraTimestepsNeeded",&GK::numeroTimestepsOltreFineBlocco,R"begend(
                 perform an efficient, multithreaded Green-Kubo calculations of the transport coefficient of a condensed matter system, given the currents.
 )begend")
@@ -162,7 +179,7 @@ PYBIND11_MODULE(pyanalisi,m) {
     ;
 
     using RL = ReadLog<double>;
-    py::class_<RL>(m,"ReadLog")
+    py::class_<RL>(m,"ReadLog_file")
             .def(py::init<std::string,Traiettoria*,unsigned int, unsigned int, unsigned int, std::vector<std::string> >() ,R"begend(
                  perform an advanced read of a column formatted textfile with headers. Support multithreaded reading of chunks of lines.
 
@@ -170,16 +187,29 @@ PYBIND11_MODULE(pyanalisi,m) {
                  ----------
                  string -> filename
                  Traj -> Traj instance, to eventually calculate some currents
-                 unsigned int ->
-                 unsigned int ->
-                 unsigned int ->
-                 string list -> 
+                 unsigned int -> skip
+                 unsigned int -> number of threads
+                 unsigned int -> batch size
+                 string list -> eventual list of commands to calculate additional currents using the Traj instance
 )begend")
             .def("getNtimesteps", &RL::n_timestep,R"begend(
                  return number of timesteps read
 )begend");
 
-    py::class_<CorrelatoreSpaziale>(m,"CurrentCalc", py::buffer_protocol())
+    py::class_<ReadLog_numpy<double> >(m,"ReadLog")
+            .def(py::init<py::buffer, std::vector<std::string> >() ,R"begend(
+                 proxy class between python arrays and library
+
+                 Parameters
+                 ----------
+                 string -> 2d array with data
+                 string list -> header list
+)begend")
+            .def("getNtimesteps", &ReadLog_numpy<double>::n_timestep,R"begend(
+                 return number of timesteps read
+)begend");
+
+    py::class_<CorrelatoreSpaziale>(m,"_CurrentCalc", py::buffer_protocol())
             .def(py::init<Traiettoria*,std::vector< std::array<double,3> >,double,unsigned int,unsigned int,bool>(),R"begend(
                  calculates  \dot \tilde e(k) / |k|  (can be useful to define some new current)
 )begend")
@@ -202,7 +232,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             });
 
 
-    py::class_<HeatC>(m,"HeatCurrentCalc", py::buffer_protocol())
+    py::class_<HeatC>(m,"_HeatCurrentCalc", py::buffer_protocol())
             .def(py::init<Traiettoria*,double,unsigned int,unsigned int>(),R"begend(
                  calculates  something ill defined
 )begend")
@@ -222,7 +252,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             });
 
 
-    py::class_<CenterDiff>(m,"CenterDiff", py::buffer_protocol())
+    py::class_<CenterDiff>(m,"_CenterDiff", py::buffer_protocol())
             .def(py::init<Traiettoria *,unsigned int,unsigned int, unsigned int,bool,bool>())
             .def("reset",&CenterDiff::reset)
             .def("getNumberOfExtraTimestepsNeeded", &CenterDiff::numeroTimestepsOltreFineBlocco)
@@ -242,7 +272,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("__exit__",[](CenterDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
 
 
-    py::class_<CenterOfMassDiff>(m,"CenterOfMassDiff", py::buffer_protocol())
+    py::class_<CenterOfMassDiff>(m,"_CenterOfMassDiff", py::buffer_protocol())
             .def(py::init<Traiettoria *,unsigned int,unsigned int>())
             .def("reset",&CenterOfMassDiff::reset)
             .def("getNumberOfExtraTimestepsNeeded", &CenterOfMassDiff::numeroTimestepsOltreFineBlocco)
@@ -284,7 +314,7 @@ PYBIND11_MODULE(pyanalisi,m) {
     define_atomic_traj<Traiettoria>(m,"_lammps");
     define_atomic_traj<Traiettoria_numpy>(m,"");
     gk<ReadLog<> >(m,"_file");
-    gk<ReadLog<> >(m,"");
+    gk<ReadLog_numpy<double> >(m,"");
     m.def("info",[]() -> std::string{
         return _info_msg ;
     });

@@ -1,8 +1,8 @@
 import pytest
-import pyanalisi
 import numpy as np
 
 def test_gofr(analisi_traj,num_regression):
+    import pyanalisi
     startr=0.0
     endr=3.8
     nbin=200

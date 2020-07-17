@@ -24,3 +24,6 @@ ReadLog_numpy<TFLOAT>::ReadLog_numpy(pybind11::buffer data, std::vector<std::str
 
 
 }
+
+template class ReadLog_numpy<double>;
+template class ReadLog_numpy<long double>;

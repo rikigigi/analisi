@@ -1,5 +1,6 @@
 import pytest
 import os
+import pyanalisi
 
 import faulthandler
 faulthandler.enable()
@@ -31,6 +32,17 @@ def numpy_traj(filepath_tests):
 
 @pytest.fixture(scope='session')
 def analisi_traj(numpy_traj):
-    import pyanalisi
     return pyanalisi.Trajectory(*numpy_traj,True, False)
+
+@pytest.fixture(scope='session')
+def numpy_log(filepath_tests):
+    import numpy as np
+    with open(filepath_tests + '/data/gk_integral.dat', 'r') as flog:
+        headers = flog.readline().split()
+    log = np.loadtxt(filepath_tests + '/data/gk_integral.dat', skiprows=1)
+    return log, headers
+
+@pytest.fixture(scope='session')
+def analisi_log(numpy_log):
+    return pyanalisi.ReadLog(*numpy_log)
 

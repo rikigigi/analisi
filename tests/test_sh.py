@@ -1,8 +1,8 @@
 import pytest
-import pyanalisi
 import numpy as np
 
 def test_sh(analisi_traj,num_regression):
+    import pyanalisi
     startr=0.7
     endr=3.5
     nbin=4
