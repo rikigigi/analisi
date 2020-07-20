@@ -3,7 +3,7 @@
 #include "lammps_struct.h"
 #include "buffer_utils.h"
 
-Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buffer buffer_vel, pybind11::buffer buffer_types, pybind11::buffer buffer_box, bool lammps_box, bool pbc_wrap) : lammps_box{lammps_box}
+Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::buffer &&buffer_vel_, pybind11::buffer &&buffer_types_, pybind11::buffer &&buffer_box_, bool lammps_box, bool pbc_wrap) : buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}, lammps_box{lammps_box}
 {
     wrap_pbc=pbc_wrap;
     pybind11::buffer_info info_pos{buffer_pos.request()};

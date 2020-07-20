@@ -7,7 +7,7 @@
 class Traiettoria_numpy : public TraiettoriaBase<Traiettoria_numpy>
 {
 public:
-    Traiettoria_numpy(pybind11::buffer buffer_pos, pybind11::buffer buffer_vel, pybind11::buffer buffer_types, pybind11::buffer buffer_box,bool lammps_box=true,bool pbc_wrap=false);
+    Traiettoria_numpy(pybind11::buffer &&buffer_pos, pybind11::buffer &&buffer_vel, pybind11::buffer &&buffer_types, pybind11::buffer &&buffer_box,bool lammps_box=true,bool pbc_wrap=false);
     ~Traiettoria_numpy();
     double * posizioni (const int & timestep, const int & atomo) {return buffer_posizioni+natoms*3*timestep+atomo*3;}
     double * velocita (const int & timestep, const int & atomo){return buffer_velocita+natoms*3*timestep+atomo*3;}
@@ -18,6 +18,7 @@ public:
     void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);
 
 private:
+    pybind11::buffer buffer_pos,buffer_vel,buffer_types,buffer_box;
     bool lammps_box,posizioni_allocated;
     void calc_cm_pos_vel(double * a, double *&cm);
 };

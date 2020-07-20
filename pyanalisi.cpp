@@ -303,6 +303,10 @@ PYBIND11_MODULE(pyanalisi,m) {
                 types (int) python array (natoms)
                 lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
 )lol")
+
+            .def("getNtimesteps",&Traiettoria_numpy::get_ntimesteps,R"begend(
+                 returns number of timesteps
+)begend")
             .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj,R"lol(
                  Parameters
                  ----------
