@@ -42,6 +42,12 @@ struct DataRegression{
         }
     }
     bool is_same(double a, double b) {
+        if (std::isnan(a)) {
+            BOOST_TEST_WARN("Found NaN while testing 'a' array!");
+        }
+        if (std::isnan(b)) {
+            BOOST_TEST_WARN("Found NaN while testing 'b' array!");
+        }
         double max=fabs(a)>fabs(b) ? a : b;
         double min=fabs(a)>fabs(b) ? b : a;
         if (a==0 and b==0) return true;
@@ -53,20 +59,24 @@ struct DataRegression{
             if (! is_same(a[i],b[i])) {
                 BOOST_TEST_MESSAGE("data differs: " <<a[i] << " " << b<<" " <<a[i]-b[i] );
                 double ave_diff=0.0,ave_violated_diff=0.0;
-                double max_diff=a[i]-b[i];
-                double min_diff=a[i]-b[i];
-                unsigned n_violated=0;
+                double max_diff=fabs(a[i]-b[i]);
+                double min_diff=fabs(a[i]-b[i]);
+                unsigned n_violated=0,n=0;
                 for (size_t j=0;j<size;j++){
                     double t=fabs(a[j]-b[j]);
                     if (! is_same(a[j],b[j])) {
                         ave_violated_diff+=(t-ave_violated_diff)/(++n_violated);
                     }
                     //BOOST_TEST_MESSAGE(a[j] << " " << b[j]<<" " <<a[j]-b[j] );
-                    ave_diff+=(t - ave_diff)/(1+j);
+                    if (std::isnan(t)){
+                        BOOST_TEST_WARN("found NaN ");
+                    } else {
+                        ave_diff+=(t - ave_diff)/(++n);
+                    }
                     if (t<min_diff) min_diff=t;
                     if (t>max_diff) max_diff=t;
                 }
-                BOOST_TEST_ERROR("average difference: "<<ave_diff <<"\navereage difference when !is_same(a,b): "<<ave_violated_diff<<"\nnumber of !is_same(a,b): "<<n_violated<<"\nmin,max diff :"<<min_diff<<" "<<max_diff<<"\n");
+                BOOST_TEST_ERROR("\naverage difference: "<<ave_diff <<"\navereage difference when !is_same(a,b): "<<ave_violated_diff<<"\nnumber of !is_same(a,b): "<<n_violated<<"\nmin,max diff :"<<min_diff<<" "<<max_diff<<"\n");
                 return false;
             }
         }
