@@ -52,9 +52,21 @@ struct DataRegression{
         for (size_t i=0;i<size;++i){
             if (! is_same(a[i],b[i])) {
                 BOOST_TEST_MESSAGE("data differs: " <<a[i] << " " << b<<" " <<a[i]-b[i] );
+                double ave_diff=0.0,ave_violated_diff=0.0;
+                double max_diff=a[i]-b[i];
+                double min_diff=a[i]-b[i];
+                unsigned n_violated=0;
                 for (size_t j=0;j<size;j++){
-                    BOOST_TEST_MESSAGE(a[j] << " " << b[j]<<" " <<a[j]-b[j] );
+                    double t=fabs(a[j]-b[j]);
+                    if (! is_same(a[j],b[j])) {
+                        ave_violated_diff+=(t-ave_violated_diff)/(++n_violated);
+                    }
+                    //BOOST_TEST_MESSAGE(a[j] << " " << b[j]<<" " <<a[j]-b[j] );
+                    ave_diff+=(t - ave_diff)/(1+j);
+                    if (t<min_diff) min_diff=t;
+                    if (t>max_diff) max_diff=t;
                 }
+                BOOST_TEST_ERROR("average difference: "<<ave_diff <<"\navereage difference when !is_same(a,b): "<<ave_violated_diff<<"\nnumber of !is_same(a,b): "<<n_violated<<"\nmin,max diff :"<<min_diff<<" "<<max_diff<<"\n");
                 return false;
             }
         }
