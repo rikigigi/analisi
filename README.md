@@ -106,12 +106,21 @@ Dependencies:
 
 - C++17 capable compiler
 - linux (mmap)
-- FFTW3 (not included)
+- FFTW3 (included in the package)
 - Eigen3 (included in the package)
 - Boost (included in the package)
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- optional)
 - python (optional) 
+
+If you want to use system's fftw3 library, you have to provide to cmake the option:
+```
+-DSYSTEM_FFTW3=ON
+```
+If you don't want any python interface you have to provide to cmake the option:
+```
+-DPYTHON_INTERFACE=OFF
+```
 
 ## MPI build (why not?)
 ```

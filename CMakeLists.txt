@@ -64,10 +64,20 @@ add_subdirectory(boost)
 
 
 
+option(SYSTEM_FFTW3 "Use system fftw3 library" OFF)
 #fftw3
+if(SYSTEM_FFTW3)
 find_library (FFTW NAMES "fftw3")
 find_library (FFTW_TH NAMES "fftw3_threads")
 find_library (FFTW_OMP NAMES "fftw3_omp")
+else()
+#or use included one
+set(ENABLE_OPENMP ON CACHE BOOL "Enables multithread in FFTW3")
+set(ENABLE_THREADS ON CACHE BOOL "Enables multithread in FFTW3")
+add_subdirectory(fftw-3.3.8)
+set(FFTW fftw3)
+set(FFTW_OMP ${FFTW}_omp)
+endif()
 
 #xdrfile
 find_library (XDRFILE NAMES "xdrfile" )
@@ -104,8 +114,10 @@ set (ANALISI_LIB
     sphericalcorrelations.cpp
     )
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/pybind11/tools")
+option(PYTHON_INTERFACE "Build python interface" ON)
 
+if(PYTHON_INTERFACE)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/pybind11/tools")
 #check python
 # Add a CMake parameter for choosing a desired Python version
 if(NOT PYBIND11_PYTHON_VERSION)
@@ -113,9 +125,9 @@ if(NOT PYBIND11_PYTHON_VERSION)
 endif()
 set(Python_ADDITIONAL_VERSIONS 3.9 3.8 3.7 3.6 3.5 3.4)
 find_package(PythonLibsNew ${PYBIND11_PYTHON_VERSION} REQUIRED)
-
 if (${PYTHONLIBS_FOUND})
     set (ANALISI_LIB "${ANALISI_LIB}" traiettoria_numpy.cpp readlog_numpy.cpp )
+endif()
 endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
@@ -136,6 +148,7 @@ target_link_libraries(test_calcBuffer ${PROJECT_NAME}_lib boost test_fixtures)
 add_executable(test_gk tests/src/test_gk.cpp)
 target_link_libraries(test_gk ${PROJECT_NAME}_lib boost test_fixtures)
 
+if(PYTHON_INTERFACE)
 if (${PYTHONLIBS_FOUND})
 #python interface
 set (PYTHON_SUPPORT ${PYTHON_LIBRARIES})
@@ -147,6 +160,7 @@ add_subdirectory( pybind11 )
 pybind11_add_module(pyanalisi pyanalisi.cpp)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
 endif()
+endif()
 
 
 if (FFTW_OMP)
@@ -156,7 +170,6 @@ elseif (FFTW_TH)
 else()
     set (FFTW_MT "" )
 endif()
-
 
 if (XDRFILE)
     set (XDR_FILE "${XDRFILE}")
@@ -174,6 +187,11 @@ add_definitions(-DANALISI -DDEBUG)
 
 # look for environment variables like $FFTW_INCLUDE and $BOOST_INCLUDE (found in cineca's cluster nodes) and add to the include path
 
+if(DEFINED ENV{FFTW_INC})
+    message(STATUS "Found FFTW_INC=$ENV{FFTW_INC}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I $ENV{FFTW_INC}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I $ENV{FFTW_INC}")
+endif()
 if(DEFINED ENV{FFTW_INCLUDE})
     message(STATUS "Found FFTW_INCLUDE=$ENV{FFTW_INCLUDE}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I $ENV{FFTW_INCLUDE}")
