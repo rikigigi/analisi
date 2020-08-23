@@ -26,7 +26,7 @@ CorrelatoreSpaziale::CorrelatoreSpaziale(Traiettoria *t,
                                                  unsigned int nthreads,
                                                  unsigned int skip,
                                                  bool debug) :
-    t{t},sfac(nullptr), sigma2(sigma2),debug(debug),tipi_atomi(0),ntimesteps(0), CalcolaMultiThread (nthreads,skip)
+    t{t},sfac(nullptr), sigma2(sigma2),debug(debug),tipi_atomi(0),ntimesteps(0), CalcolaMultiThread<CorrelatoreSpaziale> (nthreads,skip)
 {
     nk=ks.size();
     klist=ks;

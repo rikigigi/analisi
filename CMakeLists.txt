@@ -112,6 +112,7 @@ set (ANALISI_LIB
     centerofmassdiff.cpp
     specialfunctions.cpp
     sphericalcorrelations.cpp
+    atomicdensity.cpp
     )
 
 option(PYTHON_INTERFACE "Build python interface" ON)

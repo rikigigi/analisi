@@ -20,7 +20,7 @@
 class Traiettoria;
 
 
-class CorrelatoreSpaziale : public CalcolaMultiThread, public OperazioniSuLista<CorrelatoreSpaziale,double>
+class CorrelatoreSpaziale : public CalcolaMultiThread<CorrelatoreSpaziale>, public OperazioniSuLista<CorrelatoreSpaziale,double>
 {
 public:
     CorrelatoreSpaziale(Traiettoria *t,
@@ -30,16 +30,17 @@ public:
                         unsigned int skip=1,
                         bool debug=false
             );
-    virtual unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) final {return 1;}
-    virtual void reset(const unsigned int numeroTimestepsPerBlocco) final;
-    virtual void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith) noexcept;
+    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 1;}
+    void reset(const unsigned int numeroTimestepsPerBlocco);
+    void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith) noexcept;
     void s_fac_k(const double  k[3], const unsigned int i_t,double * out ) const;
     int get_sfac_size()const {return size_sfac;}
     void print(std::ostream & out);
     using CalcolaMultiThread::operator=;
     ~CorrelatoreSpaziale();
-    virtual std::vector<ssize_t> get_shape() const final;
-    virtual std::vector<ssize_t> get_stride() const final;
+    std::vector<ssize_t> get_shape() const;
+    std::vector<ssize_t> get_stride() const;
+    void join_data(){}
 
 private:
     using OperazioniSuLista<CorrelatoreSpaziale,double>::lista;

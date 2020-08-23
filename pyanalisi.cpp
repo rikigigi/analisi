@@ -16,6 +16,7 @@
 #include "readlog_numpy.h"
 #include "sphericalcorrelations.h"
 #include "config.h"
+#include "atomicdensity.h"
 
 namespace py = pybind11;
 
@@ -95,6 +96,22 @@ void define_atomic_traj(py::module & m, std::string typestr){
             })
             .def("__enter__",[](MSD & m) -> MSD & {return m;})
             .def("__exit__",[](MSD & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
+            ;
+    using AD = AtomicDensity<T,long>;
+    py::class_<AD>(m,(std::string("PositionHistogram")+typestr).c_str(),py::buffer_protocol())
+            .def(py::init<T*,std::array<size_t, 3>,unsigned, unsigned>())
+            .def("reset",&AD::reset)
+            .def("calculate",&AD::calcola)
+            .def_buffer([](AD & m)->py::buffer_info {
+        return py::buffer_info(
+                    m.accesso_lista(),
+                    sizeof(double),
+                    py::format_descriptor<double>::format(),
+                    m.get_shape().size(),
+                    m.get_shape(),
+                    m.get_stride()
+                    );
+    })
             ;
 }
 
