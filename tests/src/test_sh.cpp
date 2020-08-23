@@ -17,7 +17,7 @@ struct ShFixture{
     unsigned int nbin;
     int natoms,ntypes;
     SphericalCorrelations<l,double,Traiettoria> sh;
-    DataRegression data;
+    DataRegression<double> data;
     double  workspace[(l+1)*(l+1)], cheby[(l+1)*2];
     void calc(int timestep, double * res){
 	double l_[3]={traj.traj.scatola(timestep)[1]-traj.traj.scatola(timestep)[0],

@@ -12,7 +12,7 @@ struct GkFixture{
         gk.reset(5000);
     }
     LogSetup traj;
-    DataRegression data;
+    DataRegression<double> data;
     GreenKuboNComponentIonicFluid<ReadLog<>, double,double> gk;
 };
 

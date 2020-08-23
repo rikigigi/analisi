@@ -148,6 +148,8 @@ add_executable(test_calcBuffer tests/src/test_calc_buffer.cpp)
 target_link_libraries(test_calcBuffer ${PROJECT_NAME}_lib boost test_fixtures)
 add_executable(test_gk tests/src/test_gk.cpp)
 target_link_libraries(test_gk ${PROJECT_NAME}_lib boost test_fixtures)
+add_executable(test_ph tests/src/test_position_histogram.cpp)
+target_link_libraries(test_ph ${PROJECT_NAME}_lib boost test_fixtures)
 
 if(PYTHON_INTERFACE)
 if (${PYTHONLIBS_FOUND})

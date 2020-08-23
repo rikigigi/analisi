@@ -105,8 +105,8 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def_buffer([](AD & m)->py::buffer_info {
         return py::buffer_info(
                     m.accesso_lista(),
-                    sizeof(double),
-                    py::format_descriptor<double>::format(),
+                    sizeof(long),
+                    py::format_descriptor<long>::format(),
                     m.get_shape().size(),
                     m.get_shape(),
                     m.get_stride()
