@@ -36,7 +36,8 @@ private:
     size_t idx_(const double * pos, const double * l, bool & ok) const {
         size_t idxs[3];
         for (unsigned int icoord=0;icoord<3;++icoord){
-            double l_=(pos[icoord]-l[2*icoord])/(l[2*icoord+1]-l[2*icoord]);
+            double b=l[2*icoord+1]-l[2*icoord];
+            double l_=pos[icoord]-std::floor(pos[icoord]/b)*b;
             if (l_<0 || l_>=1) {
                 ok=false;
                 return 0;
