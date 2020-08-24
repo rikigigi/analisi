@@ -30,23 +30,26 @@ private:
     std::array<size_t,3> nbin;
     Hist * hist;
     T * t;
-    size_t idx(const size_t x, const size_t y, const size_t z) const {
-        return x + nbin[0]*(y + nbin[1]*z);
+    int ntypes;
+    size_t idx(const size_t x, const size_t y, const size_t z, const size_t itype) const {
+        return x + nbin[2]*(y + nbin[1]*(z + itype*nbin[0]));
     }
-    size_t idx_(const double * pos, const double * l, bool & ok) const {
+    size_t idx_(const double * pos, const double * l, bool & ok,int itype) const {
         size_t idxs[3];
         for (unsigned int icoord=0;icoord<3;++icoord){
             double b=l[2*icoord+1]-l[2*icoord];
-            double l_=pos[icoord]-std::floor(pos[icoord]/b)*b;
+            double l_=pos[icoord]/b-std::floor(pos[icoord]/b);
             if (l_<0 || l_>=1) {
                 ok=false;
+                std::cerr << l_ << " b="<<b<<" coord="<<pos[icoord]<<std::endl;
+                throw std::runtime_error("Bug: wrong pbc wrapping");
                 return 0;
             } else {
                 ok=true;
             }
             idxs[icoord] = std::floor(l_*nbin[icoord]);
         }
-        return idx(idxs[0],idxs[1],idxs[2]);
+        return idx(idxs[2],idxs[1],idxs[0],itype);
     }
 
     using CalcolaMultiThread<This>::ntimesteps;
