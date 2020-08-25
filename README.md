@@ -143,7 +143,21 @@ make
  TODO
 
 ## GreenKubo
- TODO
+ Given $M$ vector time series of length $N$ $^m \bf J _{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,
+ implements an expression equivalent to the following formula:
+ $$
+ \begin{equation}
+ ^{ij}C_t = \frac{1}{N_{ave}}\sum_{m=1}^{N_{ave}}\frac{1}{3}\sum_{c=1}^{3} \,^i\!J^c_m\cdot\,^j\!J^c_{m+l}\\
+ ^{ij}L_t = \left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l \\
+ ^{ij}\bar L_t = \frac{1}{t}\left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l\cdot l \\
+ GK_t=\frac{1}{^{0\,0}[(L_t)^{-1}]}\\
+ \bar {GK}_t=\frac{1}{^{0\,0}[(L_t-\bar L_t)^{-1}]}\\
+ \end{equation}
+ $$
+ but with the trapezoidal rule in place of the sums marked with $^*$. Note that $L_t$ is a matrix. To get the correct units of measure, you have still to multiply all the quantities but the $C_t$s by the integration timestep. $N_{ave}$ is the number of timesteps on which the code runs the average.
+ Every quantity is written in the output in the following order:
+ $$\{^{0\,0}C_t,^{0\,0}L_t,^{0\,0}\bar L_t,^{0\,1}C_t,^{0\,1}L_t,^{0\,1}\bar L_t,\dots,^{M\,M}C_t,^{M\,M}L_t,^{M\,M}\bar L_t,GK_t,\bar {GK}_t\}$$
+ If the command line tool is used, the variance of the block average is automatically computed, and after each column you find its variance. Moreover you find in the output a useful description of the columns with their indexes.
 
 ## g(r,t)
  TODO
