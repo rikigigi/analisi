@@ -67,7 +67,9 @@ log = np.loadtxt(filepath_tests + '/data/gk_integral.dat', skiprows=1)
 
 import pyanalisi
 traj = pyanalisi.ReadLog(log, headers)
-gk = pyanalisi.GreenKubo(analisi_log,'',1,['c_flux[1]','c_vcm[1][1]'], False, 2000, 2,False,0,4,False,1,100)
+gk = pyanalisi.GreenKubo(analisi_log,'',
+       1,['c_flux[1]','c_vcm[1][1]'],
+       False, 2000, 2,False,0,4,False,1,100)
 gk.reset(analisi_log.getNtimesteps()-2000)
 gk.calculate(0)
 result = np.array(gk,copy=False)
@@ -97,7 +99,8 @@ Calculations:
 - mean square displacement
 - green kubo integral of currents
 - multicomponent green kubo time domain formula (MPI here can be useful...)
-- spherical harmonics number density time correlation analysis
+- spherical harmonics number density time correlation analysis (MPI here can be useful...)
+- atomic position histogram
 - and more ...
 - ...
 
@@ -105,7 +108,8 @@ Calculations:
 Dependencies:
 
 - C++17 capable compiler
-- linux (mmap)
+- cmake
+- linux (mmap) (maybe can be removed if only python interface is needed)
 - FFTW3 (included in the package)
 - Eigen3 (included in the package)
 - Boost (included in the package)
@@ -138,13 +142,59 @@ make
 ```
 
 # Documentation
-[link to pdf version](README.pdf)
+This document is better rendered in the pdf version. [Link to the pdf version](README.pdf).
+
+## General info
+
+The command line utility is able to read only binary trajectory files in the LAMMPS format, specified with the command line option `-i [input_file]`, or a time series in a column formatted text file with a header, specified with the command line option `-l [input_file]`. The trajectory file can be generated in many ways:
+ - by LAMMPS :-)
+ - by using the command line utility with the command line options `-i [input_file] -binary-convert [output_file]`, where `[input_file]` is the name of a plain text trajectory in the format:
+ 
+   ```
+   [natoms]
+   [xlo] [xhi]
+   [ylo] [yhi]
+   [zlo] [zhi]
+   [id_1] [type_1] [x_1] [y_1] [z_1] [vx_1] [vy_1] [vz_1]
+    .      .       .    .    .    .     .     .
+    .      .       .    .    .    .     .     .
+    .      .       .    .    .    .     .     .
+   [id_natoms] [type_natoms] [x_natoms] [y_natoms] [z_natoms] [vx_natoms] [vy_natoms] [vz_natoms]
+   .
+   .
+   .
+   ```
+   
+   That is: for every step you have to provide the number of atoms, low and high coordinates of the orthorombic cell, and then for every atom its id, type id, positions and velocities.
+ - by using the command line utility with the command line options `-i [trr_file] -binary-convert-gromacs [output_file] [typefile]` and a gromacs trajectory (you have to provide the xdr library)
+ - by using the python interface:
+ 
+   ```
+   #read trajectory. It can come from everywhere
+    import numpy as np
+    pos = np.load( 'tests/data/positions.npy') #shape (N_timesteps, N_atoms, 3)
+    vel = np.load( 'tests/data/velocities.npy') #shape (N_timesteps, N_atoms, 3)
+    box = np.load( 'tests/data/cells.npy') #shape (N_timesteps, 3, 3)
+    types = np.load( 'tests/data/types.npy') #shape (N_timesteps), dtype=np.int32
+    
+    #create trajectory object and dump to file
+    import pyanalisi
+    analisi_traj = pyanalisi.Trajectory(pos, vel, types, box, True, False)
+    analisi_traj.write_lammps_binary("output_filename.bin"
+                               , 0, # starting timestep
+                               -1   # last timestep:
+                               )    # -1 dumps full trajectory
+```
 
 ## MSD
- TODO
+
+Given a trajectory $\bf ^ix_t$ where $i\in\{1,\dots,N_{atoms}\}$ is the atomic index and $t$ is the timestep index, the code computes the following
+$$
+MSD_t^{typej}=\frac{1}{N_{typej}}\sum_{i|type(i)=typej}\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|^i{\bf x}_{t+l}-^i{\bf x}_l\right|^2
+$$
 
 ## GreenKubo
- Given $M$ vector time series of length $N$ $^m \bf J _{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,
+ Given $M$ vector time series of length $N$ $^m {\bf J}_{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,
  implements an expression equivalent to the following formula:
  $$
  \begin{aligned}
@@ -216,9 +266,6 @@ $$
 c_\ell^{Jj}(t)=\langle \frac{1}{N_J}\sum_{I \text{ is of type } J}\sum_{m=-\ell}^{\ell} y_{\ell m}^{I j}(0) y_{\ell m}^{I j}(t) \rangle
 $$
 where $\langle \cdot \rangle$ is an average operator, and we do an additional average over all the $N_J$ central atoms of the type $J$. The $\langle \cdot \rangle$ average is implemented as an average over the starting timestep.
-
-### Library interface
- TODO
 
 # Credits
 Written by Riccardo Bertossa during his lifetime at SISSA
