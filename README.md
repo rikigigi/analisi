@@ -138,6 +138,7 @@ make
 ```
 
 # Documentation
+[link to pdf version](README.pdf)
 
 ## MSD
  TODO
@@ -146,13 +147,13 @@ make
  Given $M$ vector time series of length $N$ $^m \bf J _{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,
  implements an expression equivalent to the following formula:
  $$
- \begin{equation}
- ^{ij}C_t = \frac{1}{N_{ave}}\sum_{m=1}^{N_{ave}}\frac{1}{3}\sum_{c=1}^{3} \,^i\!J^c_m\cdot\,^j\!J^c_{m+l}\\
- ^{ij}L_t = \left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l \\
- ^{ij}\bar L_t = \frac{1}{t}\left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l\cdot l \\
- GK_t=\frac{1}{^{0\,0}[(L_t)^{-1}]}\\
- \bar {GK}_t=\frac{1}{^{0\,0}[(L_t-\bar L_t)^{-1}]}\\
- \end{equation}
+ \begin{aligned}
+ ^{ij}C_t &= \frac{1}{N_{ave}}\sum_{m=1}^{N_{ave}}\frac{1}{3}\sum_{c=1}^{3} \,^i\!J^c_m\cdot\,^j\!J^c_{m+l}\\
+ ^{ij}L_t &= \left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l \\
+ ^{ij}\bar L_t &= \frac{1}{t}\left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l\cdot l \\
+ GK_t&=\frac{1}{^{0\,0}[(L_t)^{-1}]}\\
+ \bar {GK}_t&=\frac{1}{^{0\,0}[(L_t-\bar L_t)^{-1}]}\\
+ \end{aligned}
  $$
  but with the trapezoidal rule in place of the sums marked with $^*$. Note that $L_t$ is a matrix. To get the correct units of measure, you have still to multiply all the quantities but the $C_t$s by the integration timestep. $N_{ave}$ is the number of timesteps on which the code runs the average.
  Every quantity is written in the output in the following order:
@@ -182,9 +183,11 @@ Y_{\ell m} =
 $$
 Where $\cos \theta$, $\sin \varphi$, $\cos \varphi$ are calculated using cartesian components:
 $$
-\cos \theta = \frac{z}{\sqrt{x^2+y^2+z^2}}  \\
-\cos \varphi = \frac{x}{\sqrt{x^2+y^2}}  \\ 
-\sin \varphi = \frac{y}{\sqrt{x^2+y^2}} \\
+\begin{aligned}
+\cos \theta &= \frac{z}{\sqrt{x^2+y^2+z^2}}  \\
+\cos \varphi &= \frac{x}{\sqrt{x^2+y^2}}  \\ 
+\sin \varphi &= \frac{y}{\sqrt{x^2+y^2}} \\
+\end{aligned}
 $$
 and $\sin |m|\varphi$, $\cos |m|\varphi$ are evaluated using Chebyshev polynomials with a recursive definition:
 $$
