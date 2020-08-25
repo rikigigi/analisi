@@ -37,10 +37,14 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
     step_index=std::numeric_limits< unsigned int>::max();
 
     //trova la prima linea fatta di soli numeri. Quella prima
-
+    bool winzoz=false;
     while (log.good()) {
         header=tmp;
         std::getline(log,tmp);
+        if (tmp.length()>1 && tmp.back()=='\r'){
+            tmp.pop_back();
+            winzoz=true;
+        }
         lcont++;
         if (if_only_numbers(tmp)&&tmp.length()>1)
             break;
@@ -48,6 +52,9 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
 
     if (header.size()==0) {
         throw std::runtime_error("Cannot find the column headers in file\""+filename+"\"\n");
+    }
+    if (winzoz){
+        std::cerr << ("!! WARNING: you probably are reading a windows formatted file (with \\r\\n as end line markers) on a different platform. Please convert first the file. Maybe you can use tools like dos2unix or fromdos.");
     }
 
     //trova i nomi delle colonne e la colonna del timestep
@@ -320,7 +327,7 @@ template <class TFLOAT> unsigned int ReadLog<TFLOAT>::timestep(unsigned int inde
 }
 
 template <class TFLOAT> bool ReadLog<TFLOAT>::if_only_numbers(std::string str){
-    return str.find_first_not_of("Ee0123456789 \t.-+")==std::string::npos;
+    return str.find_first_not_of("Ee0123456789 \t.-+\r\n")==std::string::npos;
 }
 
 template <class TFLOAT> ReadLog<TFLOAT>::~ReadLog(){
