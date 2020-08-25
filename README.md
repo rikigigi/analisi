@@ -184,7 +184,7 @@ The command line utility is able to read only binary trajectory files in the LAM
                                , 0, # starting timestep
                                -1   # last timestep:
                                )    # -1 dumps full trajectory
-```
+   ```
 
 ## MSD
 
