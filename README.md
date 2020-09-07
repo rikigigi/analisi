@@ -188,10 +188,28 @@ The command line utility is able to read only binary trajectory files in the LAM
 
 ## MSD
 
-Given a trajectory $\bf ^ix_t$ where $i\in\{1,\dots,N_{atoms}\}$ is the atomic index and $t$ is the timestep index, the code computes the following
+Given a trajectory $\bf ^ix_t$ where $i\in\{1,\dots,N_{atoms}\}$ is the atomic index and $t$ is the timestep index, defining the center of mass position of the atomic species $j$ at the timestep $t$ as
 $$
-MSD_t^{typej}=\frac{1}{N_{typej}}\sum_{i|type(i)=typej}\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|^i{\bf x}_{t+l}-^i{\bf x}_l\right|^2
+^{j}cm_t=\frac{1}{N_{j}}\sum_{i|type(i)=j}^i{\bf x}_{t}
 $$
+where $N_j$ is the number of atoms of the specie $j$,
+the code computes the following
+$$
+\begin{aligned}
+MSD_t^{typej}&=\frac{1}{N_{typej}}\sum_{i|type(i)=typej}\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|^i{\bf x}_{t+l}-^i{\bf x}_l\right|^2 \\
+MSDcm_t^{typej}&=\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|^{typej}cm_{t+l}-^{typej}cm_{l}\right|^2 \\
+\end{aligned}
+$$
+If the option `-mean-square-displacement-self` is provided in the command line or in the python interface the documented argument is set to `True`, the atomic mean square displacement for each atomic species is calculated in the reference system of the center of mass of that particular atomic specie. That is, in this case the following is computed:
+$$
+\begin{aligned}
+MSD_t^{typej}&=\frac{1}{N_{typej}}\sum_{i|type(i)=typej}\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|(^i{\bf x}_{t+l}-^{typej}cm_{t+l})-(^i{\bf x}_l-^{typej}cm_{l})\right|^2 \\
+MSDcm_t^{typej}&=\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|^{typej}cm_{t+l}-^{typej}cm_{l}\right|^2 \\
+\end{aligned}
+$$
+In the output you have many columns, one for each of the $N_{types}$ atomic species, first the block of the atomic MSD and then eventually the block of the center of mass MSD if asked to compute. The center of mass MSD is computed only if the command line option `-Q` is provided or the documented argument is set to `True` in the python interface constructor. The output is the following:
+$$\{MSD_t^{1},\dots,MSD_t^{N_{types}},MSDcm_t^{1},\dots,MSDcm_t^{N_{types}}\}$$
+In the command line output after each column printed as described in the line above you will find the variance calculated with a block average over the specified number of blocks.
 
 ## GreenKubo
  Given $M$ vector time series of length $N$ $^m {\bf J}_{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,

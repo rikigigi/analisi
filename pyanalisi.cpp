@@ -80,7 +80,18 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     using MSD=MSD<T>;
     py::class_<MSD>(m,(std::string("MeanSquareDisplacement")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T *, unsigned int, unsigned int, unsigned int , bool, bool,bool>())
+            .def(py::init<T *, unsigned int, unsigned int, unsigned int , bool, bool,bool>(),
+                 R"begend(
+                 Parameters
+                 ----------
+                 Trajectory instance
+                 time skip for the average computation
+                 max time
+                 number of threads
+                 calculate center of mass MSD
+                 calculate for each atomic specie the atomic msd in the center of mass reference system of that specie
+                 debug flag
+                 )begend")
             .def("reset",&MSD::reset)
             .def("getNumberOfExtraTimestepsNeeded",&MSD::numeroTimestepsOltreFineBlocco)
             .def("calculate", &MSD::calcola)
