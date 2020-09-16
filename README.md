@@ -144,7 +144,7 @@ make
 # Documentation
 This document is better rendered in the pdf version. [Link to the pdf version](README.pdf).
 
-## General info
+## Command line interface
 
 The command line utility is able to read only binary trajectory files in the LAMMPS format, specified with the command line option `-i [input_file]`, or a time series in a column formatted text file with a header, specified with the command line option `-l [input_file]`. The trajectory file can be generated in many ways:
  - by LAMMPS :-)
@@ -167,15 +167,53 @@ The command line utility is able to read only binary trajectory files in the LAM
    
    That is: for every step you have to provide the number of atoms, low and high coordinates of the orthorombic cell, and then for every atom its id, type id, positions and velocities.
  - by using the command line utility with the command line options `-i [trr_file] -binary-convert-gromacs [output_file] [typefile]` and a gromacs trajectory (you have to provide the xdr library)
- - by using the python interface:
+ - by using the python interface: see section [Buffer protocol interface](#Buffer-protocol-interface)
  
+
+## Python interface
+### Creating a trajectory object
+You can create a trajectory python object to be used in this library in two ways: 
+ - start from python arrays that some other routine that you have gived to you
+ - use a LAMMPS binary file that you have on the filesystem. This is the same file that is used by the command line interface.
+ 
+#### Buffer protocol interface
+You must have 4 arrays. In general the interface supports any object that supports python's buffer protocol. This include, among others, numpy arrays. Suppose you have a trajectory of `t` timesteps and `n` atoms. You need the following arrays:
+ - position array, of shape `(t,n,3)`
+ - velocity array, of shape `(t,n,3)`
+ - cell array, of shape `(t,3,3)` only diagonal matrices (orthorombic cells) are supported at the moment, or if a lammps formated cell is provided `(t,6)` 
+ - types array, of shape `(n)`
+ 
+In general no particular units of measure are required, and the output will reflect the units that you used in the input. The calculations that the program does are reported exactly in the following sections. From those formulas you can deduce the units of the output given the units that you used in the input.
+
+Then you must decide if you want that the coordinates are rewrapped inside the cell or not. At the moment only orthorombic cells are supported in all calculations but those that need only unwrapped coordinates, like MSD.
+
+The lammps format for the cell is `[x_lo, x_hi, y_lo, y_hi, z_lo, z_hi]`: you have to provide only the coordinates boundaries.
+
+The syntax for creating the object is 
+```
+import pyanalisi
+analisi_traj = pyanalisi.Trajectory(positions_array,
+                                    velocity_array,
+                                    types_array,
+                                    box_array,
+                                    use_matrix_or_lammps_cell_format,
+                                    wrap_atomic_coordinates)
+```
+where `use_matrix_or_lammps_cell_format` is `True` if usual matrix format for the cell is given and `False` if a lammps formatted cell is provided and `wrap_atomic_coordinates` is `True` if you want to wrap all the atomic coordinates inside the cell.
+
+You can write a LAMMPS bynary trajectory (that can be used by the command line interface) by calling
+```
+analisi_traj.write_lammps_binary('output_path', start_timestep, end_timestep)
+```
+where `start_timestep` is the first timestep index to dump (indexes start from 0) and  `end_timestep` is the first timestep that will not be writed. If `end_timestep == -1`, it will dump till the end of the trajectory. This is a very convenient way of moving heavy computations on a cluster where MPI can be used, or more in general to convert a generic trajectory format in the format used by the command line tool. For example
+
    ```
    #read trajectory. It can come from everywhere
     import numpy as np
     pos = np.load( 'tests/data/positions.npy') #shape (N_timesteps, N_atoms, 3)
     vel = np.load( 'tests/data/velocities.npy') #shape (N_timesteps, N_atoms, 3)
     box = np.load( 'tests/data/cells.npy') #shape (N_timesteps, 3, 3)
-    types = np.load( 'tests/data/types.npy') #shape (N_timesteps), dtype=np.int32
+    types = np.load( 'tests/data/types.npy') #shape (N_atoms), dtype=np.int32
     
     #create trajectory object and dump to file
     import pyanalisi
@@ -185,6 +223,25 @@ The command line utility is able to read only binary trajectory files in the LAM
                                -1   # last timestep:
                                )    # -1 dumps full trajectory
    ```
+
+#### LAMMPS binary trajectory interface
+This interface is a little more complicated, since it was designed for computing block averages of very big files. The object is created with
+```
+analisi_traj = pyanalisi.Traj('path_of_binary_file')
+```
+
+Then you have to call some more functions, BEFORE calling the compute routines :
+```
+analisi_traj.setWrapPbc(True) #optional: if you want to wrap positions inside the cell
+analisi_traj.setAccessWindowSize(size_in_number_of_steps_of_the_reading_block)
+analisi_traj.setAccessStart(first_timestep_to_read)
+```
+then call the relevant compute routine, making sure that it is not going to read past the last timestep of the block. Later you can call again `setAccessStart` to compute the quantity in a different region of the trajectory. Only the data of the current block is stored in the memory.
+
+### Creating a time series object
+
+TODO
+
 
 ## MSD
 
@@ -229,7 +286,39 @@ In the command line output after each column printed as described in the line ab
  If the command line tool is used, the variance of the block average is automatically computed, and after each column you find its variance. Moreover you find in the output a useful description of the columns with their indexes.
 
 ## g(r,t)
- TODO
+
+Given a central atom of type $j$ at timestep $l$, calculates the histogram of the minimum image's radial distance of atoms of type $i$ at timestep $l+t$. The histogram can be of the same atom (you now, it spreads arond while time is passing) or of all atoms different from the original one. Everything is averaged over $l$ and atoms of the same type. In particular, defining the index of a pair of atoms $i$ and $j$ and a timelag $t$ at a timestep $l$ as
+$$
+^{i\,j}h_t=\lfloor(|^j {\bf x}_{l+t}  - ^i {\bf x}_l|_{\text{min.image}}-rmin)/dr\rfloor,
+$$
+the histogram $g(r,t)$ between specie $I$ and $J$ is defined as
+$$
+^{I\,J}g_t^r=\sum_{i|type(i)=I}\sum_{j|type(j)=J} \delta(^{i\,j}h_t,r)
+$$
+where $\delta(\cdot,\cdot)$ is the Kronecker delta. In practice the program, for each atoms, it adds 1 to the corresponding bin of the histogram. 
+
+For each $t,I,J$, with $J\geq I$, the position of the histograms in the memory is $N_{types}(N_{types}+1)/2 - (J+1)(J+2)/2 + I$ (0 is the first). Given this order of the histograms, the layout in the memory is the following:
+$$
+\{^{0}g_t^0,\dots,^{0}g_t^{r_{max}},\dots,^{N_{types}(N_{types}+1)/2}g_t^0,\dots,^{N_{types}(N_{types}+1)/2}g_t^{r_{max}},\dots\}
+$$
+
+
+
+The layout of the command line output is a gnuplot-friendly one, where the output is organized in blocks, one for each $t$, separated by two blank lines, and every line corresponds to a histogram bin for every combination of $I,J$:
+
+$$
+\begin{aligned}
+&\{&^{0}g_0^0,&\dots &,&^{N_{types}(N_{types}+1)/2}g_0^0&\}\\
+&\{&\vdots,&\vdots &,&\vdots &\}\\
+&\{&^{0}g_{0}^{r_{max}},&\dots &,&^{N_{types}(N_{types}+1)/2}g_0^{r_{max}}&\}\\
+\vdots\\
+&\{&^{0}g_{t_{max}}^0,&\dots &,&^{N_{types}(N_{types}+1)/2}g_{t_{max}}^0&\}\\
+&\{&\vdots,&\vdots &,&\vdots &\}\\
+&\{&^{0}g_{t_{max}}^{r_{max}},&\dots &,&^{N_{types}(N_{types}+1)/2}g_{t_{max}}^{r_{max}}&\}\\
+\end{aligned}
+$$
+
+where we collapsed the indexes $I,J$ into a single number, the position order of the histogram. As usual in the command line output every column is an average over all the blocks and it is followed by the variance of the mean.
 
 ## Spherical harmonics correlations
 ### Calculation procedure:
