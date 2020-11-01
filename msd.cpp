@@ -67,7 +67,7 @@ void MSD<T>::calcola(unsigned int primo) {
                 for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                     double delta=(pow(traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0],2)+
                             pow(traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1],2)+
-                            pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))/3.0
+                            pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))
                             -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
                     lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
@@ -112,7 +112,7 @@ void MSD<T>::calcola(unsigned int primo) {
                                         pow(
                                             traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2]
                                             -(traiettoria->posizioni_cm(primo+imedia,itype)[2]-traiettoria->posizioni_cm(primo+imedia+t,itype)[2])
-                                        ,2))/3.0
+                                        ,2))
                                         -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
                                 lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
@@ -121,7 +121,7 @@ void MSD<T>::calcola(unsigned int primo) {
                             for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                                 double delta=(pow(traiettoria->posizioni(primo+imedia,iatom)[0]-traiettoria->posizioni(primo+imedia+t,iatom)[0],2)+
                                         pow(traiettoria->posizioni(primo+imedia,iatom)[1]-traiettoria->posizioni(primo+imedia+t,iatom)[1],2)+
-                                        pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))/3.0
+                                        pow(traiettoria->posizioni(primo+imedia,iatom)[2]-traiettoria->posizioni(primo+imedia+t,iatom)[2],2))
                                         -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
                                 lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
@@ -131,7 +131,7 @@ void MSD<T>::calcola(unsigned int primo) {
                             for (unsigned int itype=0; itype < ntypes; itype++) {
                             double delta=(pow(traiettoria->posizioni_cm(primo+imedia,itype)[0]-traiettoria->posizioni_cm(primo+imedia+t,itype)[0],2)+
                                     pow(traiettoria->posizioni_cm(primo+imedia,itype)[1]-traiettoria->posizioni_cm(primo+imedia+t,itype)[1],2)+
-                                    pow(traiettoria->posizioni_cm(primo+imedia,itype)[2]-traiettoria->posizioni_cm(primo+imedia+t,itype)[2],2))/3.0
+                                    pow(traiettoria->posizioni_cm(primo+imedia,itype)[2]-traiettoria->posizioni_cm(primo+imedia+t,itype)[2],2))
                                     -lista[ntypes*t*f_cm+ntypes+itype];
 
                                 lista[ntypes*t*f_cm+ntypes+itype]+=delta/(++cont[ntypes+itype]);
