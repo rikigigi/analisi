@@ -40,11 +40,153 @@ class Traiettoria : public TraiettoriaBase<Traiettoria>
 public:
     Traiettoria(std::string filename);
     ~Traiettoria();
-    double * posizioni (const int & timestep, const int & atomo);
-    double * velocita (const int & timestep, const int & atomo);
-    double * scatola (const int & timestep);
-    double * posizioni_cm(const int & timestep, const int & tipo);
-    double * velocita_cm(const int & timestep, const int & tipo);
+    double * posizioni (const int &timestep, const int &atomo){
+
+        if (atomo<0 || atomo > natoms) {
+            std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
+            return 0;
+        }
+
+        int t=timestep-timestep_corrente;
+
+        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+            return &buffer_posizioni[t*3*natoms+atomo*3];
+
+        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+    #ifdef DEBUG
+            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+    #endif
+            if(imposta_inizio_accesso(timestep)) {
+                t=timestep-timestep_corrente;
+                if (t>0 && t< timestep_finestra)
+                    return &buffer_posizioni[t*3*natoms+atomo*3];
+                else
+                    abort();
+            } else {
+                std::cerr << "Errore nel caricamento del file.\n";
+                return 0;
+            }
+        }
+
+    }
+    double * velocita(const int &timestep, const int &atomo) {
+        if (atomo<0 || atomo > natoms) {
+            std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
+            return 0;
+        }
+
+
+        int t=timestep-timestep_corrente;
+
+        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+            return &buffer_velocita[t*3*natoms+atomo*3];
+
+        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+
+    #ifdef DEBUG
+            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+    #endif
+            if(imposta_inizio_accesso(timestep)){
+                t=timestep-timestep_corrente;
+                if (t>0 && t< timestep_finestra)
+                    return &buffer_velocita[t*3*natoms+atomo*3];
+                else
+                    abort();
+            } else {
+                std::cerr << "Errore nel caricamento del file.\n";
+                abort();
+                return 0;
+            }
+        }
+
+    }
+    double * scatola(const int &timestep) {
+        int t=timestep-timestep_corrente;
+
+        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+            return &buffer_scatola[t*6];
+
+        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+    #ifdef DEBUG
+            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+    #endif
+            if(imposta_inizio_accesso(timestep)){
+                t=timestep-timestep_corrente;
+                if (t>0 && t< timestep_finestra)
+                    return &buffer_scatola[t*6];
+                else
+                    abort();
+            } else {
+                std::cerr << "Errore nel caricamento del file.\n";
+                abort();
+                return 0;
+            }
+        }
+    }
+    double * posizioni_cm(const int &timestep, const int &tipo){
+
+        if (tipo<0 || tipo > ntypes) {
+            std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
+            return 0;
+        }
+
+        int t=timestep-timestep_corrente;
+
+        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+            return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+
+        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+    #ifdef DEBUG
+            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+    #endif
+            if(imposta_inizio_accesso(timestep)) {
+                t=timestep-timestep_corrente;
+                if (t>0 && t< timestep_finestra)
+                    return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+                else
+                    abort();
+            } else {
+                std::cerr << "Errore nel caricamento del file.\n";
+                return 0;
+            }
+        }
+
+    }
+
+    double * velocita_cm(const int &timestep, const int &tipo){
+
+        if (tipo<0 || tipo > ntypes) {
+            std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
+            return 0;
+        }
+
+        int t=timestep-timestep_corrente;
+
+        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+
+            return &buffer_velocita_cm[t*3*ntypes+tipo*3];
+
+        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+    #ifdef DEBUG
+            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+    #endif
+            if(imposta_inizio_accesso(timestep)) {
+                t=timestep-timestep_corrente;
+                if (t>0 && t< timestep_finestra)
+                    return &buffer_velocita_cm[t*3*ntypes+tipo*3];
+                else
+                    abort();
+            } else {
+                std::cerr << "Errore nel caricamento del file.\n";
+                return 0;
+            }
+        }
+
+    }
     double *scatola_last();
 
     using TraiettoriaBase<Traiettoria>::Errori;
