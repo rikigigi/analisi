@@ -82,7 +82,7 @@ struct Intestazione_timestep_new : public Intestazione_timestep_triclinic {
     }
 };
 
-
+//#include <iostream>
 class TimestepManager {
     enum class Type {
         Old, Old_triclinic, F2020
@@ -90,6 +90,7 @@ class TimestepManager {
     template <class T> char * read_and_advance(char * start, T * destination, int n =1) const {
         //destination = * (T*) start;
         std::copy_n((T*) start, n, destination);
+        //std::cerr<<sizeof (T) <<std::endl;
         return start + sizeof (T)*n;
     }
 
@@ -105,6 +106,7 @@ public:
         intestazione_old = (Intestazione_timestep *) begin;
         if (intestazione_old->timestep <0) {
             type=Type::F2020;
+            delete intestazione_new;
             intestazione_new = new Intestazione_timestep_new;
             //read intestazione
             intestazione_new->magic_string_len=-intestazione_old->timestep;
@@ -120,6 +122,7 @@ public:
             READ_ADV(revision);
             READ_ADV(timestep);
             READ_ADV(natoms);
+            READ_ADV(triclinic);
             READ_ADV_A(condizioni_al_contorno,6);
             READ_ADV_A(scatola,6);
             if(intestazione_new->triclinic) {
@@ -128,14 +131,17 @@ public:
             READ_ADV(dimensioni_riga_output);
             if (intestazione_new->revision > 0x0001) {
                 READ_ADV(unit_style_len);
-                intestazione_new->unit_style = new char[intestazione_new->unit_style_len];
-                READ_ADV_A(unit_style,intestazione_new->unit_style_len);
+                if (intestazione_new->unit_style_len>0){
+                    intestazione_new->unit_style = new char[intestazione_new->unit_style_len];
+                    READ_ADV_A(unit_style,intestazione_new->unit_style_len);
+                }
                 READ_ADV(time_flag);
                 if (intestazione_new->time_flag){
                     READ_ADV(time);
                 }
                 READ_ADV(columns_len);
                 intestazione_new->columns = new char[intestazione_new->columns_len];
+                READ_ADV_A(columns,intestazione_new->columns_len);
             }
             READ_ADV(nchunk);
 

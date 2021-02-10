@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-def test_gofr(analisi_traj,num_regression):
+def test_msd(analisi_traj,num_regression):
     import pyanalisi
     msd=pyanalisi.MeanSquareDisplacement(analisi_traj,10,4000,4,True,False,False)
     msd.reset(3000)
