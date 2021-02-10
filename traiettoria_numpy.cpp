@@ -20,7 +20,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
     if (info_vel.shape[2]!=3)
         throw std::runtime_error("Wrong number of cartesian components in the third dimension of velocities array");
 
-    for (int i=0;i<info_pos.shape.size();++i) {
+    for (unsigned long i=0;i<info_pos.shape.size();++i) {
         if (info_pos.shape[i] != info_vel.shape[i])
             throw std::runtime_error("Shape of positions and velocities array is different");
     }
@@ -150,13 +150,13 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
             head.scatola[i]=scatola(t)[i];
         head.timestep=t;
         head.triclinic=false;
-        head.condizioni_al_contorno[0][0]=0;
-        head.condizioni_al_contorno[1][0]=0;
-        head.condizioni_al_contorno[2][0]=0;
-        head.condizioni_al_contorno[0][1]=0;
-        head.condizioni_al_contorno[1][1]=0;
-        head.condizioni_al_contorno[2][1]=0;
-        head.dimensioni_riga_output=8;
+        head.condizioni_al_contorno[0]=0;
+        head.condizioni_al_contorno[1]=0;
+        head.condizioni_al_contorno[2]=0;
+        head.condizioni_al_contorno[3]=0;
+        head.condizioni_al_contorno[4]=0;
+        head.condizioni_al_contorno[5]=0;
+        head.dimensioni_riga_output=NDOUBLE_ATOMO;
         head.nchunk=1;
         int n_data=head.natoms*head.dimensioni_riga_output;
         //write timestep header
@@ -164,14 +164,15 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
         out.write((char*) &n_data,sizeof(int));
 
         for (unsigned int iatom=0;iatom<head.natoms;++iatom) {
-            double data[8];
+            double data[NDOUBLE_ATOMO];
             data[0]=iatom;
             data[1]=get_type(iatom);
             for (int i=0;i<3;++i){
                 data[2+i]=posizioni(t,iatom)[i];
                 data[5+i]=velocita(t,iatom)[i];
             }
-            out.write((char*) data,sizeof(double)*8);
+            static_assert (NDOUBLE_ATOMO==8, "You have to change the file writing (what do I have to write?) this if you change NDOUBLE_ATOMO" );
+            out.write((char*) data,sizeof(double)*NDOUBLE_ATOMO);
         }
     }
 }

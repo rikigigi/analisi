@@ -143,15 +143,15 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
         }
 
         head.triclinic=false;
-        head.condizioni_al_contorno[0][0]=0;
-        head.condizioni_al_contorno[1][0]=0;
-        head.condizioni_al_contorno[2][0]=0;
-        head.condizioni_al_contorno[0][1]=0;
-        head.condizioni_al_contorno[1][1]=0;
-        head.condizioni_al_contorno[2][1]=0;
-        head.dimensioni_riga_output=8;
+        head.condizioni_al_contorno[0]=0;
+        head.condizioni_al_contorno[1]=0;
+        head.condizioni_al_contorno[2]=0;
+        head.condizioni_al_contorno[3]=0;
+        head.condizioni_al_contorno[4]=0;
+        head.condizioni_al_contorno[5]=0;
+        head.dimensioni_riga_output=NDOUBLE_ATOMO;
         head.nchunk=1;
-        int n_data=head.natoms*8;
+        int n_data=head.natoms*NDOUBLE_ATOMO;
         //qui ho impostato l'intestazione, la scrivo
         out.write((char*) &head,sizeof(Intestazione_timestep));
         out.write((char*) &n_data,sizeof(int));
@@ -159,9 +159,10 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
 
 
         for (unsigned int i=0;i<head.natoms;++i) {
-            double data[8];
+            double data[NDOUBLE_ATOMO];
             if (tipo==natoms_box_xyz_vxvyvz){
-                in >> data[0] >> data[1] >> data[2] >> data[3] >> data[4] >> data[5] >> data[6] >> data[7];
+                for (int j=0; j<NDOUBLE_ATOMO;++j)
+                    in >> data[j];
                 if (!in.good()){
                     std::cerr << "Errore nella lettura del file (timestep "<<itim<<")!\nATTENZIONE: file di output non completo!\n";
                     break;
@@ -169,6 +170,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
                 good=in.good();
             } else if (tipo==gromax_trr) {
 #ifdef XDR_FILE
+                static_assert (NDOUBLE_ATOMO==8, "I don't know what to do with xdr files if NDOUBLE_ATOMO is not 8" );
                 data[0]=types[i].first;
                 data[1]=types[i].second;
                 data[2]=xx[i][0];
@@ -182,7 +184,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
                 abort();
 #endif
             }
-            out.write((char*) data,sizeof(double)*8);
+            out.write((char*) data,sizeof(double)*NDOUBLE_ATOMO);
         }
     }
 #ifdef XDR_FILE

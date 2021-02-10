@@ -11,7 +11,7 @@ class AtomicDensity : public CalcolaMultiThread<AtomicDensity<T,Hist>>, public O
 {
 public:
     AtomicDensity(T *t,
-                  std::array<size_t,3> nbin,
+                  std::array<ssize_t,3> nbin,
     unsigned int nthreads=0,
     unsigned int skip=1
             );
@@ -27,7 +27,7 @@ public:
 
 private:
 
-    std::array<size_t,3> nbin;
+    std::array<ssize_t,3> nbin;
     Hist * hist;
     T * t;
     int ntypes;

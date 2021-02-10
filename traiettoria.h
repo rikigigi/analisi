@@ -22,9 +22,7 @@
 #include "traiettoriabase.h"
 
 
-struct Intestazione_timestep;
-struct Chunk;
-
+#include "lammps_struct.h"
 
 /**
  * Questa classe garantisce un accesso veloce ai timestep caricati con imposta_inizio_accesso
@@ -192,7 +190,7 @@ public:
     using TraiettoriaBase<Traiettoria>::Errori;
     Traiettoria::Errori imposta_dimensione_finestra_accesso(const int & timesteps);
     Traiettoria::Errori imposta_inizio_accesso(const int & timesteps);
-    int64_t get_timestep_lammps(unsigned int timestep);
+    int64_t get_timestep_lammps(int timestep);
     void index_all();
 //    void set_calculate_center_of_mass(bool);
 //    bool get_calculate_center_of_mass();
@@ -200,9 +198,9 @@ private:
     std::map<int,unsigned int>id_map;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
     int64_t * timesteps_lammps; // timesteps secondo lammps
-    void allunga_timesteps(unsigned int nuova_dimensione);
-    size_t leggi_pezzo(const size_t & partenza,Intestazione_timestep * &timestep,Chunk * &chunk);
-    size_t leggi_pezzo_intestazione(const size_t & partenza, Intestazione_timestep * &timestep);
+    void allunga_timesteps(int nuova_dimensione);
+    size_t leggi_pezzo(const size_t & partenza, TimestepManager &timestep, Chunk * &chunk);
+    size_t leggi_pezzo_intestazione(const size_t & partenza, TimestepManager &timestep);
     void init_buffer_tipi();
     int fd;
     size_t fsize,tstep_size;
@@ -212,7 +210,7 @@ private:
     bool triclinic;
     bool calculate_center_of_mass;
     long pagesize;
-    size_t allinea_offset(const size_t & offset, size_t & differenza);
+    size_t allinea_offset(const long &offset, size_t & differenza);
 
 };
 

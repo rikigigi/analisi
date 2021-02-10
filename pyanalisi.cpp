@@ -110,7 +110,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
             ;
     using AD = AtomicDensity<T,long>;
     py::class_<AD>(m,(std::string("PositionHistogram")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,std::array<size_t, 3>,unsigned, unsigned>())
+            .def(py::init<T*,std::array<ssize_t, 3>,unsigned, unsigned>())
             .def("reset",&AD::reset)
             .def("calculate",&AD::calcola)
             .def_buffer([](AD & m)->py::buffer_info {

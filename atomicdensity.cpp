@@ -2,7 +2,7 @@
 #include "config.h"
 
 template <class T, class Hist>
-AtomicDensity<T,Hist>::AtomicDensity(T *t, std::array<size_t, 3> nbin, unsigned int nthreads, unsigned int skip) : CalcolaMultiThread<This> {nthreads, skip}, nbin{nbin},t{t}, ntypes{t->get_ntypes()}
+AtomicDensity<T,Hist>::AtomicDensity(T *t, std::array<ssize_t, 3> nbin, unsigned int nthreads, unsigned int skip) : CalcolaMultiThread<This> {nthreads, skip}, nbin{nbin},t{t}, ntypes{t->get_ntypes()}
 {
     lunghezza_lista=nbin[0]*nbin[1]*nbin[2]*ntypes;
     lista=new Hist [lunghezza_lista];
