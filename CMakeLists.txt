@@ -150,6 +150,8 @@ add_executable(test_gk tests/src/test_gk.cpp)
 target_link_libraries(test_gk ${PROJECT_NAME}_lib boost test_fixtures)
 add_executable(test_ph tests/src/test_position_histogram.cpp)
 target_link_libraries(test_ph ${PROJECT_NAME}_lib boost test_fixtures)
+add_executable(test_lammps2020 tests/src/test_lammps2020.cpp)
+target_link_libraries(test_lammps2020 ${PROJECT_NAME}_lib boost test_fixtures)
 
 if(PYTHON_INTERFACE)
 if (${PYTHONLIBS_FOUND})
