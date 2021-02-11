@@ -153,6 +153,14 @@ target_link_libraries(test_ph ${PROJECT_NAME}_lib boost test_fixtures)
 add_executable(test_lammps2020 tests/src/test_lammps2020.cpp)
 target_link_libraries(test_lammps2020 ${PROJECT_NAME}_lib boost test_fixtures)
 
+enable_testing()
+add_test(NAME sh COMMAND test_sh)
+add_test(NAME double_loop_splitter COMMAND test_2loop)
+add_test(NAME calcBuffer COMMAND test_calcBuffer)
+add_test(NAME gk COMMAND test_gk)
+add_test(NAME atomic_density COMMAND test_ph)
+add_test(NAME msd COMMAND test_lammps2020)
+
 if(PYTHON_INTERFACE)
 if (${PYTHONLIBS_FOUND})
 #python interface
