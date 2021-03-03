@@ -83,36 +83,36 @@ endif()
 find_library (XDRFILE NAMES "xdrfile" )
 
 set (ANALISI_LIB
-    calcoliblocchi.cpp
-    chargefluxts.cpp
-    convertibinario.cpp
-    convolution.cpp
-    correlatorespaziale.cpp
-    cronometro.C
-    doubleround.cpp
-    gofrt.cpp
-    greenkubo2componentionicfluid.cpp
-    greenkuboNcomponentionicfluid.cpp
-    heatfluxts.cpp
-    interpolator.cpp
-    istogrammaatomiraggio.cpp
-    istogrammavelocita.cpp
-    modivibrazionali.cpp
-    mp.cpp
-    msd.cpp
-    posizioniequilibrio.cpp
-    readlog.cpp
-    rnd.c
-    spettrovibrazionale.cpp
-    testtraiettoria.cpp
-    traiettoria.cpp
-    heatc.cpp
-    calcolamultithread.cpp
-    centerdiff.cpp
-    centerofmassdiff.cpp
-    specialfunctions.cpp
-    sphericalcorrelations.cpp
-    atomicdensity.cpp
+    lib/src/calcoliblocchi.cpp
+    lib/src/chargefluxts.cpp
+    lib/src/convertibinario.cpp
+    lib/src/convolution.cpp
+    lib/src/correlatorespaziale.cpp
+    lib/src/cronometro.C
+    lib/src/doubleround.cpp
+    lib/src/gofrt.cpp
+    lib/src/greenkubo2componentionicfluid.cpp
+    lib/src/greenkuboNcomponentionicfluid.cpp
+    lib/src/heatfluxts.cpp
+    lib/src/interpolator.cpp
+    lib/src/istogrammaatomiraggio.cpp
+    lib/src/istogrammavelocita.cpp
+    lib/src/modivibrazionali.cpp
+    lib/src/mp.cpp
+    lib/src/msd.cpp
+    lib/src/posizioniequilibrio.cpp
+    lib/src/readlog.cpp
+    lib/src/rnd.c
+    lib/src/spettrovibrazionale.cpp
+    lib/src/testtraiettoria.cpp
+    lib/src/traiettoria.cpp
+    lib/src/heatc.cpp
+    lib/src/calcolamultithread.cpp
+    lib/src/centerdiff.cpp
+    lib/src/centerofmassdiff.cpp
+    lib/src/specialfunctions.cpp
+    lib/src/sphericalcorrelations.cpp
+    lib/src/atomicdensity.cpp
     )
 
 option(PYTHON_INTERFACE "Build python interface" ON)
@@ -127,13 +127,19 @@ endif()
 set(Python_ADDITIONAL_VERSIONS 3.9 3.8 3.7 3.6 3.5 3.4)
 find_package(PythonLibsNew ${PYBIND11_PYTHON_VERSION} REQUIRED)
 if (${PYTHONLIBS_FOUND})
-    set (ANALISI_LIB "${ANALISI_LIB}" traiettoria_numpy.cpp readlog_numpy.cpp )
+    set (ANALISI_LIB
+	"${ANALISI_LIB}"
+	lib/src/traiettoria_numpy.cpp
+	lib/src/readlog_numpy.cpp )
 endif()
 endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
+target_include_directories(${PROJECT_NAME}_lib PUBLIC lib/include )
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} 
+	analisi/main.cpp
+	)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
 
@@ -170,7 +176,9 @@ INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS})
 include_directories(pybind11/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory( pybind11 )
-pybind11_add_module(pyanalisi pyanalisi.cpp)
+pybind11_add_module(pyanalisi 
+	pyanalisi/src/pyanalisi.cpp
+	)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
 endif()
 endif()
