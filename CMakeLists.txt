@@ -142,6 +142,7 @@ endif()
 endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
+target_link_libraries(${PROJECT_NAME}_lib rt)
 target_include_directories(${PROJECT_NAME}_lib PUBLIC lib/include )
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_executable(${PROJECT_NAME} 
