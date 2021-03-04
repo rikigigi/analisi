@@ -74,8 +74,11 @@ else()
 #or use included one
 set(ENABLE_OPENMP ON CACHE BOOL "Enables multithread in FFTW3")
 set(ENABLE_THREADS ON CACHE BOOL "Enables multithread in FFTW3")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+
 add_subdirectory(fftw-3.3.8)
 set(FFTW fftw3)
+set_property(TARGET ${FFTW} PROPERTY POSITION_INDEPENDENT_CODE ON)
 set(FFTW_OMP ${FFTW}_omp)
 endif()
 
