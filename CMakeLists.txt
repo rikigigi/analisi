@@ -70,6 +70,8 @@ if(SYSTEM_FFTW3)
 find_library (FFTW NAMES "fftw3")
 find_library (FFTW_TH NAMES "fftw3_threads")
 find_library (FFTW_OMP NAMES "fftw3_omp")
+check_include_file_CXX ("fftw3.h" HAVEfftw3)
+check_include_file_CXX ("fftw.h" HAVEfftw)
 else()
 #or use included one
 set(ENABLE_OPENMP ON CACHE BOOL "Enables multithread in FFTW3")
@@ -78,6 +80,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 
 add_subdirectory(fftw-3.3.8)
 include_directories( fftw-3.3.8/api )
+set(HAVEfftw3 1)
 set(FFTW fftw3)
 set_property(TARGET ${FFTW} PROPERTY POSITION_INDEPENDENT_CODE ON)
 set(FFTW_OMP ${FFTW}_omp)
@@ -260,8 +263,6 @@ else()
 endif()
 endif()
 
-check_include_file_CXX ("fftw3.h" HAVEfftw3)
-check_include_file_CXX ("fftw.h" HAVEfftw)
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
