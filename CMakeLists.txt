@@ -7,6 +7,12 @@ if(NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type specified: assuming RELEASE build.")
 endif(NOT CMAKE_BUILD_TYPE)
 
+option(BUILD_TESTS "Build test programs" ON)
+option(PYTHON_INTERFACE "Build python interface" ON)
+option(SYSTEM_FFTW3 "Use system fftw3 library" OFF)
+
+
+
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX11)
@@ -63,8 +69,6 @@ add_subdirectory(boost)
 #endif()
 
 
-
-option(SYSTEM_FFTW3 "Use system fftw3 library" OFF)
 #fftw3
 if(SYSTEM_FFTW3)
 find_library (FFTW NAMES "fftw3")
@@ -74,7 +78,7 @@ check_include_file_CXX ("fftw3.h" HAVEfftw3)
 check_include_file_CXX ("fftw.h" HAVEfftw)
 else()
 #or use included one
-set(ENABLE_OPENMP ON CACHE BOOL "Enables multithread in FFTW3")
+set(ENABLE_OPENMP OFF CACHE BOOL "Enables multithread in FFTW3")
 set(ENABLE_THREADS ON CACHE BOOL "Enables multithread in FFTW3")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 
@@ -83,7 +87,7 @@ include_directories( fftw-3.3.8/api )
 set(HAVEfftw3 1)
 set(FFTW fftw3)
 set_property(TARGET ${FFTW} PROPERTY POSITION_INDEPENDENT_CODE ON)
-set(FFTW_OMP ${FFTW}_omp)
+set(FFTW_TH ${FFTW}_threads)
 endif()
 
 #xdrfile
@@ -122,7 +126,6 @@ set (ANALISI_LIB
     lib/src/atomicdensity.cpp
     )
 
-option(PYTHON_INTERFACE "Build python interface" ON)
 
 if(PYTHON_INTERFACE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/pybind11/tools")
@@ -152,6 +155,7 @@ target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
 
 ## test suite
+if (BUILD_TESTS)
 add_library(test_fixtures INTERFACE)
 target_include_directories(test_fixtures INTERFACE tests/src/)
 add_executable(test_sh tests/src/test_sh.cpp)
@@ -174,6 +178,7 @@ add_test(NAME calcBuffer COMMAND test_calcBuffer)
 add_test(NAME gk COMMAND test_gk)
 add_test(NAME atomic_density COMMAND test_ph)
 add_test(NAME msd COMMAND test_lammps2020)
+endif()
 
 if(PYTHON_INTERFACE)
 if (${PYTHONLIBS_FOUND})
@@ -192,10 +197,12 @@ endif()
 endif()
 
 
-if (FFTW_OMP)
-    set (FFTW_MT "${FFTW_OMP}" )
-elseif (FFTW_TH)
+if (FFTW_TH)
     set (FFTW_MT "${FFTW_TH}" )
+elseif (FFTW_OMP)
+    set (FFTW_MT "${FFTW_OMP}" )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
 else()
     set (FFTW_MT "" )
 endif()
@@ -266,8 +273,6 @@ endif()
 
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
 
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DEIGEN_INITIALIZE_MATRICES_BY_NAN ${COMPILER_SANITIZE_FLAGS}")
 set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${COMPILER_SANITIZE_FLAGS}")
