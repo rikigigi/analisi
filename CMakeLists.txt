@@ -290,3 +290,6 @@ CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_D
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
+message(STATUS "python install library = ${PYTHON_SITE_PACKAGES}" )
+install(TARGETS pyanalisi DESTINATION ${PYTHON_SITE_PACKAGES} COMPONENT python )
+

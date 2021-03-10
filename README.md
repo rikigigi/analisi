@@ -1,32 +1,47 @@
 # analisi: your Swiss Army Knife of molecular dynamics analysis
 
+NOTE: after the [merge request](https://github.com/conda-forge/staged-recipes/pull/14160) to conda forge will be accepted conda-forge will be available.
+
+Available on linux's [conda-forge](https://conda-forge.org/#about):
+```
+conda config --add channels conda-forge    #if not already done
+conda config --set channel_priority strict #if not already done
+conda install analisi
+```
+
+or by compiling from source following this [section](#building-from-source)
+
 Fastest possible example usage:
 
-## command line
+## command line example
 
 - mean square displacement
 ```
 ./analisi -i tests/lammps.bin -Q > output_file
 ```
 
+
 - spherical harmonics correlation functions
 ```
 ./analisi -i tests/lammps.bin -Y 4 -F 0.7 3.5 > output_file
 ```
+
 
 - g(r), with time lags too
 ```
 ./analisi -i tests/lammps.bin -g 200 -F 0.7 3.5 > output_file
 ```
 
+
 - green kubo autocorrelation integrals 
 ```
 ./analisi -l tests/gk_integral.txt -H -a 'c_flux[1]' 'c_vcm[1][1]' > output_file
 ```
 
-many others...
 
-## python
+and many others...
+
+## python example
 
 ```
 #read trajectory
@@ -82,11 +97,13 @@ If you use this program and you like it, spread the word around and give it cred
 
 # Description
 
+This is a framework for computing averages on molecular dynamics trajectories and block averages.
+An mpi parallelization over the blocks is implemented in a very abstract and general way, so it is easy to implement a new calculation that can be parallelized with no effort using MPI. The code has two interfaces: a command line interface that is parallelized with MPI and threads, and a python interface that is parallelized on threads only. With such many parallelization levels more accurate averages can be performed, as described in details in the next sections.
 
 Features:
 
  - python interface (reads numpy array)
- - command line interface (reads binary lammps-like files)
+ - command line interface (reads binary lammps-like files or time series in column format)
  - multithreaded
  - command line interface has MPI too (for super-heavy calculations)
  - command line calculates variance of every quantity and every function (in python you can do it by yourselves with numpy.var )
@@ -107,24 +124,15 @@ Calculations:
 # Building from source
 Dependencies:
 
-- C++17 capable compiler
+- C++17 compatible compiler (GCC 7+, clang 6+, intel 19.0.1+, [source](https://en.cppreference.com/w/cpp/compiler_support) )
 - cmake
-- linux (mmap) (maybe can be removed if only python interface is needed)
+- linux (mmap - maybe this dependency can be removed with some additional work)
 - FFTW3 (included in the package)
 - Eigen3 (included in the package)
 - Boost (included in the package)
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- optional)
 - python (optional) 
-
-If you want to use system's fftw3 library, you have to provide to cmake the option:
-```
--DSYSTEM_FFTW3=ON
-```
-If you don't want any python interface you have to provide to cmake the option:
-```
--DPYTHON_INTERFACE=OFF
-```
 
 ## MPI build (why not?)
 ```
@@ -141,14 +149,33 @@ cmake ../
 make
 ```
 
+After compiling the code you will find the executable `analisi` and the shared library `pyanalisi.*.so` (with a  part of the name that depends on your particular python installation) in the building folder. To install the python library, simply copy it in your site-library folder, for example by executing the command
+```
+cp pyanalisi.*.so "`python3 -m site --user-site`/pyanalisi.so"
+```
+Be careful to choose the correct python executable, the same that you used to compile the library.
+This task can be performed as well by the command `make install/local` inside a python virtual environment, for example a miniconda installation.
+
+To test that the library was compiled correctly and that there are no regressions, you can run the (small) test suite with the command
+```
+make test
+```
+
+## additional cmake options
+
+ - `-DBUILD_TESTS=OFF` skips the building of the C++ tests
+ - `-DSYSTEM_FFTW3=ON` try to detect system's FFTW3 library
+ - `-DPYTHON_EXECUTABLE=/path/to/python` use this python installation to build the python interface
+ - `-DPYTHON_INTERFACE=OFF` don't build any python interface (the building process will not depend on python)
+
 # Documentation
 This document is better rendered in the pdf version. [Link to the pdf version](README.pdf).
 
 ## Command line interface
 
-The command line utility is able to read only binary trajectory files in the LAMMPS format, specified with the command line option `-i [input_file]`, or a time series in a column formatted text file with a header, specified with the command line option `-l [input_file]`. The trajectory file can be generated in many ways:
+The command line utility is able to read only binary trajectory files in the LAMMPS format, specified with the command line option <code>-i <i>input_file</i></code>, or a time series in a column formatted text file with a header, specified with the command line option <code>-l <i>input_file</i></code>. The trajectory file can be generated in many ways:
  - by LAMMPS :-)
- - by using the command line utility with the command line options `-i [input_file] -binary-convert [output_file]`, where `[input_file]` is the name of a plain text trajectory in the format:
+ - by using the command line utility with the command line options <code>-i <i>input_file</i> -binary-convert <i>output_file</i></code>, where <code><i>input_file</i></code> is the name of a plain text trajectory in the format:
  
    ```
    [natoms]
@@ -166,22 +193,36 @@ The command line utility is able to read only binary trajectory files in the LAM
    ```
    
    That is: for every step you have to provide the number of atoms, low and high coordinates of the orthorombic cell, and then for every atom its id, type id, positions and velocities.
- - by using the command line utility with the command line options `-i [trr_file] -binary-convert-gromacs [output_file] [typefile]` and a gromacs trajectory (you have to provide the xdr library)
+ - by using the command line utility with the command line options <code>-i <i>input_file</i> -binary-convert-gromacs <i>output_file</i> <i>typefile</i></code> and a gromacs trajectory (you have to provide the xdr library in the building process)
  - by using the python interface: see section [Buffer protocol interface](#Buffer-protocol-interface)
  
+### Command line interface common arguments
+
+Where meaningful, the following arguments are shared by all calculation performed by the command line utility
+ - <code>-i <i>input_file</i></code> specify input trajectory binary file. See [lammps documentation](https://lammps.sandia.gov/doc/dump.html) for the documentation of how to produce a binary dump from lammps. The order of the dumped atomic quantities **must be** `id type xu yu zu vx vy vz`
+ - <code>-l <i>input_file</i></code> specify input time series in text column format with headers
+ - <code>-N <i>thread_number</i></code> specify the number of threads to use where parallelization is implemented with threads
+ - <code>-B <i>number_of_block</i></code> when the code calculates variances of the quantity, it splits the trajectory in many blocks. With this option you can specify the number of blocks. If MPI parallelization is used, since different blocks are calculated in parallel, you may want to spacify a number of blocks that is a multiple of the number of MPI processes. In this way, at the final iteration over the blocks, all processes will be busy.
+ - <code>-s <i>timestep_number_skip</i></code> usually neighbour configurations in the trajectory are strongly correlated. With this option you specify how far must be two consecutive configuration used to calculate averages.
+ - <code>-S <i>timestep_number_length</i></code> specify how long must be the function that the code calculates, measured in number of timesteps. (for example the length of the MSD plot)
 
 ## Python interface
+
 ### Creating a trajectory object
+
 You can create a trajectory python object to be used in this library in two ways: 
- - start from python arrays that some other routine that you have gived to you
+ - start from python arrays generated by other code
  - use a LAMMPS binary file that you have on the filesystem. This is the same file that is used by the command line interface.
  
-#### Buffer protocol interface
+
+#### using Python arrays: the buffer protocol interface
+
+
 You must have 4 arrays. In general the interface supports any object that supports python's buffer protocol. This include, among others, numpy arrays. Suppose you have a trajectory of `t` timesteps and `n` atoms. You need the following arrays:
  - position array, of shape `(t,n,3)`
  - velocity array, of shape `(t,n,3)`
- - cell array, of shape `(t,3,3)` only diagonal matrices (orthorombic cells) are supported at the moment, or if a lammps formated cell is provided `(t,6)` 
- - types array, of shape `(n)`
+ - cell array, of shape `(t,3,3)` only diagonal matrices (orthorombic cells) are supported at the moment, or if a lammps formated cell is provided `(t,6)` The lammps format simply list the low and high coordinates of the orthorombic cell, as in the header of each timestep that you find in the lammps trajetory format (shown in [command line interface](#command-line-interface) section )
+ - types array, of shape `(n)` (integer array)
  
 In general no particular units of measure are required, and the output will reflect the units that you used in the input. The calculations that the program does are reported exactly in the following sections. From those formulas you can deduce the units of the output given the units that you used in the input.
 
@@ -201,11 +242,11 @@ analisi_traj = pyanalisi.Trajectory(positions_array,
 ```
 where `use_matrix_or_lammps_cell_format` is `True` if usual matrix format for the cell is given and `False` if a lammps formatted cell is provided and `wrap_atomic_coordinates` is `True` if you want to wrap all the atomic coordinates inside the cell.
 
-You can write a LAMMPS bynary trajectory (that can be used by the command line interface) by calling
+You can write a LAMMPS bynary trajectory (that can be used by the command line interface with mpi, for example) by calling
 ```
 analisi_traj.write_lammps_binary('output_path', start_timestep, end_timestep)
 ```
-where `start_timestep` is the first timestep index to dump (indexes start from 0) and  `end_timestep` is the first timestep that will not be writed. If `end_timestep == -1`, it will dump till the end of the trajectory. This is a very convenient way of moving heavy computations on a cluster where MPI can be used, or more in general to convert a generic trajectory format in the format used by the command line tool. For example
+where `start_timestep` is the first timestep index to dump (indexes start from 0) and  `end_timestep` is the first timestep that will not be written. If `end_timestep == -1`, it will dump everything till the end of the trajectory. This is a very convenient way of moving heavy computations on a cluster where MPI can be used, or more in general to convert a generic trajectory format in the format used by the command line tool. For example
 
    ```
    #read trajectory. It can come from everywhere
@@ -217,15 +258,21 @@ where `start_timestep` is the first timestep index to dump (indexes start from 0
     
     #create trajectory object and dump to file
     import pyanalisi
-    analisi_traj = pyanalisi.Trajectory(pos, vel, types, box, True, False)
+    analisi_traj = pyanalisi.Trajectory(pos, vel, types, box,
+                                        True, # matrix format for the box array
+                                        False # don't wrap the coordinates
+                                        )
     analisi_traj.write_lammps_binary("output_filename.bin"
                                , 0, # starting timestep
                                -1   # last timestep:
-                               )    # -1 dumps full trajectory
+                               )    #  -1 dumps full trajectory
    ```
 
+
 #### LAMMPS binary trajectory interface
-This interface is a little more complicated, since it was designed for computing block averages of very big files. The object is created with
+
+
+This interface is a little more complicated, since it was designed for computing block averages of very big files. It can read the same files that the command line program reads. The object is created with
 ```
 analisi_traj = pyanalisi.Traj('path_of_binary_file')
 ```
@@ -236,11 +283,18 @@ analisi_traj.setWrapPbc(True) #optional: if you want to wrap positions inside th
 analisi_traj.setAccessWindowSize(size_in_number_of_steps_of_the_reading_block)
 analisi_traj.setAccessStart(first_timestep_to_read)
 ```
-then call the relevant compute routine, making sure that it is not going to read past the last timestep of the block. Later you can call again `setAccessStart` to compute the quantity in a different region of the trajectory. Only the data of the current block is stored in the memory.
+The first line is to set the pbc wrapping (don't use this if you have to compute the MSD!). Since the access to the trajectory is done in blocks, the second line sets the size of the reading block. The bigger the block the bigger the memory allocated to store the positions and the velocities. The last call sets the index of the first timestep that is going to be read, and then read it. In this moment the selected chunk of the trajectory is loaded into your memory. At this point you are able to call the needed compute routine, making sure that it is not going to read past the last timestep of the block. Later you can call again `setAccessStart` to load a different part of the trajectory and compute the quantity again. Only the data of the current block is stored in the memory, and if evenutally there is some overlap with the previous block, the data is copied from memory and the overlapped part is not read again from the filesystem.
+
 
 ### Creating a time series object
 
-TODO
+Before analyzing a time series, for example to calculate the integral of the autocorrelation function, it is necessary to create a time series object. This object will hold the data that a different function can analyze. It is created with the following:
+```
+time_series = pyanalisi.ReadLog(data_array, headers_array)
+```
+where `data_array` and `header_array` are python objects that support the buffer protocol interface, for example numpy arrays, or a plain python list.
+The `data_array` is a two dimensional array where the first index is the timestep index and the second index is the column index.
+The `header_array` object must describe the columns that are stored in the bidimensional floating point array `data_array` using Python Strings.
 
 
 ## MSD
@@ -257,7 +311,7 @@ MSD_t^{typej}&=\frac{1}{N_{typej}}\sum_{i|type(i)=typej}\frac{1}{N_{ave}}\sum_{l
 MSDcm_t^{typej}&=\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|^{typej}cm_{t+l}-^{typej}cm_{l}\right|^2 \\
 \end{aligned}
 $$
-If the option `-mean-square-displacement-self` is provided in the command line or in the python interface the documented argument is set to `True`, the atomic mean square displacement for each atomic species is calculated in the reference system of the center of mass of that particular atomic specie. That is, in this case the following is computed:
+If the option `--mean-square-displacement-self` is provided in the command line or in the python interface the documented argument is set to `True`, the atomic mean square displacement for each atomic species is calculated in the reference system of the center of mass of that particular atomic specie. That is, in this case the following is computed:
 $$
 \begin{aligned}
 MSD_t^{typej}&=\frac{1}{N_{typej}}\sum_{i|type(i)=typej}\frac{1}{N_{ave}}\sum_{l=1}^{N_{ave}}\left|(^i{\bf x}_{t+l}-^{typej}cm_{t+l})-(^i{\bf x}_l-^{typej}cm_{l})\right|^2 \\
@@ -268,7 +322,34 @@ In the output you have many columns, one for each of the $N_{types}$ atomic spec
 $$\{MSD_t^{1},\dots,MSD_t^{N_{types}},MSDcm_t^{1},\dots,MSDcm_t^{N_{types}}\}$$
 In the command line output after each column printed as described in the line above you will find the variance calculated with a block average over the specified number of blocks.
 
+The options that you can use for this calculation, in summary, are:
+
+<code>
+./analisi -i <i>lammp_binary</i> [-N <i>number of threads</i>] [-S <i>stop timestep</i>] [-s <i>skip every</i>] [-B <i>number of blocks</i>] -q | -Q [--mean-square-displacement-self]
+</code>
+
+where any option of `-q`, `-Q`, `--mean-square-displacement-self` activates the calculation of the MSD.
+
+To use this calculation in the python interface, you have to first create a trajectory object (that can be both from a lammps binary or from python arrays objects - described in the section [creating a trajectory object](#creating-a-trajectory-object)), then you have to create the following instance if the numnpy array trajectory is used:
+```
+msd_calculation = pyanalisi.MeanSquareDisplacement(
+    trajectory_instance, # Trajectory instance
+    skip, # in calculating averages skip this amount of timestep,
+          # as in -s option
+    tmax, # size of the MSD(t) plot in number of timesteps
+    nthreads, # number of parallel threads to use in the computation
+    center_of_mass, # if True calculates center of mass displacement too
+    use_cm_reference, # use the reference system of the center of mass
+                      # of all atoms of the same type
+    debug_flag # if True produces some dump files...
+   )
+
+```
+if the lammps binary trajectory instance is used, you must use the `pyanalisi.MeanSquareDisplacement_lammps`, with exactly the same arguments. The calculation will be exactly the same.
+
+
 ## GreenKubo
+
  Given $M$ vector time series of length $N$ $^m {\bf J}_{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,
  implements an expression equivalent to the following formula:
  $$
@@ -284,6 +365,7 @@ In the command line output after each column printed as described in the line ab
  Every quantity is written in the output in the following order:
  $$\{^{0\,0}C_t,^{0\,0}L_t,^{0\,0}\bar L_t,^{0\,1}C_t,^{0\,1}L_t,^{0\,1}\bar L_t,\dots,^{M\,M}C_t,^{M\,M}L_t,^{M\,M}\bar L_t,GK_t,\bar {GK}_t\}$$
  If the command line tool is used, the variance of the block average is automatically computed, and after each column you find its variance. Moreover you find in the output a useful description of the columns with their indexes.
+
 
 ## g(r,t)
 
@@ -320,8 +402,11 @@ $$
 
 where we collapsed the indexes $I,J$ into a single number, the position order of the histogram. As usual in the command line output every column is an average over all the blocks and it is followed by the variance of the mean.
 
+
 ## Spherical harmonics correlations
+
 ### Calculation procedure:
+
 The implemented formula for the real spherical harmonics is the following:
 $$
 Y_{\ell m} =
@@ -374,5 +459,7 @@ c_\ell^{Jj}(t)=\langle \frac{1}{N_J}\sum_{I \text{ is of type } J}\sum_{m=-\ell}
 $$
 where $\langle \cdot \rangle$ is an average operator, and we do an additional average over all the $N_J$ central atoms of the type $J$. The $\langle \cdot \rangle$ average is implemented as an average over the starting timestep.
 
+
 # Credits
+
 Written by Riccardo Bertossa during his lifetime at SISSA
