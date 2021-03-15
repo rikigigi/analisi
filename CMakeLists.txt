@@ -9,9 +9,11 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 option(BUILD_TESTS "Build test programs" ON)
 option(PYTHON_INTERFACE "Build python interface" ON)
-option(SYSTEM_FFTW3 "Use system fftw3 library" OFF)
-
-
+option(SYSTEM_FFTW3 "Use system's fftw3 library" OFF)
+option(SYSTEM_EIGEN3 "Use system's eigen3 library" OFF)
+option(SYSTEM_BOOST "Use system's boost library" OFF)
+#option(SYSTEM_PYBIND11 "Use system's pybind11 library" OFF)
+option(SYSTEM_XDRFILE "Use system's xdrfile" OFF)
 
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
@@ -59,15 +61,18 @@ else()
 endif()
 
 
+
+if (SYSTEM_BOOST)
+find_library( BPO NAMES boost_program_options)
+
+if (BPO)
+    message (STATUS "program_options library found: ${BPO}")
+else()
+    message (FATAL_ERROR "boost_program_options library not found!")
+endif()
+else()
 add_subdirectory(boost)
-#find_library( BPO NAMES boost_program_options)
-
-#if (BPO)
-#    message (STATUS "program_options library found: ${BPO}")
-#else()
-#    message (FATAL_ERROR "boost_program_options library not found!")
-#endif()
-
+endif()
 
 #fftw3
 if(SYSTEM_FFTW3)
@@ -91,8 +96,22 @@ set(FFTW_TH ${FFTW}_threads)
 endif()
 
 #xdrfile
-find_library (XDRFILE NAMES "xdrfile" )
-
+if(SYSTEM_XDRFILE)
+find_library (xdrfile NAMES "xdrfile" )
+if (xdrfile)
+    set (XDR_FILE "${xdrfile}")
+    message(STATUS "xdrfile library found!")
+    set (HAVE_XDRFILE 1)
+else ()
+    set (XDR_FILE "")
+    message(STATUS "WARNING: xdrfile library not found (conversion from gromacs file disabled)")
+endif()
+else()
+add_subdirectory(xdrfile-1.1.4)
+set (XDR_FILE xdrfile)
+    message(STATUS "using packaged xdrfile library")
+    set (HAVE_XDRFILE 1)
+endif()
 set (ANALISI_LIB
     lib/src/calcoliblocchi.cpp
     lib/src/chargefluxts.cpp
@@ -207,14 +226,6 @@ else()
     set (FFTW_MT "" )
 endif()
 
-if (XDRFILE)
-    set (XDR_FILE "${XDRFILE}")
-    message(STATUS "xdrfile library found!")
-    set (HAVE_XDRFILE 1)
-else ()
-    set (XDR_FILE "")
-    message(STATUS "WARNING: xdrfile library not found (conversion from gromacs file disabled)")
-endif()
 
 target_link_libraries(${PROJECT_NAME} boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 target_link_libraries(${PROJECT_NAME}_lib "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
@@ -240,35 +251,19 @@ if(DEFINED ENV{BOOST_INCLUDE})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I $ENV{BOOST_INCLUDE}")
 endif()
 
-set (EIGEN_DOWNLOADED_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-eigen-323c052e1731")
-
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/eigen-eigen-323c052e1731)
-	include_directories(${EIGEN_DOWNLOADED_LIB_DIR})
-    set(HAVEEigenDense 1)
-    message(STATUS "Using downloaded eigen3 library (if you have problems delete directory ${EIGEN_DOWNLOADED_LIB_DIR})")
-else()
-
+if(SYSTEM_EIGEN3)
 check_include_file_CXX ("eigen3/Eigen/Dense" HAVEeigen3EigenDense)
 check_include_file_CXX ("Eigen/Dense" HAVEEigenDense)
-
-
-if (  HAVEeigen3EigenDense OR HAVEEigenDense )
-message(STATUS "Using system eigen3 library")
+   if (  HAVEeigen3EigenDense OR HAVEEigenDense )
+      message(STATUS "Using system eigen3 library")
+   else()
+      message(FATAL_ERROR "cannot find eigen3 library!")
+   endif()
 else()
-    message(STATUS "Downloading eigen3 library and unpacking in source directory")
-    include_directories(${EIGEN_DOWNLOADED_LIB_DIR})
-    file (DOWNLOAD
-        http://bitbucket.org/eigen/eigen/get/3.3.7.tar.bz2
-        ${CMAKE_CURRENT_SOURCE_DIR}/eigen3.3.7.tar.bz2
-        SHA512=c12bfd034d0a1112bf2df3f773ad98f36b2b53fbbfceac5f143ee1793322746fb8a6546d7db7da2a1000da6a535bd8cea0c4125b549afc90a6570743b02dcf3d
-        SHOW_PROGRESS
-       )
-    execute_process(
-	COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_CURRENT_SOURCE_DIR}/eigen3.3.7.tar.bz2
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	)
-
-endif()
+set (EIGEN_DOWNLOADED_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen3")
+   include_directories(${EIGEN_DOWNLOADED_LIB_DIR})
+   set(HAVEEigenDense 1)
+   message(STATUS "Using packaged eigen3 library")
 endif()
 
 

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<!-- git web interface version 1.7.2.5, (C) 2005-2006, Kay Sievers <kay.sievers@vrfy.org>, Christian Gierke -->
+<!-- git core binaries version 1.7.2.5 -->
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+<meta name="generator" content="gitweb/1.7.2.5 git/1.7.2.5"/>
+<meta name="robots" content="index, nofollow"/>
+<title>Savannah Git Hosting - config.git/summary</title>
+<link rel="stylesheet" type="text/css" href="gitweb.css"/>
+<link rel="alternate" title="config.git - log - RSS feed" href="/gitweb/?p=config.git;a=rss" type="application/rss+xml" />
+<link rel="alternate" title="config.git - log - RSS feed (no merges)" href="/gitweb/?p=config.git;a=rss;opt=--no-merges" type="application/rss+xml" />
+<link rel="alternate" title="config.git - log - Atom feed" href="/gitweb/?p=config.git;a=atom;opt=--no-merges" type="application/atom+xml" />
+<link rel="alternate" title="config.git - log - Atom feed (no merges)" href="/gitweb/?p=config.git;a=atom;opt=--no-merges" type="application/atom+xml" />
+<link rel="shortcut icon" href="git-favicon.png" type="image/png" />
+</head>
+<body>
+<div class="page_header">
+<a title="git homepage" href="http://git-scm.com/"><img src="git-logo.png" width="72" height="27" alt="git" class="logo"/></a><a href="/gitweb/">git@sv</a> / <a href="/gitweb/?p=config.git;a=summary">config.git</a> / summary
+</div>
+<form method="get" action="/gitweb/" enctype="application/x-www-form-urlencoded">
+<div class="search">
+<input name="p" type="hidden" value="config.git" />
+<input name="a" type="hidden" value="search" />
+<input name="h" type="hidden" value="HEAD" />
+<select name="st" >
+<option selected="selected" value="commit">commit</option>
+<option value="grep">grep</option>
+<option value="author">author</option>
+<option value="committer">committer</option>
+<option value="pickaxe">pickaxe</option>
+</select><sup><a href="/gitweb/?p=config.git;a=search_help">?</a></sup> search:
+<input type="text" name="s"  />
+<span title="Extended regular expression"><label><input type="checkbox" name="sr" value="1" />re</label></span></div>
+</form>
+<div class="page_nav">
+summary | <a href="/gitweb/?p=config.git;a=shortlog">shortlog</a> | <a href="/gitweb/?p=config.git;a=log">log</a> | <a href="/gitweb/?p=config.git;a=commit;h=5049811e672698aa2337bb27ede94e54c9174154">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=5049811e672698aa2337bb27ede94e54c9174154">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree">tree</a><br/>
+<br/>
+</div>
+<div class="title">&nbsp;</div>
+<table class="projects_list">
+<tr id="metadata_desc"><td>description</td><td>config</td></tr>
+<tr id="metadata_owner"><td>owner</td><td></td></tr>
+<tr id="metadata_lchange"><td>last change</td><td>Thu, 1 May 2014 02:48:36 +0000</td></tr>
+<tr class="metadata_url"><td>URL</td><td>git://git.sv.gnu.org/config.git</td></tr>
+<tr class="metadata_url"><td></td><td>http://git.savannah.gnu.org/r/config.git</td></tr>
+<tr class="metadata_url"><td></td><td>ssh://git.sv.gnu.org/srv/git/config.git</td></tr>
+</table>
+<div class="header">
+<a class="title" href="/gitweb/?p=config.git;a=shortlog">shortlog</a>
+</div>
+<table class="shortlog">
+<tr class="dark">
+<td title="5 weeks ago"><i>2014-05-01</i></td>
+<td class="author"><a title="Search for commits authored by Chao-ying Fu" class="list" href="/gitweb/?p=config.git;a=search;s=Chao-ying+Fu;st=author">Chao-ying Fu</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=5049811e672698aa2337bb27ede94e54c9174154">	* config.sub (mipsisa32r6, mipsisa64r6): New.</a> <span class="refs"> <span class="head" title="heads/master"><a href="/gitweb/?p=config.git;a=shortlog;h=refs/heads/master">master</a></span></span></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=5049811e672698aa2337bb27ede94e54c9174154">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=5049811e672698aa2337bb27ede94e54c9174154">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=5049811e672698aa2337bb27ede94e54c9174154;hb=5049811e672698aa2337bb27ede94e54c9174154">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=5049811e672698aa2337bb27ede94e54c9174154;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="2 months ago"><i>2014-04-03</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=878563aff317792da07ffc4da6eca4e2e9ab7623">	* testsuite/config-sub.data: Sort.</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=878563aff317792da07ffc4da6eca4e2e9ab7623">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=878563aff317792da07ffc4da6eca4e2e9ab7623">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=878563aff317792da07ffc4da6eca4e2e9ab7623;hb=878563aff317792da07ffc4da6eca4e2e9ab7623">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=878563aff317792da07ffc4da6eca4e2e9ab7623;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="2 months ago"><i>2014-04-03</i></td>
+<td class="author"><a title="Search for commits authored by Ashish Kapania" class="list" href="/gitweb/?p=config.git;a=search;s=Ashish+Kapania;st=author">Ashish Kapania</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=8585d388f9d77b8f2b0e7b7c023e2ad7497fb931">	* config.sub (-tirtos*): New.</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=8585d388f9d77b8f2b0e7b7c023e2ad7497fb931">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=8585d388f9d77b8f2b0e7b7c023e2ad7497fb931">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=8585d388f9d77b8f2b0e7b7c023e2ad7497fb931;hb=8585d388f9d77b8f2b0e7b7c023e2ad7497fb931">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=8585d388f9d77b8f2b0e7b7c023e2ad7497fb931;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="2 months ago"><i>2014-04-03</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* testsuite/config-sub.sh (run_config-sub): Quote some variables" href="/gitweb/?p=config.git;a=commit;h=cccd1d0ab7c01795a0c6c18d1edb6bd20817e07c">	* testsuite/config-sub.sh (run_config-sub): Quote... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=cccd1d0ab7c01795a0c6c18d1edb6bd20817e07c">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=cccd1d0ab7c01795a0c6c18d1edb6bd20817e07c">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=cccd1d0ab7c01795a0c6c18d1edb6bd20817e07c;hb=cccd1d0ab7c01795a0c6c18d1edb6bd20817e07c">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=cccd1d0ab7c01795a0c6c18d1edb6bd20817e07c;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="2 months ago"><i>2014-03-24</i></td>
+<td class="author"><a title="Search for commits authored by Christian Svensson" class="list" href="/gitweb/?p=config.git;a=search;s=Christian+Svensson;st=author">Christian Svensson</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=47681e2a9b5e8236e38cffe03c85e571782fc080">	* config.guess (openrisc:Linux:*:*): New.</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=47681e2a9b5e8236e38cffe03c85e571782fc080">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=47681e2a9b5e8236e38cffe03c85e571782fc080">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=47681e2a9b5e8236e38cffe03c85e571782fc080;hb=47681e2a9b5e8236e38cffe03c85e571782fc080">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=47681e2a9b5e8236e38cffe03c85e571782fc080;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="3 months ago"><i>2014-03-12</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=f4ebd3ed097771a729b68e688236aea665e7c1f3">	Reported by Dejan Lekic &lt;dejan.lekic@gmail.com&gt;.</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=f4ebd3ed097771a729b68e688236aea665e7c1f3">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=f4ebd3ed097771a729b68e688236aea665e7c1f3">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=f4ebd3ed097771a729b68e688236aea665e7c1f3;hb=f4ebd3ed097771a729b68e688236aea665e7c1f3">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=f4ebd3ed097771a729b68e688236aea665e7c1f3;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="3 months ago"><i>2014-02-12</i></td>
+<td class="author"><a title="Search for commits authored by Urs Janssen" class="list" href="/gitweb/?p=config.git;a=search;s=Urs+Janssen;st=author">Urs Janssen</a></td><td><a class="list subject" title="?* config.guess (Linux|GNU|GNU/*): Strip extraneous whitespace" href="/gitweb/?p=config.git;a=commit;h=6947a35648e577c2e3a12d5c88d488c6ea94e1c0">	* config.guess (Linux|GNU|GNU/*): Strip extraneous... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=6947a35648e577c2e3a12d5c88d488c6ea94e1c0">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=6947a35648e577c2e3a12d5c88d488c6ea94e1c0">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=6947a35648e577c2e3a12d5c88d488c6ea94e1c0;hb=6947a35648e577c2e3a12d5c88d488c6ea94e1c0">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=6947a35648e577c2e3a12d5c88d488c6ea94e1c0;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="4 months ago"><i>2014-01-25</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=26c2790a6161e95071996617d5344ec57a9c8bd7">Improve formatting of 2014-01-25 entries.</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=26c2790a6161e95071996617d5344ec57a9c8bd7">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=26c2790a6161e95071996617d5344ec57a9c8bd7">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=26c2790a6161e95071996617d5344ec57a9c8bd7;hb=26c2790a6161e95071996617d5344ec57a9c8bd7">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=26c2790a6161e95071996617d5344ec57a9c8bd7;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="4 months ago"><i>2014-01-25</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" href="/gitweb/?p=config.git;a=commit;h=98d92476e9010cabea831516705fd90c22f5b694">	* config.guess: Remove check for /usr/apollo directory.</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=98d92476e9010cabea831516705fd90c22f5b694">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=98d92476e9010cabea831516705fd90c22f5b694">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=98d92476e9010cabea831516705fd90c22f5b694;hb=98d92476e9010cabea831516705fd90c22f5b694">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=98d92476e9010cabea831516705fd90c22f5b694;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess: Remove the C program that detects ancient" href="/gitweb/?p=config.git;a=commit;h=4fe9ffeda113c1b948aa96f43e948e3b1b630667">	* config.guess: Remove the C program that detects... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=4fe9ffeda113c1b948aa96f43e948e3b1b630667">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=4fe9ffeda113c1b948aa96f43e948e3b1b630667">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=4fe9ffeda113c1b948aa96f43e948e3b1b630667;hb=4fe9ffeda113c1b948aa96f43e948e3b1b630667">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=4fe9ffeda113c1b948aa96f43e948e3b1b630667;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess (vax-dec-bsd4.3): Remove from the C program." href="/gitweb/?p=config.git;a=commit;h=83dc3e68b2fe0e9ddaa1608236a16e25a01cc7a4">	* config.guess (vax-dec-bsd4.3): Remove from the C... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=83dc3e68b2fe0e9ddaa1608236a16e25a01cc7a4">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=83dc3e68b2fe0e9ddaa1608236a16e25a01cc7a4">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=83dc3e68b2fe0e9ddaa1608236a16e25a01cc7a4;hb=83dc3e68b2fe0e9ddaa1608236a16e25a01cc7a4">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=83dc3e68b2fe0e9ddaa1608236a16e25a01cc7a4;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess (&lt;arch&gt;-next-nextstep): Remove from the C program." href="/gitweb/?p=config.git;a=commit;h=62de502a5cd452cf3138f1c3c138ad37fccba6bb">	* config.guess (&lt;arch&gt;-next-nextstep): Remove from... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=62de502a5cd452cf3138f1c3c138ad37fccba6bb">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=62de502a5cd452cf3138f1c3c138ad37fccba6bb">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=62de502a5cd452cf3138f1c3c138ad37fccba6bb;hb=62de502a5cd452cf3138f1c3c138ad37fccba6bb">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=62de502a5cd452cf3138f1c3c138ad37fccba6bb;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess (ns32k-encore-sysv): Remove from the C program." href="/gitweb/?p=config.git;a=commit;h=7503e32e819d4be706502b83c963eba5ccbbd01b">	* config.guess (ns32k-encore-sysv): Remove from the... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=7503e32e819d4be706502b83c963eba5ccbbd01b">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=7503e32e819d4be706502b83c963eba5ccbbd01b">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=7503e32e819d4be706502b83c963eba5ccbbd01b;hb=7503e32e819d4be706502b83c963eba5ccbbd01b">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=7503e32e819d4be706502b83c963eba5ccbbd01b;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess (mips-sony-bsd): Remove from the C program." href="/gitweb/?p=config.git;a=commit;h=6c134e4ebedbbf0edabf5563a604121da7363677">	* config.guess (mips-sony-bsd): Remove from the C... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=6c134e4ebedbbf0edabf5563a604121da7363677">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=6c134e4ebedbbf0edabf5563a604121da7363677">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=6c134e4ebedbbf0edabf5563a604121da7363677;hb=6c134e4ebedbbf0edabf5563a604121da7363677">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=6c134e4ebedbbf0edabf5563a604121da7363677;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="dark">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess (m68k-sony-newsos): Remove from the C program." href="/gitweb/?p=config.git;a=commit;h=1a322da12ed9af9dfdf65ef21c886f8f0f90bccf">	* config.guess (m68k-sony-newsos): Remove from the... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=1a322da12ed9af9dfdf65ef21c886f8f0f90bccf">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=1a322da12ed9af9dfdf65ef21c886f8f0f90bccf">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=1a322da12ed9af9dfdf65ef21c886f8f0f90bccf;hb=1a322da12ed9af9dfdf65ef21c886f8f0f90bccf">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=1a322da12ed9af9dfdf65ef21c886f8f0f90bccf;sf=tgz">snapshot</a></td>
+</tr>
+<tr class="light">
+<td title="4 months ago"><i>2014-01-24</i></td>
+<td class="author"><a title="Search for commits authored by Ben Elliston" class="list" href="/gitweb/?p=config.git;a=search;s=Ben+Elliston;st=author">Ben Elliston</a></td><td><a class="list subject" title="?* config.guess (i386-sequent-dynix): Remove from the C program." href="/gitweb/?p=config.git;a=commit;h=04d08564876f5cc2e4c3a0ebd51e4576eb488631">	* config.guess (i386-sequent-dynix): Remove from the... </a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=commit;h=04d08564876f5cc2e4c3a0ebd51e4576eb488631">commit</a> | <a href="/gitweb/?p=config.git;a=commitdiff;h=04d08564876f5cc2e4c3a0ebd51e4576eb488631">commitdiff</a> | <a href="/gitweb/?p=config.git;a=tree;h=04d08564876f5cc2e4c3a0ebd51e4576eb488631;hb=04d08564876f5cc2e4c3a0ebd51e4576eb488631">tree</a> | <a title="in format: tar.gz" href="/gitweb/?p=config.git;a=snapshot;h=04d08564876f5cc2e4c3a0ebd51e4576eb488631;sf=tgz">snapshot</a></td>
+</tr>
+<tr>
+<td colspan="4"><a href="/gitweb/?p=config.git;a=shortlog">...</a></td>
+</tr>
+</table>
+<div class="header">
+<a class="title" href="/gitweb/?p=config.git;a=tags">tags</a>
+</div>
+<table class="tags">
+<tr class="dark">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=5872af9e15507b9854522e65aa5d97e1c3e66f22">before-miles-orphaned-changes</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=2f83955b8e9e1f430e3c4351afe0c7649db74dca"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=2f83955b8e9e1f430e3c4351afe0c7649db74dca">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=5872af9e15507b9854522e65aa5d97e1c3e66f22">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/before-miles-orphaned-changes">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/before-miles-orphaned-changes">log</a></td>
+</tr><tr class="light">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=88f228e846946eefb9ddcecc3166b1bc6f2a1a35">before-thomas-posix1996</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=d32faf421bc6fb6ced8b7f59801b378a8da3b141"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=d32faf421bc6fb6ced8b7f59801b378a8da3b141">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=88f228e846946eefb9ddcecc3166b1bc6f2a1a35">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/before-thomas-posix1996">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/before-thomas-posix1996">log</a></td>
+</tr><tr class="dark">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=6c8083f246f20638c9b0823bc5e91c5c6e89f6fb">gnumach-release-1-1-1</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=f3e0b527c5a931fbcb9e3de2f65de5fec565a860"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=f3e0b527c5a931fbcb9e3de2f65de5fec565a860">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=6c8083f246f20638c9b0823bc5e91c5c6e89f6fb">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/gnumach-release-1-1-1">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/gnumach-release-1-1-1">log</a></td>
+</tr><tr class="light">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=601e780c28ea3a5b612269b102543bb217ba1b2f">gnumach-release-1-1-3</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=9190ab5e369d0502d3bd069dba8525602870ddb7"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=9190ab5e369d0502d3bd069dba8525602870ddb7">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=601e780c28ea3a5b612269b102543bb217ba1b2f">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/gnumach-release-1-1-3">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/gnumach-release-1-1-3">log</a></td>
+</tr><tr class="dark">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=93a7b64f299ffe95dcbd82ab205386f19bc485e0">post-cagney-2000-02-15</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=747f1255c96bf8817f8fc7c601e04721bbaf5b2e"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=747f1255c96bf8817f8fc7c601e04721bbaf5b2e">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=93a7b64f299ffe95dcbd82ab205386f19bc485e0">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/post-cagney-2000-02-15">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/post-cagney-2000-02-15">log</a></td>
+</tr><tr class="light">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=6d12834002dfec5d892dffb48573819e5c7c3197">pre-cagney-2000-02-15</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=83ccd5e050c1578c6780a7ddea7140ef075eef69"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=83ccd5e050c1578c6780a7ddea7140ef075eef69">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=6d12834002dfec5d892dffb48573819e5c7c3197">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/pre-cagney-2000-02-15">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/pre-cagney-2000-02-15">log</a></td>
+</tr><tr class="dark">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=4e31c06b164a91d047372c1e3304905ad6aba1f5">release-0-1</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=b8144a17feb27eb3f99e11554bb8d93457834ae0"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=b8144a17feb27eb3f99e11554bb8d93457834ae0">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=4e31c06b164a91d047372c1e3304905ad6aba1f5">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/release-0-1">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/release-0-1">log</a></td>
+</tr><tr class="light">
+<td><i>unknown</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=commit;h=e588e00296c261697dde57830b86cf6e0ab66e31">release-1-0</a></td>
+<td><a class="list subject" href="/gitweb/?p=config.git;a=tag;h=c19069c11ea9765ded72b340edb04911dd50c6a5"></a></td>
+<td class="selflink"><a href="/gitweb/?p=config.git;a=tag;h=c19069c11ea9765ded72b340edb04911dd50c6a5">tag</a></td>
+<td class="link"> | <a href="/gitweb/?p=config.git;a=commit;h=e588e00296c261697dde57830b86cf6e0ab66e31">commit</a> | <a href="/gitweb/?p=config.git;a=shortlog;h=refs/tags/release-1-0">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/tags/release-1-0">log</a></td>
+</tr></table>
+<div class="header">
+<a class="title" href="/gitweb/?p=config.git;a=heads">heads</a>
+</div>
+<table class="heads">
+<tr class="dark">
+<td><i>5 weeks ago</i></td>
+<td class="current_head"><a class="list name" href="/gitweb/?p=config.git;a=shortlog;h=refs/heads/master">master</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=shortlog;h=refs/heads/master">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/heads/master">log</a> | <a href="/gitweb/?p=config.git;a=tree;h=refs/heads/master;hb=master">tree</a></td>
+</tr><tr class="light">
+<td><i>13 years ago</i></td>
+<td><a class="list name" href="/gitweb/?p=config.git;a=shortlog;h=refs/heads/linux-overhaul-20010122">linux-overhaul-20010122</a></td>
+<td class="link"><a href="/gitweb/?p=config.git;a=shortlog;h=refs/heads/linux-overhaul-20010122">shortlog</a> | <a href="/gitweb/?p=config.git;a=log;h=refs/heads/linux-overhaul-20010122">log</a> | <a href="/gitweb/?p=config.git;a=tree;h=refs/heads/linux-overhaul-20010122;hb=linux-overhaul-20010122">tree</a></td>
+</tr></table>
+<div class="page_footer">
+<div class="page_footer_text">config</div>
+<a class="rss_logo" title="log RSS feed" href="/gitweb/?p=config.git;a=rss">RSS</a>
+<a class="rss_logo" title="log Atom feed" href="/gitweb/?p=config.git;a=atom">Atom</a>
+</div>
+<script type="text/javascript" src="gitweb.js"></script>
+</body>
+</html>
