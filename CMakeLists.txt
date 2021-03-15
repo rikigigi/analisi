@@ -81,6 +81,11 @@ find_library (FFTW_TH NAMES "fftw3_threads")
 find_library (FFTW_OMP NAMES "fftw3_omp")
 check_include_file_CXX ("fftw3.h" HAVEfftw3)
 check_include_file_CXX ("fftw.h" HAVEfftw)
+   if (  HAVEfftw3 OR HAVEfftw )
+      message(STATUS "Using system fftw3 library")
+   else()
+      message(FATAL_ERROR "cannot find fftw3 library's headers!")
+   endif()
 else()
 #or use included one
 set(ENABLE_OPENMP OFF CACHE BOOL "Enables multithread in FFTW3")
@@ -167,6 +172,10 @@ add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
 target_link_libraries(${PROJECT_NAME}_lib rt)
 target_include_directories(${PROJECT_NAME}_lib PUBLIC lib/include )
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC Threads::Threads)
 add_executable(${PROJECT_NAME} 
 	analisi/main.cpp
 	)
