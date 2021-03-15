@@ -131,7 +131,7 @@ Dependencies:
 - Eigen3 (included in the package)
 - Boost (included in the package)
 - Mpi (optional)
-- libxdrfile (for gromacs file conversion -- optional)
+- libxdrfile (for gromacs file conversion -- included in the package)
 - python (optional) 
 
 ## MPI build (why not?)
