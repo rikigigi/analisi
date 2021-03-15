@@ -164,7 +164,10 @@ make test
 ## additional cmake options
 
  - `-DBUILD_TESTS=OFF` skips the building of the C++ tests
- - `-DSYSTEM_FFTW3=ON` try to detect system's FFTW3 library
+ - `-DSYSTEM_FFTW3=ON` use system's FFTW3 library
+ - `-DSYSTEM_EIGEN3=ON` use installed system's eigen3 library
+ - `-DSYSTEM_BOOST=ON` use detected system's boost library
+ - `-DSYSTEM_XDRFILE` use detected system's xdrfile library
  - `-DPYTHON_EXECUTABLE=/path/to/python` use this python installation to build the python interface
  - `-DPYTHON_INTERFACE=OFF` don't build any python interface (the building process will not depend on python)
 
