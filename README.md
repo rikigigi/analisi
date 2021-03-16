@@ -7,6 +7,86 @@ conda config --set channel_priority strict #if not already done
 conda install analisi
 ```
 
+<table>
+  <tr>
+    <td>Azure</td>
+    <td>
+      <details>
+        <summary>
+          <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+            <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master">
+          </a>
+        </summary>
+        <table>
+          <thead><tr><th>Variant</th><th>Status</th></tr></thead>
+          <tbody><tr>
+              <td>linux_64_mpimpichpython3.6.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpimpichpython3.6.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpimpichpython3.7.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpimpichpython3.7.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpimpichpython3.8.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpimpichpython3.8.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpimpichpython3.9.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpimpichpython3.9.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpiopenmpipython3.6.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpiopenmpipython3.6.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpiopenmpipython3.7.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpiopenmpipython3.7.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpiopenmpipython3.8.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpiopenmpipython3.8.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr><tr>
+              <td>linux_64_mpiopenmpipython3.9.____cpython</td>
+              <td>
+                <a href="https://dev.azure.com/conda-forge/feedstock-builds/_build/latest?definitionId=12226&branchName=master">
+                  <img src="https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/analisi-feedstock?branchName=master&jobName=linux&configuration=linux_64_mpiopenmpipython3.9.____cpython" alt="variant">
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
+    </td>
+  </tr>
+</table>
+
+| Name | Downloads | Version | Platforms | Repository |
+| --- | --- | --- | --- | --- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-analisi-green.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [analisi-feedstock](https://github.com/conda-forge/analisi-feedstock)
+
 or by compiling from source following this [section](#building-from-source)
 
 Fastest possible example usage:
@@ -346,8 +426,19 @@ msd_calculation = pyanalisi.MeanSquareDisplacement(
    )
 
 ```
-if the lammps binary trajectory instance is used, you must use the `pyanalisi.MeanSquareDisplacement_lammps`, with exactly the same arguments. The calculation will be exactly the same.
-
+if the lammps binary trajectory instance is used, you must use the `pyanalisi.MeanSquareDisplacement_lammps`, with exactly the same arguments. The calculation will be exactly the same. After initializing the object, the calculation can be initialized with
+```
+msd_calculation.reset(block_size)
+```
+that sets the number of steps that will be used to calculate the average over the trajectory. If  `tmax` is greater than `block_size`, then `tmax` will be setted to `block_size`. The calculation is started with:
+```
+msd_calculation.calculate(first_timestep)
+```
+where `first_timestep` is the index of the first timestep that will be used to calculate the averages. After the calculation over this block is finished, the result can be collected in a numpy array with:
+```
+result = np.array(msd_calculation, copy=False)
+```
+In general the object msd_calculation supports the buffer protocol interface, so to get the result you can use anything that can interface with the buffer.
 
 ## GreenKubo
 
