@@ -1,7 +1,5 @@
 # analisi: your Swiss Army Knife of molecular dynamics analysis
 
-NOTE: after the [merge request](https://github.com/conda-forge/staged-recipes/pull/14160) to conda forge will be accepted conda-forge will be available.
-
 Available on linux's [conda-forge](https://conda-forge.org/#about):
 ```
 conda config --add channels conda-forge    #if not already done
