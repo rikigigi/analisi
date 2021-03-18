@@ -138,7 +138,7 @@ int main(int argc, char ** argv)
 
     boost::program_options::options_description options("Program to analyze of molecular dynamics trajectories, with multithread and MPI block averages.\n\nAllowed options:");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
-    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins,skip=1,conv_n=20,final=60,stop_acf=0;
+    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0,buffer_size=10;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
@@ -159,8 +159,7 @@ int main(int argc, char ** argv)
             ("energia-fononi,E",boost::program_options::value<std::string>(&fononefile)->default_value(""),"output file with kinetic and potential energy for each phonon")
 #endif
             ("vibrational-spectrum,V",boost::program_options::bool_switch(&spettro_vibraz)->default_value(false),"calculates vibrational spectrum for each atomic type")
-            ("velocity-histogram,v",boost::program_options::bool_switch(&velocity_h)->default_value(false),"calculates velocity histogram")
-            ("bin-number,m",boost::program_options::value<int>(&nbins)->default_value(50),"number of bins in the velocity histogram")
+            ("velocity-histogram,v",boost::program_options::value<int>(&nbins_vel)->default_value(0),"calculates velocity histogram with the specified number of bins")
             ("histogram-minmax,M",boost::program_options::value<double>(&vmax_h)->default_value(500),"specify a number M. The bins of the histogram will be between -M and +M")
             ("heat-transport-coefficient,H",boost::program_options::bool_switch(&heat_coeff)->default_value(false),"perform green-kubo integral of the provided time series file (specified with the -l option)")
             ("headers,a",boost::program_options::value<std::vector<std::string> > (&headers)->multitoken(),"specify the name of the columns to use in the calculation of the multicomponent green-kubo integrals")
@@ -173,7 +172,7 @@ int main(int argc, char ** argv)
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"number of points to use to extract the final value of gk integral (used in a particular case)")
 #endif
             ("dump-block,d",boost::program_options::bool_switch(&dumpGK)->default_value(false),"dump the data of each block on a file (where implemented)")
-            ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"maximum number of timestep of the function that the particular calculation is going to calculate")
+            ("stop,S",boost::program_options::value<int>(&stop_acf)->default_value(0),"maximum number of timestep of the function that the particular calculation is going to calculate. If 0, uses the maximum number of timesteps possible.")
             ("covariance,z",boost::program_options::value<std::vector<unsigned int > >(&cvar_list)->multitoken(),"in the block analysis, perform covariance estimation between the pair of column specified here. You must provide an even number of integers. Only for green-kubo calculation")
             ("mean-square-displacement,q",boost::program_options::bool_switch(&msd)->default_value(false),"compute atomic mean square displacement")
             ("mean-square-displacement-cm,Q",boost::program_options::bool_switch(&msd_cm)->default_value(false),"compute atomic mean square displacement and center of mass square displacement for each atomic type")
@@ -190,7 +189,7 @@ int main(int argc, char ** argv)
 	     perform the conversion from gromacs format to the LAMMPS binary. Here you have to specify the output LAMMPS binary and the input type file with format:\n id0 type0\n ...\nidN typeN\nwith atomic types in the same order of the trr gromacs file. The trr gromacs file is specified with -i.")
 #endif
             ("neighbor",boost::program_options::value<double>(&vicini_r)->default_value(0.0),"calculate the histogram of the neighbours up to the specified distance")
-            ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"calculate the distinctive and non distinctive part of the van Hove correlation function -- a dynamical structure factor. Here you set the size in number of bins of every calculated histogram. Note that it calculate an histogram for each value of t. If you put -S 0, you get only the traditional g(r). You have to specify the minimum and maximum value of the distance in the histogram with -F option. Note that if you don't set a lower bound of 0 on the distance the non distinctive (the self) part will show up only after a many timesteps...")
+            ("gofrt,g",boost::program_options::value<unsigned int>(&gofrt)->default_value(0),"calculate the distinctive and non distinctive part of the van Hove correlation function -- a dynamical structure factor. Here you set the size in number of bins of every calculated histogram. Note that it calculate an histogram for each value of t. If you put -S 1, you get only the traditional g(r). You have to specify the minimum and maximum value of the distance in the histogram with -F option. Note that if you don't set a lower bound of 0 on the distance the non distinctive (the self) part will show up only after a many timesteps...")
             ("spherical-harmonics-correlation,Y",boost::program_options::value<unsigned int>(&sph)->default_value(0),"perform the calculation of the correlation function of the atomic density expanded in spherical harmonics. Note that this is a very heavy computation, first do a small test (for example with a very high -S or a low -s value). Here you have to specify the number of different bins of the considered radial distances, specified with -F. The code will calculate a correlation function for each bin.")
             ("buffer-size",boost::program_options::value<unsigned int>(&buffer_size)->default_value(30),"Buffer size for sh frame values. This is machine dependend and can heavily influence the performance of the code")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"parameter to read faster the time series column formatted txt file. It specifies the number of lines to read in one after the other for each thread")
@@ -603,11 +602,11 @@ int main(int argc, char ** argv)
                 }
 
 
-            }else if (velocity_h) {
+            }else if (nbins_vel>0) {
                 std::cerr << "Velocity histogram...\n";
                 Traiettoria test(input);
                 MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
-                istogramma_vel.calcola(nbins,vmax_h);
+                istogramma_vel.calcola(nbins_vel,vmax_h);
 
                 //stampa i risultati
                 unsigned int lungh_sing_h=istogramma_vel.media()->lunghezza()/(3*test.get_ntypes());
