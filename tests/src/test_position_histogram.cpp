@@ -22,14 +22,17 @@ struct PhFixture {
     size_t size(){auto s= ret.get_shape(); return s[0]*s[1]*s[2];}
 };
 
-using PhFixture_1 = PhFixture<1,long>;
-
-BOOST_FIXTURE_TEST_SUITE(test_atomic_density, PhFixture_1 )
-BOOST_AUTO_TEST_CASE(test_position_histogram)
-{
-    calc(0);
-    BOOST_TEST(data.test_regression("test_calcola_0",ret.accesso_lista(),size()));
-    calc(12);
-    BOOST_TEST(data.test_regression("test_calcola_1",ret.accesso_lista(),size()));
-}
+#define TEST_MULTIT(N)\
+using PhFixture_ ## N = PhFixture<N,long>;\
+BOOST_FIXTURE_TEST_SUITE(test_atomic_density ## N, PhFixture_ ## N )\
+BOOST_AUTO_TEST_CASE(test_position_histogram ## N)\
+{\
+    calc(0);\
+    BOOST_TEST(data.test_regression("test_calcola_0",ret.accesso_lista(),size()));\
+    calc(12);\
+    BOOST_TEST(data.test_regression("test_calcola_1",ret.accesso_lista(),size()));\
+}\
 BOOST_AUTO_TEST_SUITE_END()
+
+TEST_MULTIT(1)
+TEST_MULTIT(3)

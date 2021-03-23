@@ -51,7 +51,12 @@ void AtomicDensity<T,Hist>::join_data() {
 template <class T, class Hist>
 unsigned int  AtomicDensity<T,Hist>::numeroTimestepsOltreFineBlocco(unsigned int n_b)  {return 0;}
 template <class T, class Hist>
-void  AtomicDensity<T,Hist>::reset(const unsigned int numeroTimestepsPerBlocco) { ntimesteps=numeroTimestepsPerBlocco;                                                                                   azzera(); }
+void  AtomicDensity<T,Hist>::reset(const unsigned int numeroTimestepsPerBlocco) {
+    ntimesteps=numeroTimestepsPerBlocco;
+    azzera();
+    for (int i=0;i<lunghezza_lista*(nthreads-1);++i)
+        hist[i]=0;
+}
 template <class T, class Hist>
 std::vector<ssize_t>  AtomicDensity<T,Hist>::get_shape() const{
     return {static_cast<long>(ntypes),static_cast<long>(nbin[0]),static_cast<long>(nbin[1]),static_cast<long>(nbin[2])};
