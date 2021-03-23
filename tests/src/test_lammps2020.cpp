@@ -20,6 +20,30 @@ struct MsdFixture {
 };
 
 
+#include "gofrt.h"
+
+template<int NTH, int TMAX>
+struct GofrFixture {
+    GofrFixture() : traj{false,true},
+        gofr{&traj.traj,
+             0.9, //MIN r
+             2.0, //MAX r
+             TMAX, // t max
+             20, //number of bins
+             NTH, //number of threads
+             100 // skip
+}
+    {}
+    TrajSetup traj;
+    Gofrt<double, Traiettoria> gofr;
+    DataRegression<double> data;
+    Gofrt<double, Traiettoria> & calc(int primo) {
+        gofr.reset(75-primo);
+        gofr.calcola(primo);
+        return gofr;
+    }
+    size_t size(){auto s= gofr.get_shape(); return s[0]*s[1]*s[2];}
+};
 
 #define TEST_MULTIT(N)\
 using MsdFixture_ ## N = MsdFixture<N>;\
@@ -36,3 +60,19 @@ TEST_MULTIT(1)
 TEST_MULTIT(3)
 TEST_MULTIT(4)
 
+
+#define TEST_MULTITGOFR(N,T)\
+using GofrFixture_ ## N ## _ ## T = GofrFixture<N,T>;\
+BOOST_FIXTURE_TEST_SUITE(test_gofr##N ## _ ## T, GofrFixture_ ## N ## _ ## T)\
+BOOST_AUTO_TEST_CASE(test_gofr_##N ## _ ## T){\
+    calc(0);\
+    BOOST_TEST(data.test_regression("gofr_"#N"a"#T,gofr.accesso_lista(),size()));\
+    calc(13);\
+    BOOST_TEST(data.test_regression("gofr_"#N"b"#T,gofr.accesso_lista(),size()));\
+}\
+BOOST_AUTO_TEST_SUITE_END()
+
+TEST_MULTITGOFR(1,1)
+TEST_MULTITGOFR(3,1)
+TEST_MULTITGOFR(3,4)
+TEST_MULTITGOFR(1,4)

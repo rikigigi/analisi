@@ -14,6 +14,7 @@
 #define GOFRT_H
 
 #include "operazionisulista.h"
+#include "calcolamultithread.h"
 
 
 template <class TFLOAT, class T>
@@ -40,7 +41,7 @@ public:
 private:
     using OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT>::lista;
     using OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT>::lunghezza_lista;
-    TFLOAT rmin,rmax,dr;
+    TFLOAT rmin,rmax,rmax2,rmin2,dr;
     bool debug;
     T * traiettoria;
     unsigned int nbin,ntimesteps,lmax,leff,skip,nthreads;

@@ -245,7 +245,7 @@ make test
  - `-DSYSTEM_FFTW3=ON` use system's FFTW3 library
  - `-DSYSTEM_EIGEN3=ON` use installed system's eigen3 library
  - `-DSYSTEM_BOOST=ON` use detected system's boost library
- - `-DSYSTEM_XDRFILE` use detected system's xdrfile library
+ - `-DSYSTEM_XDRFILE=ON` use detected system's xdrfile library
  - `-DPYTHON_EXECUTABLE=/path/to/python` use this python installation to build the python interface
  - `-DPYTHON_INTERFACE=OFF` don't build any python interface (the building process will not depend on python)
 

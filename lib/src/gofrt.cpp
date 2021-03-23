@@ -27,7 +27,8 @@ template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT
 {
 
     dr=(rmax-rmin)/nbin;
-
+    rmax2=rmax*rmax;
+    rmin2=rmin*rmin;
 
 }
 
@@ -112,6 +113,16 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int prim
         throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the time lag");
     }
 
+    //init
+    for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1);itype++) {
+        for (unsigned int t=0;t<leff;++t){
+            for (unsigned int r=0;r<nbin;r++){
+                *gofr(t,itype,r)=0.0;
+            }
+        }
+    }
+    TFLOAT incr=1.0/int(ntimesteps/skip);
+
     unsigned int npassith=leff/nthreads;
     std::vector<std::thread> threads;
 
@@ -125,16 +136,11 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int prim
 
             for (unsigned int t=npassith*ith;t<ultimo;t++){
 
-                //azzera g(r) per tutti i tipi
-                for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1);itype++) {
-                    for (unsigned int r=0;r<nbin;r++){
-                        *gofr(t,itype,r)=0.0;
-                    }
-                }
-                TFLOAT incr=1.0/int(ntimesteps/skip);
                 for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
                     for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                         for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
+                            double d=traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l);
+                            if (d>rmax2 || d<rmin2) continue;
                             unsigned int type1=traiettoria->get_type(iatom);
                             unsigned int type2=traiettoria->get_type(jatom);
                             unsigned int itype=get_itype(type1,type2);
@@ -143,8 +149,8 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int prim
                             }
 
                             //calcola il quadrato della distanza della minima immagine
-                            double d=sqrt(traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l));
                             //aggiorna l'istogramma
+                            d=sqrt(d);
                             int idx=(int)floorf((d-rmin)/dr);
 
                             if (idx<nbin && idx >= 0)
