@@ -210,7 +210,7 @@ add_test(NAME double_loop_splitter COMMAND test_2loop)
 add_test(NAME calcBuffer COMMAND test_calcBuffer)
 add_test(NAME gk COMMAND test_gk)
 add_test(NAME atomic_density COMMAND test_ph)
-add_test(NAME msd COMMAND test_lammps2020)
+add_test(NAME msd_gofrt_2021 COMMAND test_lammps2020)
 endif()
 
 if(PYTHON_INTERFACE)
