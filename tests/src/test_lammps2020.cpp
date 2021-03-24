@@ -28,10 +28,10 @@ struct GofrFixture {
         gofr{&traj.traj,
              0.9, //MIN r
              2.0, //MAX r
-             TMAX, // t max
              20, //number of bins
+             TMAX, // t max
              NTH, //number of threads
-             100 // skip
+             70 // skip
 }
     {}
     TrajSetup traj;

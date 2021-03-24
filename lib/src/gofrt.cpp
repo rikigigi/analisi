@@ -23,7 +23,8 @@
 #endif
 
 template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip, bool debug) :
-    traiettoria(t),rmin(rmin),rmax(rmax),nbin(nbin), skip(skip), lmax(tmax), nthreads(nthreads), debug(debug)
+    CalcolaMultiThread_T {nthreads, skip, t->get_natoms()},
+    traiettoria(t),rmin(rmin),rmax(rmax),nbin(nbin), lmax(tmax), debug(debug)
 {
 
     dr=(rmax-rmin)/nbin;
@@ -70,41 +71,10 @@ template <class TFLOAT, class T> std::vector<ssize_t> Gofrt<TFLOAT,T>::get_strid
              static_cast<long>(nbin*sizeof(TFLOAT)), sizeof(TFLOAT)};
 }
 
-template <class TFLOAT, class T> TFLOAT * Gofrt<TFLOAT,T>::gofr(unsigned int ts,unsigned int itype,unsigned int r) {
-    unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin
-                     +nbin * itype
-                     +r;
-    if (idx >= lunghezza_lista) {
-        std::cerr << "Errore: indice fuori dal range!\n";
-        abort();
-    }
-    return &lista[idx];
-}
-
-template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::get_itype(unsigned int & type1,unsigned int & type2) const {
-     /*
-     * xxxxx  ntypes*(ntypes+1)/2 - (m+2)*(m+1)/2 +
-     * xxxxo  + altra coordinata (che deve essere la più grande)
-     * xxxoo  = indice della coppia nella memoria
-     * xxooo
-     * xoooo
-     *
-     * xx
-     * x
-    */
-    if (type2<type1) {
-        unsigned int tmp=type2;
-        type2=type1;
-        type1=tmp;
-    }
-    return traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2
-            -(type2+1)*(type2+2)/2 +type1;
-}
-
-template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int primo) {
-
+template <class TFLOAT, class T>
+void Gofrt<TFLOAT,T>::calc_init(int primo) {
     if (nthreads<=1){
-        std::cerr << "Attenzione: sto usando un solo thread.\n";
+        std::cerr << "WARNING: using a single thread.\n";
         nthreads=1;
     }
 
@@ -114,63 +84,61 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::calcola(unsigned int prim
     }
 
     //init
-    for (unsigned int itype=0;itype<traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1);itype++) {
-        for (unsigned int t=0;t<leff;++t){
-            for (unsigned int r=0;r<nbin;r++){
-                *gofr(t,itype,r)=0.0;
+    th_data = new TFLOAT[lunghezza_lista*(nthreads-1)];
+    azzera();
+    for (unsigned int i=0;i<lunghezza_lista*(nthreads-1);++i){
+        th_data[i]=0;
+    }
+    if (ntimesteps/skip>0) incr=1.0/int(ntimesteps/skip);
+    else                   incr=1;
+}
+
+template <class TFLOAT, class T>
+void Gofrt<TFLOAT,T>::calc_single_th(int t, int imedia, int atom_start, int atom_stop,int primo, int ith) {
+    TFLOAT * th_data_ = th_data + (ith-1)*lunghezza_lista;
+    if (ith==0) {
+        th_data_ = lista;
+    }
+    double l[3]={traiettoria->scatola(primo+imedia)[1]-traiettoria->scatola(primo+imedia)[0],
+                 traiettoria->scatola(primo+imedia)[3]-traiettoria->scatola(primo+imedia)[2],
+                 traiettoria->scatola(primo+imedia)[5]-traiettoria->scatola(primo+imedia)[4]};
+    for (unsigned int iatom=atom_start;iatom<atom_stop;iatom++) {
+        for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
+            double d=traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l);
+            if (d>rmax2 || d<rmin2) continue;
+            unsigned int type1=traiettoria->get_type(iatom);
+            unsigned int type2=traiettoria->get_type(jatom);
+            unsigned int itype=get_itype(type1,type2);
+            if (iatom==jatom){
+                itype=itype+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;
             }
+
+            //calcola il quadrato della distanza della minima immagine
+            //aggiorna l'istogramma
+            d=sqrt(d);
+            int idx=(int)floorf((d-rmin)/dr);
+
+            if (idx<nbin && idx >= 0)
+                th_data_[gofr_idx(t,itype,idx)]+=incr;
+
+
         }
     }
-    TFLOAT incr=1.0/int(ntimesteps/skip);
 
-    unsigned int npassith=leff/nthreads;
-    std::vector<std::thread> threads;
-
-    for (unsigned int  ith=0;ith<nthreads;ith++) {
-        threads.push_back(std::thread([&,ith](){
-            unsigned int ultimo= (ith != nthreads-1 )?npassith*(ith+1):leff;
-            unsigned int itimestep = primo;
-            double l[3]={traiettoria->scatola(itimestep)[1]-traiettoria->scatola(itimestep)[0],
-                         traiettoria->scatola(itimestep)[3]-traiettoria->scatola(itimestep)[2],
-                         traiettoria->scatola(itimestep)[5]-traiettoria->scatola(itimestep)[4]};
-
-            for (unsigned int t=npassith*ith;t<ultimo;t++){
-
-                for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
-                    for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                        for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
-                            double d=traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l);
-                            if (d>rmax2 || d<rmin2) continue;
-                            unsigned int type1=traiettoria->get_type(iatom);
-                            unsigned int type2=traiettoria->get_type(jatom);
-                            unsigned int itype=get_itype(type1,type2);
-                            if (iatom==jatom){
-                                itype=itype+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2;
-                            }
-
-                            //calcola il quadrato della distanza della minima immagine
-                            //aggiorna l'istogramma
-                            d=sqrt(d);
-                            int idx=(int)floorf((d-rmin)/dr);
-
-                            if (idx<nbin && idx >= 0)
-                                (*gofr(t,itype,idx))+=incr;
-
-
-                        }
-                    }
-
-                }
-
-            }
+}
 
 
 
-        }));
+template <class TFLOAT, class T>
+void Gofrt<TFLOAT,T>::calc_end() {
+    for (int ith=0;ith<nthreads-1;ith++) {
+        for (int i=0;i<lunghezza_lista;++i) {
+            lista[i]+=th_data[ith*lunghezza_lista+i];
+        }
     }
-    for (unsigned int  ith=0;ith<nthreads;ith++)
-        threads[ith].join();
-    threads.clear();
+
+    delete [] th_data;
+    th_data = nullptr;
 
     if (debug) {
 #ifndef USE_MPI

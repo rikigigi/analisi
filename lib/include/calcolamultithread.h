@@ -13,26 +13,30 @@
 #include <thread>
 
 namespace CalcolaMultiThread_Flags {
-constexpr int PARALLEL_SPLIT_AVERAGE = 0b00000001;
-constexpr int PARALLEL_SPLIT_TIME =    0b00000010;
-constexpr int PARALLEL_SPLIT_ATOM =    0b00000100;
-constexpr int PARALLEL_LOOP_AVERAGE =  0b00010000;
-constexpr int PARALLEL_LOOP_TIME =     0b00100000;
+constexpr int PARALLEL_SPLIT_AVERAGE =  0b00000001;
+constexpr int PARALLEL_SPLIT_TIME =     0b00000010;
+constexpr int PARALLEL_SPLIT_ATOM =     0b00000100;
+constexpr int PARALLEL_LOOP_AVERAGE =   0b00010000;
+constexpr int PARALLEL_LOOP_TIME =      0b00100000;
+constexpr int CALL_INNER_JOIN_DATA =    0b01000000;
+constexpr int CALL_DEBUG_ROUTINE =      0b10000000;
+constexpr int CALL_CALC_INIT    =      0b100000000;
 }
 
 
-template <class T, int FLAGS = CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE>
+template <class T, int FLAGS_T = CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE | CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA>
 class CalcolaMultiThread
 {
 public:
-    CalcolaMultiThread(unsigned int nthreads=0, unsigned int skip=0,unsigned int natoms=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms}
+    CalcolaMultiThread(unsigned int nthreads=0, unsigned int skip=0, int natoms=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms}
 {
     if (nthreads==0) nthreads=1;
     if (skip==0) skip=1;
 
 }
+    static constexpr int FLAGS=FLAGS_T;
 
-    std::pair<int,int> splitter(int ith, int nthreads) const {
+    std::pair<int,int> splitter(int ith, int nthreads, int primo) const {
         std::pair<int,int> res;
         res.first=ith*npassith;
         if (ith==nthreads-1) {
@@ -54,7 +58,7 @@ public:
             npassith=natoms/nthreads;
             end=natoms;
         } else {
-            static_assert (! (FLAGS & (CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM | CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME | CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)),
+            static_assert (FLAGS & (CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM | CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME | CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE),
                     "YOU MUST SPECIFY ONE OF CalcolaMultiThread_Flags" );
         }
         t0=0;t1=1;
@@ -71,22 +75,25 @@ public:
 
     void calcola(unsigned int primo){
         init_split();
+        if constexpr (FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT) {
+            static_cast<T*>(this)->calc_init(primo);
+        }
         std::vector<std::thread> threads;
         for (int t=t0;t<t1;t++){ // loop over time lags. Can be a loop over a single value if disabled
             for (int i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
                 for (unsigned int ith=0;ith<nthreads;++ith){
-                    threads.push_back(std::thread([&,ith](){
-                        auto range=splitter(ith,nthreads);
+                    threads.push_back(std::thread([&,ith,t,i](){
+                        auto range=splitter(ith,nthreads,primo);
                         // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
                         // select a different signature of the calculation function depending on where the loops (if present) are parallelized
-                        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME) {
-                            static_cast<T*>(this)->calc_single_th(t,i,range.first+primo,range.second+primo,primo,ith);
+                        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME)) {
+                            static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith);
                         } else if constexpr(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE) {
-                            static_cast<T*>(this)->calc_single_th(i,range.first+primo,range.second+primo,primo,ith);
+                            static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith);
                         } else if constexpr(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME) {
-                            static_cast<T*>(this)->calc_single_th(t,range.first+primo,range.second+primo,primo,ith);
+                            static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith);
                         } else {
-                            static_cast<T*>(this)->calc_single_th(range.first+primo,range.second+primo,primo,ith);
+                            static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith);
                         }
 
                     }));
@@ -95,8 +102,13 @@ public:
                     t.join();
                 }
                 threads.clear();
-                static_cast<T*>(this)->join_data();
+                if constexpr (FLAGS & CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA)
+                    static_cast<T*>(this)->join_data();
             }
+        }
+
+        if constexpr (FLAGS & CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE) {
+            static_cast<T*>(this)->calc_end();
         }
 
     }
@@ -132,7 +144,8 @@ protected:
     unsigned int nthreads,skip,ntimesteps, leff;
 
 private:
-    unsigned int npassith,end, natoms;
+    unsigned int npassith,end;
+    int natoms;
     int t0,t1,i0,i1;
 };
 
