@@ -135,5 +135,5 @@ analisi_traj = pyanalisi.Trajectory(data['pos'],
                                     data['cell'],
                                     False,
                                     False)
-analisi_traj.write_lammps_binary(sys.argv[1]+'.bin', 0,-1)
+analisi_traj.write_lammps_binary(sys.argv[2]+'.bin', 0,-1)
 
