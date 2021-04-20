@@ -33,7 +33,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
 
     if nstep is None:
        nstep = file_length(prefix + '.evp') - 1
-       print "nstep = ", nstep
+       print("nstep = ", nstep)
 
     data = {}
     data['step']  = np.zeros(nstep, dtype=np.int64)
@@ -44,7 +44,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
     data['econt'] = np.zeros(nstep, dtype=np.float64)
     data['pos']  = np.zeros((nstep,natoms,3), dtype=np.float64)
     data['vel']  = np.zeros((nstep,natoms,3), dtype=np.float64)
-    data['cell'] = np.zeros((nstep,3), dtype=np.float64)
+    data['cell'] = np.zeros((nstep,6), dtype=np.float64)
 
     filethe = open(prefix + '.evp')
     filethe.readline()  # skip first line
@@ -80,7 +80,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
         if len(values):
             if (data['step'][istep] != int(values[0]) ):
                 raise RuntimeError("Different timesteps between files of positions and thermo")
-            for iatom in xrange(natoms):
+            for iatom in range(natoms):
                 linepos = filepos.readline()
                 values = np.array(linepos.split())
                 data['pos'][istep,iatom,:] = values[:]
@@ -91,7 +91,7 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
         if len(values):
             if (data['step'][istep] != int(values[0]) ):
                 raise RuntimeError("Different timesteps between files of velocity and thermo")
-            for iatom in xrange(natoms):
+            for iatom in range(natoms):
                 linevel = filevel.readline()
                 values = np.array(linevel.split())
                 data['vel'][istep,iatom,:] = values[:]
@@ -102,9 +102,9 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
         if len(values):
             if (data['step'][istep] != int(values[0]) ):
                 raise RuntimeError("Different timesteps between files of cell and thermo")
-            for i in xrange(3):
+            for i in range(3):
                 values = np.array(filecel.readline().split())
-                data['cell'][istep,i] = values[i]
+                data['cell'][istep,2*i] = values[i]
 
         istep += 1
     return data
@@ -115,62 +115,25 @@ def read_file_pos_vel(prefix, natoms, nstep=None):
 #        for icoord in range(3)
 #        if positions[iatom,icoord]<0 or positions[iatom,icoord]>
 
-def write_xyz(outfile, data, natoms_per_type, type_names=None):
-    """
-    Scrive un file nel formato leggibile dal programma per la successiva conversione nel formato binario.
-    cp.x nell'output separa gli atomi per tipi. Questa funzione assume che la prima metà sono di tipo "1"
-    e la seconda metà di tipo "2".
-    outfile è il nome del file da scrivere.
-    data è il risultato della chiamata a read_file_pos_vel
-    l è la dimensione della cella cubica scritta nell'output. """
-    
-    out_file = open(outfile, "w")
-    #out_file.write("This Text is going to out file\nLook at it and see\n")
-    nsteps = data['pos'].shape[0]
-    natoms = data['pos'].shape[1]
-    if (natoms != sum(natoms_per_type)):
-        raise ValueError('Sum of number of atoms per type does not match the total number of atoms.')
-    if type_names is None:
-        type_names = map(str, np.arange(1, len(natoms_per_type)+1))
-    else:
-        if (len(natoms_per_type) != len(type_names)):
-            raise ValueError('Number of type_names not compatible with natoms_per_type.')
-    for itimestep in xrange(nsteps):
-#        out_file.write("ITEM: TIMESTEP\n")
-#        out_file.write("{}\n".format(int(round(data['step'][itimestep]))))
-#        out_file.write("ITEM: NUMBER OF ATOMS\n")
-        out_file.write("{}\n".format(natoms))
-#        out_file.write('ITEM: BOX BOUNDS pp pp pp\n')
-        out_file.write('{} {}\n'.format(0, data['cell'][itimestep,0] * BOHR))
-        out_file.write('{} {}\n'.format(0, data['cell'][itimestep,1] * BOHR))
-        out_file.write('{} {}\n'.format(0, data['cell'][itimestep,2] * BOHR))
-#        out_file.write('ITEM: ATOMS id type x y z vx vy vz\n')
-        cumnattype = np.cumsum(np.append(0,natoms_per_type))
-        for attype, nattype in enumerate(natoms_per_type):
-            firstat = cumnattype[attype]
-            lastat  = cumnattype[attype+1]
-            for i, idat in enumerate(xrange(firstat, lastat)):
-               out_file.write('{} {} {} {} {} {} {} {}\n'.format(idat+1, type_names[attype], \
-                                data['pos'][itimestep,idat,0]*BOHR,     data['pos'][itimestep,idat,1]*BOHR,     data['pos'][itimestep,idat,2]*BOHR, \
-                                data['vel'][itimestep,idat,0]*BOHR/TAU, data['vel'][itimestep,idat,1]*BOHR/TAU, data['vel'][itimestep,idat,2]*BOHR/TAU))
-#            np.savetxt(out_file, np.vstack((np.arange(firstat+1,lastat+1), [type_names[attype]]*nattype, \
-#                                           data['pos'][itimestep,firstat:lastat,:].T * BOHR, \
-#                                           data['vel'][itimestep,firstat:lastat,:].T * BOHR / TAU)).T, \
-#                       fmt='%d %s %f %f %f %f %f %f')
-    out_file.close()
-    return
 
 if len(sys.argv)<4:
-    print "Uso: {} [prefix_file_in] [file_out] [natoms1] [natoms2] ...".format(sys.argv[0])
+    print("Uso: {} [prefix_file_in] [file_out] [type atom 1] [type atom 2] ...".format(sys.argv[0]))
     exit(-1)
 
-natoms=[]
+tatoms=[]
 for n in range(3,len(sys.argv)):
-    natoms.append(int(sys.argv[n]))
-natoms=np.array(natoms)
-tot_natoms=np.sum(natoms)
+    tatoms.append(int(sys.argv[n]))
+tatoms=np.array(tatoms,dtype='int32')
+tot_natoms=tatoms.shape[0]
+
+import pyanalisi
 
 data=read_file_pos_vel(sys.argv[1],tot_natoms)
-write_xyz(sys.argv[2],data,natoms)
-
+analisi_traj = pyanalisi.Trajectory(data['pos'],
+                                    data['vel'],
+                                    tatoms,
+                                    data['cell'],
+                                    False,
+                                    False)
+analisi_traj.write_lammps_binary(sys.argv[1]+'.bin', 0,-1)
 

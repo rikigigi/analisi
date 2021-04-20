@@ -3,7 +3,7 @@
 #include "lammps_struct.h"
 #include "buffer_utils.h"
 
-Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::buffer &&buffer_vel_, pybind11::buffer &&buffer_types_, pybind11::buffer &&buffer_box_, bool lammps_box, bool pbc_wrap) : buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}, lammps_box{lammps_box}
+Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::buffer &&buffer_vel_, pybind11::buffer &&buffer_types_, pybind11::buffer &&buffer_box_, bool matrix_box, bool pbc_wrap) : buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}, matrix_box{matrix_box}
 {
     wrap_pbc=pbc_wrap;
     pybind11::buffer_info info_pos{buffer_pos.request()};
@@ -33,10 +33,18 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
 
     //check boxes
     pybind11::buffer_info info_box{buffer_box.request()};
-    if (info_box.ndim != 3)
-        throw std::runtime_error("Wrong number of dimensions of box array (must be 3)");
-    if (info_box.shape[0]!=info_pos.shape[0] || info_box.shape[1]!=3 || info_box.shape[2] != 3)
-        throw std::runtime_error("Wrong shape of box array");
+    if (matrix_box){
+        if (info_box.ndim != 3)
+            throw std::runtime_error("Wrong number of dimensions of box array (must be 3)");
+        if (info_box.shape[0]!=info_pos.shape[0] || info_box.shape[1]!=3 || info_box.shape[2] != 3)
+            throw std::runtime_error("Wrong shape of box array");
+    } else {
+        if (info_box.ndim != 2)
+            throw std::runtime_error("Wrong number of dimensions of box array (must be 2)");
+        if (info_box.shape[0]!=info_pos.shape[0] || info_box.shape[1]!=6 )
+            throw std::runtime_error("Wrong shape of box array: must be (nsteps, 6)");
+
+    }
 
     //check formats of stuff
     if (info_box.format != pybind11::format_descriptor<double>::format())
@@ -80,7 +88,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
     }
     buffer_velocita=static_cast<double*>(info_vel.ptr);
 
-    if (!lammps_box){
+    if (!matrix_box){
         buffer_scatola=static_cast<double *>(info_box.ptr);
     } else {
         buffer_scatola = new double[info_box.shape[0]*6];
@@ -178,7 +186,7 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
 }
 
 Traiettoria_numpy::~Traiettoria_numpy() {
-    if (lammps_box) {
+    if (matrix_box) {
         delete [] buffer_scatola;
     }
     if (posizioni_allocated)
