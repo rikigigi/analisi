@@ -440,13 +440,13 @@ result = np.array(msd_calculation, copy=False)
 ```
 In general the object msd_calculation supports the buffer protocol interface, so to get the result you can use anything that can interface with the buffer.
 
-## GreenKubo
+## Green-Kubo
 
  Given $M$ vector time series of length $N$ $^m {\bf J}_{t}$, $m\in\{1\dots M\}$, $t\in\{1\dots N\}$,
  implements an expression equivalent to the following formula:
  $$
  \begin{aligned}
- ^{ij}C_t &= \frac{1}{N_{ave}}\sum_{m=1}^{N_{ave}}\frac{1}{3}\sum_{c=1}^{3} \,^i\!J^c_m\cdot\,^j\!J^c_{m+l}\\
+ ^{ij}C_l &= \frac{1}{N_{ave}}\sum_{m=1}^{N_{ave}}\frac{1}{3}\sum_{c=1}^{3} \,^i\!J^c_m\cdot\,^j\!J^c_{m+l}\\
  ^{ij}L_t &= \left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l \\
  ^{ij}\bar L_t &= \frac{1}{t}\left.\sum_{l=0}^{t}\right.^*\,^{ij}C_l\cdot l \\
  GK_t&=\frac{1}{^{0\,0}[(L_t)^{-1}]}\\
