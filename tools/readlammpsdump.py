@@ -61,6 +61,7 @@ def get_types(ifile,natoms=None):
 			l=inf.readline().split()
 			types.append(int(l[types_col]))	
 	return np.array(types,dtype=np.int64)
+
 def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, box=True , force = False):
 	if(natoms is None):
 		natoms = read_natoms_dump(infile)
@@ -73,7 +74,8 @@ def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, b
 		traj['v']=np.zeros(nstep_tosave,natoms,3)
 	if (force) :
 		traj['f']=np.zeros(nstep_tosave,natoms,3)
-	traj['box']=np.zeros(nstep_tosave,3,3)
+	#traj['box']=np.zeros(nstep_tosave,3,3)
+	traj['box']=np.zeros(nstep_tosave,6)
 	traj['step']=np.zeros(nstep_tosave,dtype=np.int64)
 	traj['types']= get_types(infile,natoms)
 	with open(infile,'r') as inf :
@@ -92,11 +94,14 @@ def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, b
 				l=inf.readline() # ITEM: BOX
 
 				l=inf.readline().split()
-				box[itimestep,0,0] = float(l[1])-float(l[0])
+				box[itimestep,0] = float(l[0])
+				box[itimestep,1] = float(l[1])
 				l=inf.readline().split()
-				box[itimestep,1,1] = float(l[1])-float(l[0])
+				box[itimestep,2] = float(l[0])
+				box[itimestep,3] = float(l[1])
 				l=inf.readline().split()
-				box[itimestep,2,2] = float(l[1])-float(l[0])
+				box[itimestep,1,4] = float(l[1])-float(l[0])
+				box[itimestep,2,5] = float(l[1])-float(l[0])
 				l=inf.readline() # ITEM: ATOMS
 				for iatom in range(natoms):
 					l=[float(j) for j in inf.readline().split()]
