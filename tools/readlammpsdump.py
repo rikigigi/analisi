@@ -196,11 +196,6 @@ def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, b
 if __name__ == "__main__" : 
 	import argparse
 	parser = argparse.ArgumentParser(description = 'Convert a lammps dump trajectory file to a binary.',formatter_class=argparse.RawTextHelpFormatter)
-	parser.add_argument('-d', '--directory',
-			type = str,
-			required = False,
-			help = 'Directory with the dump trajectory file file.',
-			default = './tmp')
 	parser.add_argument('-p', '--prefix',
 			type = str,
 			required = True,
@@ -237,10 +232,10 @@ if __name__ == "__main__" :
 	
 	import pyanalisi
 	#print(types)
-	print('Reading {}/{}...'.format(directory, prefix))
-	data = readlammpsdump(infile='{}/{}'.format(directory, prefix),nstep=nstep,iskip=skip,every=every,natoms=natoms,pos=True,vel=True, box=True , force = False)
+	print('Reading {}...'.format( prefix))
+	data = readlammpsdump(infile='{}'.format( prefix),nstep=nstep,iskip=skip,every=every,natoms=natoms,pos=True,vel=True, box=True , force = False)
 	print('Done.')
 	analisi_traj = pyanalisi.Trajectory(data['p'], data['v'], data['types'], data['box'],False, args.wrap)
 	print('Writing output files...')
-	analisi_traj.write_lammps_binary('{}/{}.bin'.format(directory, prefix), 0, -1)
+	analisi_traj.write_lammps_binary('{}.bin'.format(  prefix), 0, -1)
 	print('Done.')

@@ -202,11 +202,6 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 ### Parser
 if __name__ == "__main__" : 
 	parser = argparse.ArgumentParser(description = 'Convert a cp.x trajectory file to a binary.',formatter_class=argparse.RawTextHelpFormatter)
-	parser.add_argument('-d', '--directory',
-			type = str,
-			required = False,
-			help = 'Directory with the .pos and .vel files.',
-			default = './tmp')
 	parser.add_argument('-p', '--prefix',
 			type = str,
 			required = True,
@@ -239,7 +234,6 @@ if __name__ == "__main__" :
 	
 	args = parser.parse_args()
 	
-	directory = args.directory
 	prefix = args.prefix
 	natoms = args.natoms
 	species = args.species
@@ -250,10 +244,10 @@ if __name__ == "__main__" :
 	import pyanalisi
 	types = np.loadtxt(species,dtype=np.int32).reshape(-1)
 	#print(types)
-	print('Reading {}/{}...'.format(directory, prefix))
-	data = read_file_cp_pos_vel('{}/{}'.format(directory, prefix),natoms, nstep = nstep, skip=skip , every=every)
+	print('Reading {}...'.format( prefix))
+	data = read_file_cp_pos_vel('{}'.format( prefix),natoms, nstep = nstep, skip=skip , every=every)
 	print('Done.')
 	analisi_traj = pyanalisi.Trajectory(data['pos'], data['vel'], types, data['cell'],True, args.wrap)
 	print('Writing output files...')
-	analisi_traj.write_lammps_binary('{}/{}.bin'.format(directory, prefix), 0, -1)
+	analisi_traj.write_lammps_binary('{}.bin'.format( prefix), 0, -1)
 	print('Done.')
