@@ -15,17 +15,26 @@ bar=1.0e-6/eV #eV/Ang^3
 
 def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 	"""
-	Legge i file di output di quantum espresso (cartella dove sono posizionati i vari restart)
-	Per esempio, se il prefisso is KCl-512:
-	namepos is KCl-512.pos
-	namevel is KCl-512.vel
-	nstep is il numero di timestep da leggere (NON is determinato automaticamente!)
-	natoms is il numero di atomi nella simulazione (NON is determinato automaticamente!)
+	read QE cp.x file 
+	Parameters 
+	----------
+	prefix : str
+		prefix of the files. ex prefix.pos prefix.vel prefix.cel
+	natoms : int
+		number of atoms
+	nstep : int
+		total number of step to read after initial skip
+	skip : int
+		skip initial 'skip' steps
+	every : int
+		save "every" read steps. The output will have nstep//every step length
+	tometal : bool
+		convert to metal
 	
-	ritorna una lista, una per ogni timestep, con il contenuto:
-	    [timestep,tempo]       [ posizioni ]               [velocita']
-	dove [timestep,tempo] is una coppia di numeri, posizioni is un array numpy con le posizioni,
-	e velocita' is un array numpy
+	Returns
+	--------
+	data : dict
+		dictonary with the trajectory
 	"""	
 	def file_length( filename ):
 	  i = -1

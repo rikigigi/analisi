@@ -1,9 +1,23 @@
+#!/usr/bin/env python3
 # coding=utf-8
 
 import numpy as np
 import sys
 
 def read_natoms_dump(infile):
+	"""
+	get the number of atoms from a lammps dump file
+	
+	Parameters
+	---------
+	infile : str
+		input file
+	
+	Returns
+	-------
+	natoms : int
+		number of atoms
+	"""
 	with open(infile,'r') as inf :
 		l=inf.readline()
 		l=inf.readline()
@@ -11,6 +25,26 @@ def read_natoms_dump(infile):
 		natoms=int(inf.readline())
 	return natoms
 def read_cols_to_read(infile,pos=True,vel=True,force=False):
+	"""
+	read the cols of positions, velocities and forces
+	Parameters
+	---------
+	infile : str
+		input file
+	pos : bool
+		read the positions
+	vel : bool 
+		read the velocities
+	force :
+		read the forces
+	
+	Returns
+	------
+	pos_col,vel_col,force_col : list(3)
+		list of the indeces of the columns in the lammps file 
+		if the specific cols do not exist then returns None
+	
+	"""
 	result =[]
 	pos_col=[None,None,None]
 	vel_col=[None,None,None]
@@ -46,6 +80,21 @@ def read_cols_to_read(infile,pos=True,vel=True,force=False):
 	
 	return pos_col,vel_col,force_col
 def get_types(ifile,natoms=None):
+	"""
+	get the types array
+	
+	Parameters
+	---------
+	ifile : str
+		input file
+
+	natoms : int
+		number of atoms. if None it reads the number from the traj file
+	
+	Returns
+	-------
+	types : np.array(dtype=np.int32)
+	"""
 	types = []
 	types_col = None
 	if (natoms is None) : natoms = read_natoms_dump(ifile)
@@ -65,6 +114,31 @@ def get_types(ifile,natoms=None):
 	return np.array(types,dtype=np.int32)
 
 def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, box=True , force = False):
+	"""
+	read lammps dump text file
+	Parameters
+	---------
+	infile : str 
+		input file
+	nstep : int
+		total number of step to read
+	iskip : int
+		skip first iskip steps
+	every : int
+		save "every" read steps. The output will have nstep//every step lenght
+	natoms : int
+		number of atoms, if None it read from the file
+	pos : bool
+		read the positions
+	vel : bool 
+		read the velocities
+	force :
+		read the forces
+	Returns
+	-------
+	traj : dict
+		dictonary with the trajectory 
+	"""
 	if(natoms is None):
 		natoms = read_natoms_dump(infile)
 	pos_col,vel_col,force_col = read_cols_to_read(infile,pos=pos,vel=pos,force=force)
