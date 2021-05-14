@@ -14,12 +14,11 @@ def read_cols_to_read(infile,pos=True,vel=True,force=False):
 	result =[]
 	pos_col=[None,None,None]
 	vel_col=[None,None,None]
-	for_col=[None,None,None]
+	force_col=[None,None,None]
 	with open(infile,'r') as inf :
 		for i in range(9):
 			l=inf.readline()
-		l.split()
-		l1 = l[2:]
+		l1 = l.split()[2:]
 		if(pos):
 			for i,item in enumerate(l1):
 				if(item[0]=='x'):
@@ -50,32 +49,35 @@ def get_types(ifile,natoms=None):
 	types = []
 	types_col = None
 	if (natoms is None) : natoms = read_natoms_dump(ifile)
-	with open(infile,'r') as inf :
+	with open(ifile,'r') as inf :
 		for i in range(9):
 			l=inf.readline()
-		l.split()
-		for icol,item in l:
+		l=l.split()[2:]
+		#print(l)
+		for icol,item in enumerate(l):
 			if item == 'type':
 				types_col = icol
+		#print(icol)
 		for iatoms in range(natoms):
 			l=inf.readline().split()
+			#print(l)
 			types.append(int(l[types_col]))	
-	return np.array(types,dtype=np.int64)
+	return np.array(types,dtype=np.int32)
 
 def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, box=True , force = False):
 	if(natoms is None):
 		natoms = read_natoms_dump(infile)
-	pos_col,vel_col,force_col = read_cols_to_read(infile,pos=True,vel=True,force=False)
+	pos_col,vel_col,force_col = read_cols_to_read(infile,pos=pos,vel=pos,force=force)
 	traj ={}
 	nstep_tosave = nstep//every
 	if (pos):
-		traj['p']=np.zeros(nstep_tosave,natoms,3)
+		traj['p']=np.zeros((nstep_tosave,natoms,3))
 	if (vel):
-		traj['v']=np.zeros(nstep_tosave,natoms,3)
+		traj['v']=np.zeros((nstep_tosave,natoms,3))
 	if (force) :
-		traj['f']=np.zeros(nstep_tosave,natoms,3)
+		traj['f']=np.zeros((nstep_tosave,natoms,3))
 	#traj['box']=np.zeros(nstep_tosave,3,3)
-	traj['box']=np.zeros(nstep_tosave,6)
+	traj['box']=np.zeros((nstep_tosave,6))
 	traj['step']=np.zeros(nstep_tosave,dtype=np.int64)
 	traj['types']= get_types(infile,natoms)
 	with open(infile,'r') as inf :
@@ -94,26 +96,77 @@ def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, b
 				l=inf.readline() # ITEM: BOX
 
 				l=inf.readline().split()
-				box[itimestep,0] = float(l[0])
-				box[itimestep,1] = float(l[1])
+				traj['box'][itimestep,0] = float(l[0])
+				traj['box'][itimestep,1] = float(l[1])
 				l=inf.readline().split()
-				box[itimestep,2] = float(l[0])
-				box[itimestep,3] = float(l[1])
+				traj['box'][itimestep,2] = float(l[0])
+				traj['box'][itimestep,3] = float(l[1])
 				l=inf.readline().split()
-				box[itimestep,1,4] = float(l[1])-float(l[0])
-				box[itimestep,2,5] = float(l[1])-float(l[0])
+				traj['box'][itimestep,4] = float(l[0])
+				traj['box'][itimestep,5] = float(l[1])
 				l=inf.readline() # ITEM: ATOMS
 				for iatom in range(natoms):
 					l=[float(j) for j in inf.readline().split()]
 					if(pos):
-						traj['p'][itimestep,iatom,:] = l[pos_col]
+						traj['p'][itimestep,iatom,:] = [l[jj] for jj in pos_col]
 					if(vel):
-						traj['v'][itimestep,iatom,:] = l[vel_col]
+						traj['v'][itimestep,iatom,:] = [l[jj] for jj in vel_col]
 					if (force) :
-						traj['f'][itimestep,iatom,:] = l[force_col]
+						traj['f'][itimestep,iatom,:] = [l[jj] for jj in force_col]
 			else:
 				for ii in np.arange(natoms+9):
 					l=inf.readline()
 				
 
 	return traj
+if __name__ == "__main__" : 
+	import argparse
+	parser = argparse.ArgumentParser(description = 'Convert a lammps dump trajectory file to a binary.',formatter_class=argparse.RawTextHelpFormatter)
+	parser.add_argument('-d', '--directory',
+			type = str,
+			required = False,
+			help = 'Directory with the dump trajectory file file.',
+			default = './tmp')
+	parser.add_argument('-p', '--prefix',
+			type = str,
+			required = True,
+			help = 'filename.')
+	parser.add_argument('--nstep',
+			type = int, 
+			default = None,
+			help = 'Number of steps to convert.')
+	parser.add_argument('--natoms',
+			type = int, 
+			default = None,
+			help = 'Number of atoms.')
+	parser.add_argument('--every',
+			type = int, 
+			default = 1,
+			help = 'Save 1 step every --every steps.')
+	parser.add_argument('--sskip',
+			type = int, 
+			default = 0,
+			help = 'skip first sskip steps.')
+	parser.add_argument('--wrap',
+			action='store_true',
+			default = False,
+			help = 'wrap coordinates.')
+	
+	args = parser.parse_args()
+	
+	directory = args.directory
+	prefix = args.prefix
+	natoms = args.natoms
+	nstep = args.nstep
+	every = args.every
+	skip = args.sskip
+	
+	import pyanalisi
+	#print(types)
+	print('Reading {}/{}...'.format(directory, prefix))
+	data = readlammpsdump(infile='{}/{}'.format(directory, prefix),nstep=nstep,iskip=skip,every=every,natoms=natoms,pos=True,vel=True, box=True , force = False)
+	print('Done.')
+	analisi_traj = pyanalisi.Trajectory(data['p'], data['v'], data['types'], data['box'],False, args.wrap)
+	print('Writing output files...')
+	analisi_traj.write_lammps_binary('{}/{}.bin'.format(directory, prefix), 0, -1)
+	print('Done.')

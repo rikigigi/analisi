@@ -13,7 +13,7 @@ HARTREE = 27.211386245988 #eV
 eV=1.60217662 #10^-19 J
 bar=1.0e-6/eV #eV/Ang^3
 
-def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
+def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 	"""
 	Legge i file di output di quantum espresso (cartella dove sono posizionati i vari restart)
 	Per esempio, se il prefisso is KCl-512:
@@ -94,18 +94,15 @@ def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 
 	istep=0
 	#while (istep < nstep_total):
-	for istep_total in range(nstep_total)
+	for istep_total in range(nstep_total):
 		iread = istep_total%every
 		if(iread==0):
 			linethe = filethe.readline()
 			#print(linethe)
 			linepos = filepos.readline()
 			linevel = filevel.readline()
-			if read_force: linefor = filefor.readline()
 			linecel = filecel.readline()
 			if (len(linethe)==0) or (len(linepos)==0) or (len(linevel)==0) or (len(linecel)==0):  # EOF
-				if read_force:
-					if (len(linefor)==0):
 						raise RuntimeError("End Of file")
 	
 			# controllo per commenti 
@@ -134,18 +131,6 @@ def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 			#lettura velocity
 			values_vel = linevel.split()
 			#lettura forza
-			if read_force:
-				values_for = linefor.split()
-				#values = np.array(linefor.split(), dtype=np.float)
-				#print values,data[0][istep]
-				if len(values_for):
-					if (data['step'][istep] != int(values[0]) ):
-						print(data['step'][istep], int(values[0]))
-						raise RuntimeError("Different timesteps between files of forces and thermo")
-					for iatom in range(natoms):
-						linefor = filefor.readline()
-						values = np.array(linefor.split())
-						data['for'][istep,iatom,:] = values[:]
 			if len(values) and len(values_vel):
 				if (data['step'][istep] != int(values[0]) ):
 					print(data['step'][istep], int(values[0]))
@@ -153,12 +138,6 @@ def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 				if (data['step'][istep] != int(values_vel[0]) ):
 					print(data['step'][istep], int(values_vel[0]))
 					raise RuntimeError("Different timesteps between files of velocity and thermo")
-				if read_force:
-					values_for = linefor.split()
-					if len(values_for):
-						if (data['step'][istep] != int(values_for[0]) ):
-							print(data['step'][istep], int(values_for[0]))
-							raise RuntimeError("Different timesteps between files of forces and thermo")
 				for iatom in range(natoms):
 					linepos = filepos.readline()
 					values = np.array(linepos.split())
@@ -166,11 +145,6 @@ def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 					linevel = filevel.readline()
 					values = np.array(linevel.split())
 					data['vel'][istep,iatom,:] = values[:]
-					if read_force:
-						linefor = filefor.readline()
-						values = np.array(linefor.split())
-						data['for'][istep,iatom,:] = values[:]
-	    
 	    
 			#lettura cella
 			#values = np.array(linecel.split(), dtype=np.float64)
@@ -182,9 +156,9 @@ def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 					raise RuntimeError("Different timesteps between files of cell and thermo")
 				for i in range(3):
 					values = np.array(filecel.readline().split())
-					data['cell'][istep, 3*i,0] = values[0]
-					data['cell'][istep, 3*i,1] = values[1]
-					data['cell'][istep, 3*i,2] = values[2]
+					data['cell'][istep, i,0] = values[0]
+					data['cell'][istep, i,1] = values[1]
+					data['cell'][istep, i,2] = values[2]
 	
 			istep += 1
 		else:
@@ -217,116 +191,60 @@ def read_file_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True):
 
 ###########################################################################################################################################################################
 ### Parser
-
-parser = argparse.ArgumentParser(description = 'Convert a cp.x trajectory file to the LAMMPS trajectory format. The units are Angstrom and Angstrom/picosecond.')
-parser.add_argument('-d', '--directory',
-		type = str,
-		required = False,
-		help = 'Directory with the .pos and .vel files.',
-		default = './tmp')
-parser.add_argument('-p', '--prefix',
-		type = str,
-		required = True,
-		help = 'Prefix of the filename.')
-parser.add_argument('-s', '--species',
-		nargs = '*',
-		type = str,
-		required = True,
-		help = 'Sequence of atomic species in the simulation (in the same order as in the ATOMIC_SPECIES card in the cp.x input).')
-parser.add_argument('-n', '--natm',
-		nargs = '*',
-		type = int,
-		required = True,
-		help = 'Number of atoms per species (in the same order as in the ATOMIC_SPECIES card in the cp.x input).')
-parser.add_argument('-c', '--charge',
-		nargs = '*',
-		type = float,
-		required = False,
-		help = 'Oxidation number per species (in the same order as in the ATOMIC_SPECIES card in the cp.x input).')
-parser.add_argument('--nstep',
-		type = int, 
-		default = None,
-		help = 'Number of steps to convert.')
-parser.add_argument('--tskip',
-		type = int, 
-		default = 1,
-		help = 'Write 1 every tskip steps.')
-parser.add_argument('--sskip',
-		type = int, 
-		default = 0,
-		help = 'skip first sskip steps.')
-parser.add_argument('--xyz',
-		help = 'Write the coordinates in a .xyz file.',
-		action = 'store_true',
-		required = False,
-		default = False)
-parser.add_argument('--vel',
-		help = 'Write also the velocities in a .xyz file.',
-		action = 'store_true',
-		required = False,
-		default = False)
-parser.add_argument('--analisi',
-		help = 'Output data in analisi format.',
-		action = 'store_true',
-		default = False)
-parser.add_argument('--vcm',
-		help = 'Write the per-species velocity of the centre of mass.',
-		action = 'store_true',
-		required = False,
-		default = False)
-parser.add_argument('--raw',
-		help = 'Write the .raw files needed for deepMD.',
-		action = 'store_true',
-		required = False,
-		default = False)
-parser.add_argument('--shuffle',
-		help = 'In writing the .raw files needed for deepMD, shuffle the steps.',
-		action = 'store_true',
-		required = False,
-		default = False)
-
-args = parser.parse_args()
-
-directory = args.directory
-prefix = args.prefix
-species = args.species
-natm = args.natm
-nstep = args.nstep
-xyz = args.xyz
-vel = args.vel
-analisi = args.analisi
-charge = args.charge
-tskip = args.tskip
-vcm = args.vcm
-raw = args.raw
-shuffle = args.shuffle
-skip = args.sskip
-
-if shuffle:
-	if not raw:
-		raise ValueError('--shuffle is only for --raw output.')
-
-if isinstance(species, list):
-	if not isinstance(natm, list):
-		raise ValueError('--natm should have the same dimension of --species!')
-	else:
-		if len(species) != len(natm):
-			raise ValueError('--natm should have the same dimension of --species!')
-if isinstance(natm, list):
-	if not isinstance(species, list):
-		raise ValueError('--natm should have the same dimension of --species!')
-	else:
-		if len(species) != len(natm):
-			raise ValueError('--natm should have the same dimension of --species!')
-
-if isinstance(natm, list):
-	natm_tot = np.sum(natm)
-else:
-	natm_tot = natm
-
-print('Reading {}/{}...'.format(directory, prefix))
-leggi = read_file_pos_vel('{}/{}'.format(directory, prefix), natm_tot, nstep = nstep, skip=skip)
-print('Done.')
-print('Writing output files...')
-scrivi = write_xyz('{}.lammpstrj'.format(prefix), leggi, natm, species, xyz = xyz, vel = vel, charge=charge, tskip=tskip, vcm=vcm, raw=raw, shuffle=shuffle)
-print('Done.')
+if __name__ == "__main__" : 
+	parser = argparse.ArgumentParser(description = 'Convert a cp.x trajectory file to a binary.',formatter_class=argparse.RawTextHelpFormatter)
+	parser.add_argument('-d', '--directory',
+			type = str,
+			required = False,
+			help = 'Directory with the .pos and .vel files.',
+			default = './tmp')
+	parser.add_argument('-p', '--prefix',
+			type = str,
+			required = True,
+			help = 'Prefix of the filename.')
+	parser.add_argument('-s', '--species',
+			type = str,
+			required = True,
+			help = 'A single line file with the succession of the atom indeces. \n \
+	for example a simulation of a water molecule with the atoms in the order HHO will have a file as: 0 0 1 ')
+	parser.add_argument('--nstep',
+			type = int, 
+			default = None,
+			help = 'Number of steps to convert.')
+	parser.add_argument('--natoms',
+			type = int, 
+			required = True,
+			help = 'Number of atoms.')
+	parser.add_argument('--every',
+			type = int, 
+			default = 1,
+			help = 'Save 1 step every --every steps.')
+	parser.add_argument('--sskip',
+			type = int, 
+			default = 0,
+			help = 'skip first sskip steps.')
+	parser.add_argument('--wrap',
+			action='store_true',
+			default = False,
+			help = 'wrap coordinates.')
+	
+	args = parser.parse_args()
+	
+	directory = args.directory
+	prefix = args.prefix
+	natoms = args.natoms
+	species = args.species
+	nstep = args.nstep
+	every = args.every
+	skip = args.sskip
+	
+	import pyanalisi
+	types = np.loadtxt(species,dtype=np.int32).reshape(-1)
+	#print(types)
+	print('Reading {}/{}...'.format(directory, prefix))
+	data = read_file_cp_pos_vel('{}/{}'.format(directory, prefix),natoms, nstep = nstep, skip=skip , every=every)
+	print('Done.')
+	analisi_traj = pyanalisi.Trajectory(data['pos'], data['vel'], types, data['cell'],True, args.wrap)
+	print('Writing output files...')
+	analisi_traj.write_lammps_binary('{}/{}.bin'.format(directory, prefix), 0, -1)
+	print('Done.')
