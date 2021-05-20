@@ -158,7 +158,7 @@ def readlammpsdump(infile,nstep,iskip=0,every=1,natoms=None,pos=True,vel=True, b
 		for i in np.arange(iskip*(natoms+9)):
 			l=inf.readline()
 		itimestep = -1
-		for i in np.arange(1,nstep):
+		for i in np.arange(nstep):
 			iread=i%every	
 			if(iread==0):
 				itimestep +=1
