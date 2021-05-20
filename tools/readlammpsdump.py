@@ -223,7 +223,6 @@ if __name__ == "__main__" :
 	
 	args = parser.parse_args()
 	
-	directory = args.directory
 	prefix = args.prefix
 	natoms = args.natoms
 	nstep = args.nstep

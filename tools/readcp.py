@@ -36,42 +36,11 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 	data : dict
 		dictonary with the trajectory
 	"""	
-	def file_length( filename ):
-	  i = -1
-	  blank = 0
-	  with open(filename) as f:
-	    for i, l in enumerate(f,1):
-	      if len(l) == 1:
-	        blank += 1
-	      pass
-	  return i - blank
-	
-	if nstep is None:
-		nlines = int(check_output(["wc", "-l", prefix + '.evp']).decode("utf8").split()[0])
-		nstep = nlines -1
-		#nstep = file_length(prefix + '.evp') - 1
-		print("nstep not set: using all the steps in .evp file: nstep = {}".format(nstep))
-
-# ToDo: possibilita' di leggere i file dal fondo
-#	if nstep < 0:
-#		reverse = True
-#		nstep = -nstep
-#	else:
-#		reverse = False
-#
 	data = {}
 	nstep_total = nstep
 	nstep = nstep//every
 	print('nstep_total = ',nstep_total)
 	print('nstep_tosave = ',nstep)
-	filethe = open(prefix + '.evp', 'r')
-	data['step']  = np.zeros(nstep, dtype = np.int64)
-	data['time']  = np.zeros(nstep, dtype = np.float64)
-	data['ekinc'] = np.zeros(nstep, dtype = np.float64)
-	data['Tcell'] = np.zeros(nstep, dtype = np.float64)
-	data['Tion']  = np.zeros(nstep, dtype = np.float64)
-	data['econt'] = np.zeros(nstep, dtype = np.float64)
-	data['epot'] = np.zeros(nstep, dtype = np.float64)
 	#filethe.readline()  # skip first line
 	
 	filepos = open(prefix + '.pos', 'r')
@@ -86,10 +55,6 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 	istep = 0
 	while(istep < skip):
 		istep+=1
-		linethe = filethe.readline()
-		if (linethe.split()[0] == '#') :
-			print("Comment found in {}.evp at line {}. Please check that this is correct.".format(prefix, istep+1))
-			linethe = filethe.readline()
 		linecel = filecel.readline()
 		linecel = filecel.readline()
 		linecel = filecel.readline()
@@ -106,47 +71,25 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 	for istep_total in range(nstep_total):
 		iread = istep_total%every
 		if(iread==0):
-			linethe = filethe.readline()
 			#print(linethe)
 			linepos = filepos.readline()
 			linevel = filevel.readline()
 			linecel = filecel.readline()
-			if (len(linethe)==0) or (len(linepos)==0) or (len(linevel)==0) or (len(linecel)==0):  # EOF
+			#if (len(linethe)==0) or (len(linepos)==0) or (len(linevel)==0) or (len(linecel)==0):  # EOF
+			if  (len(linepos)==0) or (len(linevel)==0) or (len(linecel)==0):  # EOF
 						raise RuntimeError("End Of file")
 	
-			# controllo per commenti 
-			if (linethe.split()[0] == '#') :
-				print("Comment found in {}.evp at line {}. Please check that this is correct.".format(prefix, istep+1))
-				linethe = filethe.readline()
-			# lettura thermo
-			values = np.array(linethe.split(), dtype = np.float)
-			if len(values):
-				#print istep, values[0], len(data['step'])
-				data['step'][istep]  = int(values[0])
-				data['time'][istep]  = values[1]
-				if istep == 1:
-					deltat = data['time'][1]-data['time'][0] 
-				data['ekinc'][istep] = values[2]
-				data['Tcell'][istep] = values[3]
-				data['Tion'][istep]  = values[4]
-				data['epot'][istep]  = values[5]
-				data['econt'][istep] = values[8]
-			else:
-				istep -= 1
 	
 			# lettura posizioni
 			#values = np.array(linepos.split(), dtype = np.float)
-			values = linepos.split()
+			values_pos = linepos.split()
 			#lettura velocity
 			values_vel = linevel.split()
 			#lettura forza
-			if len(values) and len(values_vel):
-				if (data['step'][istep] != int(values[0]) ):
-					print(data['step'][istep], int(values[0]))
-					raise RuntimeError("Different timesteps between files of positions and thermo")
-				if (data['step'][istep] != int(values_vel[0]) ):
-					print(data['step'][istep], int(values_vel[0]))
-					raise RuntimeError("Different timesteps between files of velocity and thermo")
+			if len(values_pos) and len(values_vel):
+				if (int(values_pos[0]) != int(values_vel[0]) ):
+					#print(data['step'][istep], int(values_vel[0]))
+					raise RuntimeError("Different timesteps between files of velocity and positions \n line={}  \n {} != {}".format(istep,int(values_pos[0]),int(values_vel[0])))
 				for iatom in range(natoms):
 					linepos = filepos.readline()
 					values = np.array(linepos.split())
@@ -160,9 +103,8 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 			values = linecel.split()
 			#print values, data['step'][istep]
 			if len(values):
-				if (data['step'][istep] != int(values[0]) ):
-					print(data['step'][istep], int(values[0]))
-					raise RuntimeError("Different timesteps between files of cell and thermo")
+				if ( int(values_pos[0]) != int(values[0]) ):
+					raise RuntimeError("Different timesteps between files of cell and positions \n line={}  \n {} != {}".format(istep,int(values_pos[0]),int(values[0])))
 				for i in range(3):
 					values = np.array(filecel.readline().split())
 					data['cell'][istep, i,0] = values[0]
@@ -171,15 +113,10 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 	
 			istep += 1
 		else:
-			linethe = filethe.readline()
-			if (linethe.split()[0] == '#') :
-				print("Comment found in {}.evp at line {}. Please check that this is correct.".format(prefix, istep+1))
-				linethe = filethe.readline()
 			linecel = filecel.readline()
 			linecel = filecel.readline()
 			linecel = filecel.readline()
 			linecel = filecel.readline()
-			#print(linethe)
 			linepos = filepos.readline()
 			linevel = filevel.readline()
 			for iatom in range(natoms):
@@ -191,7 +128,6 @@ def read_file_cp_pos_vel(prefix, natoms, nstep=None,skip=0,every=1,tometal=True)
 		conv_energy = HARTREE
 		data['pos'] *= conv_pos
 		data['vel'] *= conv_vel
-		data['epot'] *=conv_energy
 		data['cell'] *=conv_pos
 	
 	return data
