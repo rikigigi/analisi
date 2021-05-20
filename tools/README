@@ -1,0 +1,6 @@
+To run examples
+
+python readlammpsdump.py -p lammps/dump.lammpstrj --nstep 4
+
+python readcp.py --nstep 4 -p ./cp/water125_testanalisi -s cp/water125_testanalisi.species --natoms 375
+
