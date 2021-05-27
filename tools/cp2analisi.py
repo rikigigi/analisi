@@ -145,7 +145,7 @@ if __name__ == "__main__" :
 	parser.add_argument('-s', '--species',
 			type = str,
 			required = True,
-			help = 'A single line file with the succession of the atom indeces. \n \
+			help = 'A single line file with the succession of the atom indexes. \n \
 	for example a simulation of a water molecule with the atoms in the order HHO will have a file as: 0 0 1 ')
 	parser.add_argument('--nstep',
 			type = int, 

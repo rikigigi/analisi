@@ -1,13 +1,25 @@
-from aiida import load_profile
-from aiida.orm import Code, load_node
-from aiida.orm import *
-from aiida.engine import submit
+try:
+    import aiida
+    HAS_AIIDA=True
+except:
+    HAS_AIIDA=False
+if HAS_AIIDA:
+    from aiida import load_profile
+    from aiida.orm import Code, load_node
+    from aiida.orm import *
+    from aiida.engine import submit
+    load_profile()
 import re
-load_profile()
 
-
-from aiida_QECpWorkChain.workflow import *
-from aiida_QECpWorkChain import write_cp_traj
+try:
+    import aiida_QECpWorkChain
+    HAS_QECPWORKCHAIN=True
+except:
+    HAS_QECPWORKCHAIN=False
+        
+if HAS_QECPWORKCHAIN:
+    from aiida_QECpWorkChain.workflow import *
+    from aiida_QECpWorkChain import write_cp_traj
 
 import numpy as np
 import matplotlib as mpl
@@ -27,6 +39,7 @@ import pyanalisi as pa
 
 print(pa.info())
 
+#aiida
 def plt_key(traj,key,conv=1.0,title='',ylabel=''):
     if title=='': title=key
     fig,ax =plt.subplots(figsize=(8,6),dpi=300)
@@ -60,6 +73,7 @@ def get_types_id_array(types_array):
         res.append(types[t])
     return np.array(res,dtype='int32')
 
+#aiida
 def get_analisi_traj_from_aiida(traj):
     pos=traj.get_array('positions')
     vel=traj.get_array('velocities')
@@ -70,58 +84,125 @@ def get_analisi_traj_from_aiida(traj):
     atraj_unw=pa.Trajectory(*params,True, False)
     return atraj, atraj_unw
 
-import k3d
-from ipywidgets import interact, interactive, fixed
-import ipywidgets as widgets
-
-import scipy.ndimage
-
-def analyze_msd(traj_unw,start,stop,nthreads=4,tskip_msd=10):
-    l=stop-start
-    msd_l=l//2
+try:
+    import k3d
+    HAS_K3D=True
+except:
+    HAS_K3D=False
+try:
+    from ipywidgets import interact, interactive, fixed
+    import ipywidgets as widgets
+    HAS_IPYWIDGETS=True
+except:
+    HAS_IPYWIDGETS=False    
     
+    
+def pyanalisi_wrapper(Class,traj,*args):
+    if isinstance(traj, pa.Trajectory):
+        return getattr(pa,Class)(traj,*args)
+    elif isinstance(traj, pa.Traj):
+        return getattr(pa,Class+'_lammps')(traj,*args)
+    else:
+        raise RuntimeError(f"Wrapper for trajectory class '{traj.__name__}' not implemented")
+        
+
+def atomic_density(atraj,cell,dr=0.1):
+    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(cell/dr),dtype=int).diagonal().tolist(),1,1)
+    hist.reset(atraj.getNtimesteps())
+    hist.calculate(0)
+    res=np.array(hist)
+    return res
+
+def fft_density(res,coeff=None):
+    if coeff is None:
+        coeff=np.ones(res.shape[0])
+    resg=np.einsum('ijkl,i',np.fft.fftn(res,axes=(1,2,3)),coeff)
+    resg[0,0,0]=0
+    resg=np.fft.fftshift(resg)
+    resgn=np.real(resg*np.conj(resg))
+    resgn/=resgn.max()
+    return resgn
+
+def max_l(start,stop,tmax=0):
+    if tmax<=0:
+        tmax=(stop-start)//2
+    n_ave=stop-start-tmax
+    if start>=stop:
+        raise RuntimeError("start index must be less than the end index")
+    if n_ave<=0:
+        tmax=stop-start -1
+        n_ave=1
+    return tmax,n_ave
+
+
+
+def analyze_msd(traj_unw,start,stop,tmax=0,nthreads=4,tskip_msd=10,print=print):
+    tmax,n_ave = max_l(start,stop,tmax)
     #mean square displacement
-    msd=pa.MeanSquareDisplacement(traj_unw,tskip_msd,msd_l,nthreads,True,False,False)
-    msd.reset(l-msd_l)
+    msd=pyanalisi_wrapper('MeanSquareDisplacement',traj_unw,tskip_msd,tmax,nthreads,True,False,False)
+    msd.reset(n_ave)
     print('calculating msd...',flush=True)
     msd.calculate(start)
-    return msd
+    return np.array(msd)#,copy=True)
 
-def analyze(traj,traj_unw,start,stop,nthreads=4,tskip_msd=10,tskip_sh=200,t_sh=None):
-    l=stop-start
-    msd_l=l//2
-    
-    msd=analyze_msd(traj_unw,start,stop,nthreads,tskip_msd)
-    
-    #gofr (with time)
-    startr=0.5
-    endr=3.8
-    nbin=100
-    gofr=pa.Gofrt(traj,startr,endr,nbin,1,nthreads,tskip_msd,False)
-    gofr.reset(l-1)
+def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print):
+    tmax,n_ave = max_l(start,stop,tmax)
+    gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False)
+    gofr.reset(n_ave)
     print('calculating g(r)...',flush=True)
     gofr.calculate(start)
-    
-    #spherical harmonics correlations
-    startr=0.7
-    endr=3.5
-    nbin=4
-    dr=(endr-startr)/nbin
-    sh=pa.SphericalCorrelations(traj
+    return np.array(gofr)#,copy=True)
+
+def analyze_sh(traj,start,stop,startr,endr, nbin, tmax=0, nthreads=4,tskip=10,print=print):
+    tmax,n_ave = max_l(start,stop,tmax)
+    sh=pyanalisi_wrapper('SphericalCorrelations',traj
                                      ,startr #minimum of radial distance
                                      ,endr #maximum of radial distance
                                      ,nbin # number of distance bins
-                                     ,msd_l if t_sh is None else t_sh # maximum length of correlation functions in timesteps
+                                     ,tmax # maximum length of correlation functions in timesteps
                                      ,nthreads # number of threads
-                                     ,tskip_sh # time skip to average over the trajectory
+                                     ,tskip # time skip to average over the trajectory
                                      ,20 # buffer for sh
                                      ,False)
-    sh.reset(l-msd_l) # number of timesteps to analyze
+    sh.reset(n_ave) # number of timesteps to average
     print('calculating spherical harmonics correlation functions... (go away and have a coffee)',flush=True)
-    sh.calculate(start) #calculate starting at this timestep
+    sh.calculate(start) #calculate starting at this timestep    
+    return np.array(sh)#,copy=True)
+
+def analyze(traj,traj_unw,start,stop,nthreads=4,
+            tmax_msd=0,
+            tskip_msd=10,
+            startr_gofr=0.5,
+            endr_gofr=3.8,
+            nbin_gofr=100,
+            tskip_gofr=10,
+            tmax_gofr=1,
+            startr_sh=0.7,
+            endr_sh=1.4,
+            nbin_sh=1,
+            tskip_sh=20,
+            tmax_sh=0):
+    
+    msd=analyze_msd(traj_unw,start,stop,
+                    nthreads=nthreads,
+                    tskip_msd=tskip_msd,
+                    tmax=tmax_msd)
+    
+    #gofr (with time)
+    gofr=analyze_gofr(traj,start,stop,startr_gofr,endr_gofr,nbin_gofr,
+                      tmax=tmax_gofr,
+                      nthreads=nthreads,
+                      tskip=tskip_gofr)
+
+    
+    #spherical harmonics correlations
+    sh = analyze_sh(traj,start,stop,startr_sh,endr_sh, nbin_sh,
+                    tmax=tmax_sh,
+                    nthreads=nthreads,
+                    tskip=tskip_sh)
+
     print('all done',flush=True)
-    ress= np.array(msd,copy=True),np.array(gofr,copy=True),np.array(sh,copy=True)
-    return ress
+    return msd, gofr, sh
 
 import scipy as sp
 import scipy.optimize 
@@ -149,7 +230,7 @@ def _meta_generate_initial(n):
     for i in range(n):
         s+=f'{1.0/2**(i+1)},10*{10**-i},'
     s=f'[{s}{10**-n},0]'
-    print(s)
+    #print(s)
     return s
 
 def _meta_generate_n_exp(n):
@@ -170,8 +251,8 @@ def {names.get(n,"_"+str(n))}_exp(x, *a):
     b_min+=',0,0]'
     b_max+=',np.inf,np.inf]'
     s_aux=f'def {names.get(n,"_"+str(n))}_exp_aux(a): return {last_mult}'
-    print(s)
-    print(s_aux)
+    #print(s)
+    #print(s_aux)
     exec(s, globals())
     exec(s_aux,globals())
     s=f'''
@@ -192,7 +273,7 @@ def fit_{names.get(n,"_"+str(n))}_exp(datax,datay,p0={_meta_generate_initial(n)}
     except:
         return res          
 '''
-    print(s)
+    #print(s)
     exec(s,globals())
 
 for i in range(1,4):
@@ -512,14 +593,14 @@ def pickle_or_unpickle(pickle_dump_name, analisi=None):
             return None
     return analysis_results[pickle_dump_name]
 
-def density_field(res_g, res_g1):
+def density_field(*ress):
     plot = k3d.plot(grid=(-0.5,-0.5,-0.5,0.5,0.5,0.5))
-    obj = k3d.volume(res_g)
-    obj2 = k3d.volume(res_g1)
+    objs=[]
+    for res_ in ress:
+        objs.append(k3d.volume(np.array(res_,dtype='float16')))
+        plot+=objs[-1]
     #points = k3d.points(g0_sites,point_size=0.02)
     #points1 = k3d.points(g1_sites,point_size=0.005)
-    plot += obj
-    plot += obj2
     #plot += points
     #plot += points1
     plot.display()
@@ -552,10 +633,10 @@ def density_field(res_g, res_g1):
         global _y
         global _z
         print('finding maximum in spherical domain with r={}, center=({},{},{})'.format(_w_x,_x,_y,_z))
-        idx, (_z,_y,_x)=get_max_in_spherical_domain(res_g,_w_x,_z,_y,_x)
+        idx, (_z,_y,_x)=get_max_in_spherical_domain(ress[0],_w_x,_z,_y,_x)
         #_x,_y,_z=-_x,-_y,-_z
-        print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,res_g.shape))
-        print('value={}'.format(res_g[idx]))
+        print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,ress[0].shape))
+        print('value={}'.format(ress[0][idx]))
         plot.clipping_planes=global_clipping_planes()
     display(button)#,button2,button3)
     @interact(spherical=widgets.Checkbox(value=False))
@@ -677,18 +758,3 @@ def print_cp_with_traj(wf,print=print):
         print(c.pk,'traj pk={}: {:.3}ps'.format(c.outputs.output_trajectory.pk,length_traj(c.outputs.output_trajectory)) if 'output_trajectory' in c.outputs else 'No output_trajectory')
         print(c.inputs.parameters.get_dict()['IONS'])
         print(c.inputs.parameters.get_dict()['CELL'] if 'CELL' in c.inputs.parameters.get_dict() else '')
-
-def atomic_density(atraj,cell,dr=0.1):
-    hist=pa.PositionHistogram(atraj,np.array(np.rint(cell/dr),dtype=int).diagonal().tolist(),1,1)
-    hist.reset(atraj.getNtimesteps())
-    hist.calculate(0)
-    res=np.array(hist)
-    return res
-
-def fft_density(res,coeff=np.array([1.0,1.0])):
-    resg=np.einsum('ijkl,i',np.fft.fftn(res,axes=(1,2,3)),coeff)
-    resg[0,0,0]=0
-    resg=np.fft.fftshift(resg)
-    resgn=np.real(resg*np.conj(resg))
-    resgn/=resgn.max()
-    return resgn
