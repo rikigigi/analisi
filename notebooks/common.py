@@ -106,7 +106,7 @@ def pyanalisi_wrapper(Class,traj,*args):
         raise RuntimeError(f"Wrapper for trajectory class '{traj.__name__}' not implemented")
         
 
-def atomic_density(atraj,cell,dr=0.1):
+def atomic_density(atraj,cell=np.array([[1,0,0],[0,1,0],[0,0,1]]),dr=0.1):
     hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(cell/dr),dtype=int).diagonal().tolist(),1,1)
     hist.reset(atraj.getNtimesteps())
     hist.calculate(0)
