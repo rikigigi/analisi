@@ -52,7 +52,7 @@ const static char * _info_msg=
 #ifdef XDR_FILE
 "\nWith gromacs XDR file conversion support"
 #endif
-"\nv0.2.1"
+"\nv0.3.0"
 ;
 
 

@@ -1,5 +1,8 @@
 # analisi: your Swiss Army Knife of molecular dynamics analysis
 
+
+[Link to the pdf version of this document](README.pdf)
+
 Available on linux's [conda-forge](https://conda-forge.org/#about):
 ```
 conda config --add channels conda-forge    #if not already done
@@ -185,6 +188,7 @@ Features:
  - multithreaded
  - command line interface has MPI too (for super-heavy calculations)
  - command line calculates variance of every quantity and every function (in python you can do it by yourselves with numpy.var )
+ - jupyter notebook example of the python interface
 
 Calculations:
 
@@ -204,13 +208,14 @@ Dependencies:
 
 - C++17 compatible compiler (GCC 7+, clang 6+, intel 19.0.1+, [source](https://en.cppreference.com/w/cpp/compiler_support) )
 - cmake
-- linux (mmap - maybe this dependency can be removed with some additional work)
+- linux or macOS (mmap - maybe this dependency can be removed with some additional work)
 - FFTW3 (included in the package)
 - Eigen3 (included in the package)
 - Boost (included in the package)
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- included in the package)
 - python (optional) 
+- x86 architecture: probably the code has issues (because of memory alignment constraints) on arm architecture when reading a binary dump from lammps (at least from 2020 version on). If you don't use binary trajectory created by lammps there is no issue.
 
 ## MPI build (why not?)
 ```
