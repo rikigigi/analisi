@@ -63,11 +63,11 @@ public:
         }
         t0=0;t1=1;
         i0=0;i1=1;
-        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE) {
+        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE)) {
             i0=0;
             i1=ntimesteps;
         }
-        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME) {
+        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME)) {
             t0=0;
             t1=leff;
         }
@@ -75,7 +75,7 @@ public:
 
     void calcola(unsigned int primo){
         init_split();
-        if constexpr (FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT) {
+        if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT)) {
             static_cast<T*>(this)->calc_init(primo);
         }
         std::vector<std::thread> threads;
@@ -102,12 +102,12 @@ public:
                     t.join();
                 }
                 threads.clear();
-                if constexpr (FLAGS & CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA)
+                if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA))
                     static_cast<T*>(this)->join_data();
             }
         }
 
-        if constexpr (FLAGS & CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE) {
+        if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE)) {
             static_cast<T*>(this)->calc_end();
         }
 

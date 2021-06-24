@@ -169,7 +169,10 @@ endif()
 endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
-target_link_libraries(${PROJECT_NAME}_lib rt)
+if (NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang")  )
+  #with Clang not use rt
+   target_link_libraries(${PROJECT_NAME}_lib rt)
+endif()
 target_include_directories(${PROJECT_NAME}_lib PUBLIC lib/include )
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 

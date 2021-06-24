@@ -63,7 +63,7 @@ std::vector<ssize_t>  AtomicDensity<T,Hist>::get_shape() const{
 }
 template <class T, class Hist>
 std::vector<ssize_t>  AtomicDensity<T,Hist>::get_stride() const {
-    return {sizeof (Hist)*static_cast<long>(nbin[0]*nbin[1]*nbin[2]),static_cast<long>(nbin[1]*nbin[2]*sizeof (Hist)),static_cast<long>(nbin[2]*sizeof (Hist)),static_cast<long>(sizeof (Hist))};
+    return {static_cast<long>(sizeof (Hist))*static_cast<long>(nbin[0]*nbin[1]*nbin[2]),static_cast<long>(nbin[1]*nbin[2]*sizeof (Hist)),static_cast<long>(nbin[2]*sizeof (Hist)),static_cast<long>(sizeof (Hist))};
 }
 
 #include "traiettoria.h"
