@@ -3,6 +3,7 @@
 
 #include "calcolamultithread.h"
 #include "operazionisulista.h"
+#include <array>
 
 class CenterDiff : public CalcolaMultiThread<CenterDiff>, public OperazioniSuLista<CenterDiff,double>
 {

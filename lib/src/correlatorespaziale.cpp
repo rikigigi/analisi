@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include<thread>
+#include <array>
 
 #include "correlatorespaziale.h"
 #include "traiettoria.h"
