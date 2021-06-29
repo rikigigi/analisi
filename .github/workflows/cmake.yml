@@ -30,7 +30,7 @@ jobs:
       # Build your program with the given configuration
       run: |
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-        sudo -E ../install/install_python.sh
+        sudo -E ${{github.workspace}}/install/install_python.sh
       env:
         SP_DIR: /usr/lib/python3/dist-packages
         SOURCE_DIR: ${{github.workspace}}
