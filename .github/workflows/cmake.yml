@@ -37,7 +37,7 @@ jobs:
       run: |
         ctest -C ${{env.BUILD_TYPE}}
         ../install/install_test.sh
-        sudo ../install/install_python.sh
+        sudo -E ../install/install_python.sh
         cd ../tests/ && pytest -sv .
       env:
         SP_DIR: /usr/lib/python3/dist-packages
