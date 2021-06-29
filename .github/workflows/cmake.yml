@@ -28,7 +28,13 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        sudo -E ../install/install_python.sh
+      env:
+        SP_DIR: /usr/lib/python3/dist-packages
+        SOURCE_DIR: ${{github.workspace}}
+        BUILD_DIR: ${{github.workspace}}/build
 
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -37,9 +43,4 @@ jobs:
       run: |
         ctest -C ${{env.BUILD_TYPE}}
         ../install/install_test.sh
-        sudo -E ../install/install_python.sh
         cd ../tests/ && pytest -sv .
-      env:
-        SP_DIR: /usr/lib/python3/dist-packages
-        SOURCE_DIR: ${{github.workspace}}
-        BUILD_DIR: ${{github.workspace}}/build
