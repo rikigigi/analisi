@@ -46,6 +46,7 @@
 #ifdef USE_MPI
 #include "mp.h"
 #endif
+#include <cstdlib>
 
 namespace std{
 
@@ -136,6 +137,23 @@ int main(int argc, char ** argv)
     }
     std::cerr << std::endl;
 
+    //try to read OMP_NUM_THREADS env variable
+    int omp_num_threads = 2;
+    const char * omp_num_threads_c = getenv("OMP_NUM_THREADS");
+    if (omp_num_threads_c != nullptr) {
+        int nth_try = atoi(omp_num_threads_c);
+        if (nth_try > 0) {
+            omp_num_threads = nth_try;
+            std::cerr << "Setting default number of threads from OMP_NUM_THREADS="<<omp_num_threads<<std::endl;
+        } else {
+            std::cerr << "Invalid OMP_NUM_THREADS='"<<omp_num_threads_c<<"' env variable, using a default value of "<<omp_num_threads<<std::endl;
+        }
+    } else {
+        std::cerr << "OMP_NUM_THREADS env variable not found, using a default of "<<omp_num_threads<<std::endl;
+    }
+
+
+
     boost::program_options::options_description options("Program to analyze of molecular dynamics trajectories, with multithread and MPI block averages.\n\nAllowed options:");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
@@ -148,11 +166,12 @@ int main(int argc, char ** argv)
     std::vector<double> factors_input;
     std::vector<std::string> headers,output_conversion_gro;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
+
     options.add_options()
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "input file in binary LAMMPS format: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input),"column formatted file with headers. At the beginning of the file you can have free informations. When the program finds a line with only numbers, it assumes that data starts here, and that the line before contains the headers of the columns.")
             ("help,h", "help message")
-            ("thread,N",boost::program_options::value<int>(&numero_thread)->default_value(2),"number of threads to use where supported")
+            ("thread,N",boost::program_options::value<int>(&numero_thread)->default_value(omp_num_threads),"number of threads to use where supported (defaults to OMP_NUM_THREADS if present)")
             ("blocknumber,B",boost::program_options::value<int>(&blocknumber)->default_value(20),"number of blocks to use to calculate averages and variances and to split the reading of the trajectory")
 #ifdef EXPERIMENTAL
             ("ifc,I",boost::program_options::value<std::string>(&ifcfile)->default_value(""),"file with the force constant matrix for phonon coordinate trasformation")
@@ -216,7 +235,7 @@ int main(int argc, char ** argv)
 
         boost::program_options::notify(vm);
 
-        if (( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( debug2 || heat_coeff ) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
+        if (argc<=1 || ( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( debug2 || heat_coeff ) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << options << "\n";
             return 1;
         }
