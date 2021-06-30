@@ -125,7 +125,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                     );
     })
             ;
-    using VDOS=SpettroVibrazionale;
+    using VDOS=SpettroVibrazionale<T>;
     py::class_<VDOS>(m,(std::string("VibrationSpectrum")+typestr).c_str(),py::buffer_protocol())
             .def(py::init<T *, bool>(),
                  R"begend(

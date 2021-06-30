@@ -48,7 +48,8 @@ private:
     T * traiettoria;
     unsigned int size;
     int tipi_atomi;
-    int lunghezza_lista ;
+    using OperazioniSuLista<SpettroVibrazionale<T> >::lista;
+    using OperazioniSuLista<SpettroVibrazionale<T> >::lunghezza_lista;
     unsigned int trasformata_size;
     fftw_complex * trasformata;
     static fftw_plan fftw3;

@@ -184,7 +184,7 @@ double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,
 
 template <class T>
 SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibrazionale<T> & destra) {
-#ifdef DEBUG:
+#ifdef DEBUG
     std::cerr << "chiamato SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
 #endif
     OperazioniSuLista<SpettroVibrazionale<T>>::operator =(destra);
