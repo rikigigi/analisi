@@ -242,7 +242,7 @@ def analyze_vdos_numpy(pos, vel, types, box,
           start=0
           print('start setted to zero because all the timesteps are have been requested')
     
-    traj = pa.Trajectory(pos[start:nstep], vel[start:nstep], types[start:nstep], box[start:nstep],
+    traj = pa.Trajectory(pos[start:start+nstep,:,:], vel[start:nstep+start,:,:], types, box[start:start+nstep,:,:],
                                     matrix_format, # matrix format for the box array
                                     wrap # don't wrap the coordinates
                                     )
