@@ -136,6 +136,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                  )begend")
             .def("reset",&VDOS::reset)
             .def("calculate", &VDOS::calcola)
+            .def("spectrum", &VDOS::spettro)
             .def_buffer([](VDOS & m) -> py::buffer_info {
                 return py::buffer_info(
                             m.accesso_lista(),

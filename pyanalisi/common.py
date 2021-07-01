@@ -153,6 +153,27 @@ def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,pri
     gofr.calculate(start)
     return np.array(gofr)#,copy=True)
 
+def analyze_vdos(traj,nstep=None,print=print):
+    '''
+      Computes vdos 
+      there are no start,stop options because spettrovibrazionale.calcola  do not  support the features
+      Parameters
+      ----------
+        traj : Trajectory instances
+        nstep : int
+                nstep to use for the computation of vdos if None it uses all
+      return:
+        vdos: numpy array (nstep/2+1,3,natoms) 
+    '''
+    if nstep is None:
+       ntep = traj.getNtimesteps()
+    
+    vdos=pyanalisi_wrapper('VibrationSpectrum',traj,False)
+    vdos.reset(nstep)
+    print('calculating vdos...',flush=True)
+    vdos.calculate(0)
+    return np.array(vdos)#,copy=True)
+
 def analyze_sh(traj,start,stop,startr,endr, nbin, tmax=0, nthreads=4,tskip=10,print=print):
     tmax,n_ave = max_l(start,stop,tmax)
     sh=pyanalisi_wrapper('SphericalCorrelations',traj

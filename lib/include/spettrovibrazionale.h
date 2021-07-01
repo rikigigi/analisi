@@ -37,8 +37,8 @@ public:
     void calcola(unsigned int primo);
     SpettroVibrazionale(T* t,bool dump=false);
     ~SpettroVibrazionale();
-    std::vector<ssize_t> get_shape() const { return {static_cast<ssize_t> (size/2+1),static_cast<ssize_t>(3),static_cast<ssize_t>(tipi_atomi)} ; }
-    std::vector<ssize_t> get_stride() const { return { static_cast<ssize_t> (3*tipi_atomi*sizeof(double)),static_cast<ssize_t>(tipi_atomi*sizeof (double)),static_cast<ssize_t>(sizeof(double))};}
+    std::vector<ssize_t> get_shape() const { return {static_cast<ssize_t> (tipi_atomi),static_cast<ssize_t>(size/2+1),static_cast<ssize_t>(3)} ; }
+    std::vector<ssize_t> get_stride() const { return { static_cast<ssize_t> (3*(size/2+1)*sizeof(double)),static_cast<ssize_t>(3*sizeof (double)),static_cast<ssize_t>(sizeof(double))};}
     static void deallocate_plan(); // da chiamare alla fine del programma!
     double spettro(unsigned int frequenza, unsigned int dim, unsigned int tipo_atomo);
     SpettroVibrazionale<T> & operator = (const SpettroVibrazionale<T> &);
