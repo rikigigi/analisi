@@ -481,6 +481,61 @@ $$
 where $\langle \cdot \rangle$ is an average operator, and we do an additional average over all the $N_J$ central atoms of the type $J$. The $\langle \cdot \rangle$ average is implemented as an average over the starting timestep.
 
 
+## Vibrational Spectrum
+
+### Calculation procedure:
+The implemented equation is: 
+
+<a href="https://www.codecogs.com/eqnedit.php?latex=D_{\alpha}(\omega)&space;=&space;\frac{1}{3N_{\alpha}}&space;\sum_{n}^{N_{\alpha}}&space;\int_{-&space;\infty}^{&space;\infty}&space;\langle&space;\mathbf{v}_{n}(0)\cdot&space;\mathbf{v}_{n}&space;(t)&space;\rangle&space;e^{i&space;\omega&space;t}&space;dt" target="_blank"><img src="https://latex.codecogs.com/gif.latex?D_{\alpha}(\omega)&space;=&space;\frac{1}{3N_{\alpha}}&space;\sum_{n}^{N_{\alpha}}&space;\int_{-&space;\infty}^{&space;\infty}&space;\langle&space;\mathbf{v}_{n}(0)\cdot&space;\mathbf{v}_{n}&space;(t)&space;\rangle&space;e^{i&space;\omega&space;t}&space;dt" title="D_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle \mathbf{v}_{n}(0)\cdot \mathbf{v}_{n} (t) \rangle e^{i \omega t} dt" /></a>
+
+where <a href="https://www.codecogs.com/eqnedit.php?latex=\alpha" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\alpha" title="\alpha" /></a> is the type of atom.
+The diffusivity can be computed as half of the zero value of D.
+
+### command line version
+The options that you can use for this calculation are simply:
+
+<code>
+./analisi -i <i>lammp_binary</i> [-N <i>number of threads</i>] [-V] [-B <i>number of blocks</i>] 
+</code>
+
+the code will generate a file with a number of line equal to the number of frequencies, and with `ntypes_atoms*2+1` columns where:
+- the first column rappresent the index of the frequncies 
+- then there are the block average and variance of the spectrum for each atomic type
+
+The code is trasparent ot units of measuares of the quantities. If a user wants the diffusivity in the correct units ( e.g. metal) must porcede in the following way:
+- the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
+- the other columns can be multiplied by `dt/nstep`;
+where `nstep` is the total number of step of the block used to compute  VDOS, `dt` is the time difference of two consecutive molecular dynamis steps.
+
+### python interface
+
+There are two optimal methods of computing the VDOS with the python interface depending on which trajectory are you using. 
+The two function can be found in the `common.py` file
+
+- with the lammps `Traj`: `analyze_vdos_lammps(traj,nstep=None,start=0,resetAccess=True,print=print)`.
+   - `traj` is the lammps trajectory file;
+   - `nstep` is the number of step to use in the computation of the VDOS; if `None` all steps are included;
+   - `start` is the starting step to use as starting point of the trajectory;
+   - `resetAccess` if true resets  `traj.setAccessWindowSize(traj.getNtimesteps())` and `traj.setAccessStart(0)`
+
+- with numpy `Trajectory` interface: `analyze_vdos_numpy(pos,vel,types,box,nstep=ltot,start=start)` .
+   - `pos`   : positions matrix (N_timesteps, N_atoms, 3)
+   - `vel`   : velocities matrix (N_timesteps, N_atoms, 3)
+   - `types` : types vector (N_atoms)
+   - `box `  : box matrix  
+   - `matrix_format` :bool
+          matrix format for the box array
+   - `wrap `: bool 
+    `     `   wrap coordinate
+   - `nstep` : int
+    `     `   nstep to use for the computation of vdos if None it uses all
+   - `start` : int
+   `     `   initial step
+  The first 6 input are the same of the numpy `Trajectory` interface
+
+Both functions returns a numpy array with dimensions: `(ntypes, freq, Cartesian_coordinate)`.
+The units are the same of the `command line version`, thus the matrix must be multiplied by `dt/nstep`.
+
 # Credits
 
 Written by Riccardo Bertossa during his lifetime at SISSA
