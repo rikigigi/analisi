@@ -486,9 +486,9 @@ where $\langle \cdot \rangle$ is an average operator, and we do an additional av
 ### Calculation procedure:
 The implemented equation is: 
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=D_{\alpha}(\omega)&space;=&space;\frac{1}{3N_{\alpha}}&space;\sum_{n}^{N_{\alpha}}&space;\int_{-&space;\infty}^{&space;\infty}&space;\langle&space;\mathbf{v}_{n}(0)\cdot&space;\mathbf{v}_{n}&space;(t)&space;\rangle&space;e^{i&space;\omega&space;t}&space;dt" target="_blank"><img src="https://latex.codecogs.com/gif.latex?D_{\alpha}(\omega)&space;=&space;\frac{1}{3N_{\alpha}}&space;\sum_{n}^{N_{\alpha}}&space;\int_{-&space;\infty}^{&space;\infty}&space;\langle&space;\mathbf{v}_{n}(0)\cdot&space;\mathbf{v}_{n}&space;(t)&space;\rangle&space;e^{i&space;\omega&space;t}&space;dt" title="D_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle \mathbf{v}_{n}(0)\cdot \mathbf{v}_{n} (t) \rangle e^{i \omega t} dt" /></a>
+<img src="https://latex.codecogs.com/gif.latex?\bg_white&space;D_{\alpha}(\omega)&space;=&space;\frac{1}{3N_{\alpha}}&space;\sum_{n}^{N_{\alpha}}&space;\int_{-&space;\infty}^{&space;\infty}&space;\langle&space;\mathbf{v}_{n}(0)\cdot&space;\mathbf{v}_{n}&space;(t)&space;\rangle&space;e^{i&space;\omega&space;t}&space;dt" title="D_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle \mathbf{v}_{n}(0)\cdot \mathbf{v}_{n} (t) \rangle e^{i \omega t} dt" />
 
-where <a href="https://www.codecogs.com/eqnedit.php?latex=\alpha" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\alpha" title="\alpha" /></a> is the type of atom.
+where `$\alpha$` is the type of atom.
 The diffusivity can be computed as half of the zero value of D.
 
 ### command line version
