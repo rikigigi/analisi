@@ -230,9 +230,12 @@ PYBIND11_MODULE(pyanalisi,m) {
                  int -> first timestep to read
 )begend")
     //.def("getPosition",[](Traiettoria & t, int ts,int natoms){return std::array<>})
+            .def("serving_pos", &Traiettoria::serving_pos)
+            .def("toggle_pos_vel", &Traiettoria::toggle_pos_vel)
             .def_buffer([](Traiettoria & g) -> py::buffer_info {
+
                 return py::buffer_info(
-                g.posizioni(0,0),                               /* Pointer to buffer */
+                g.serving_pos()? g.posizioni_inizio() : g.velocita_inizio(),                               /* Pointer to buffer */
                 sizeof(double),                          /* Size of one scalar */
                 py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
                 g.get_shape().size(),                                      /* Number of dimensions */

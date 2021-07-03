@@ -91,11 +91,9 @@ public:
                 if (t>0 && t< loaded_timesteps)
                     return &buffer_velocita[t*3*natoms+atomo*3];
                 else
-                    abort();
+                    throw std::runtime_error("requested timestep is out of range");
             } else {
-                std::cerr << "Errore nel caricamento del file.\n";
-                abort();
-                return 0;
+                throw  std::runtime_error("Error loading the file\n");
             }
         }
 
@@ -116,11 +114,9 @@ public:
                 if (t>0 && t< loaded_timesteps)
                     return &buffer_scatola[t*6];
                 else
-                    abort();
+                    throw std::runtime_error("requested timestep is out of range");
             } else {
-                std::cerr << "Errore nel caricamento del file.\n";
-                abort();
-                return 0;
+                throw  std::runtime_error("Error loading the file\n");
             }
         }
     }
@@ -146,10 +142,9 @@ public:
                 if (t>0 && t< loaded_timesteps)
                     return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
                 else
-                    abort();
+                    throw std::runtime_error("requested timestep is out of range");
             } else {
-                std::cerr << "Errore nel caricamento del file.\n";
-                return 0;
+                throw  std::runtime_error("Error loading the file\n");
             }
         }
 
@@ -177,10 +172,9 @@ public:
                 if (t>0 && t< loaded_timesteps)
                     return &buffer_velocita_cm[t*3*ntypes+tipo*3];
                 else
-                    abort();
+                    throw std::runtime_error("requested timestep is out of range");
             } else {
-                std::cerr << "Errore nel caricamento del file.\n";
-                return 0;
+                throw  std::runtime_error("Error loading the file\n");
             }
         }
 

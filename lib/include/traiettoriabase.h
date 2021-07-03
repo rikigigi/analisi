@@ -26,7 +26,7 @@ public:
     wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
     buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
     buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
-    buffer_tipi{nullptr},buffer_tipi_id{nullptr} {}
+    buffer_tipi{nullptr},buffer_tipi_id{nullptr}, serve_pos{true} {}
 
     //double * posizioni (const int & timestep, const int & atomo) { return static_cast<T*>(this)->posizioni(timestep,atomo);}
     DECL_CALL_BASE_2(double *, posizioni, (const int &, timestep), (const int &, atomo))
@@ -144,6 +144,14 @@ public:
                  static_cast<ssize_t>(sizeof(double))};
     }
 
+    void toggle_pos_vel() {
+        serve_pos=!serve_pos;
+    }
+
+    bool serving_pos() {
+        return serve_pos;
+    }
+
 protected:
 
     double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
@@ -162,6 +170,9 @@ protected:
 
     std::vector<unsigned int> types;
     std::map<int,unsigned int>type_map;
+
+private:
+    bool serve_pos;
 };
 
 #endif // TRAIETTORIABASE_H
