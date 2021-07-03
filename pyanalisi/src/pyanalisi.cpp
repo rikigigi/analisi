@@ -4,6 +4,7 @@
 #include "pybind11/stl.h"
 
 #include "traiettoria.h"
+#include "spettrovibrazionale.h"
 #include "readlog.h"
 #include "correlatorespaziale.h"
 #include "gofrt.h"
@@ -123,6 +124,31 @@ void define_atomic_traj(py::module & m, std::string typestr){
                     m.get_stride()
                     );
     })
+            ;
+    using VDOS=SpettroVibrazionale<T>;
+    py::class_<VDOS>(m,(std::string("VibrationSpectrum")+typestr).c_str(),py::buffer_protocol())
+            .def(py::init<T *, bool>(),
+                 R"begend(
+                 Parameters
+                 ----------
+                 Trajectory instance
+                 debug flag
+                 )begend")
+            .def("reset",&VDOS::reset)
+            .def("calculate", &VDOS::calcola)
+            .def("spectrum", &VDOS::spettro)
+            .def_buffer([](VDOS & m) -> py::buffer_info {
+                return py::buffer_info(
+                            m.accesso_lista(),
+                            sizeof(double),
+                            py::format_descriptor<double>::format(),
+                            m.get_shape().size(),
+                            m.get_shape(),
+                            m.get_stride()
+                            );
+            })
+            .def("__enter__",[](VDOS & m) -> VDOS & {return m;})
+            .def("__exit__",[](VDOS & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
             ;
 }
 

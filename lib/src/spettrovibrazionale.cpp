@@ -14,7 +14,8 @@
 #include "traiettoria.h"
 #include <fstream>
 
-SpettroVibrazionale::SpettroVibrazionale(Traiettoria * t, bool dump_):OperazioniSuLista<SpettroVibrazionale>()
+template <class T>
+SpettroVibrazionale<T>::SpettroVibrazionale(T * t, bool dump_):OperazioniSuLista<SpettroVibrazionale>()
 {
     traiettoria=t;
     dump=dump_;
@@ -26,26 +27,33 @@ SpettroVibrazionale::SpettroVibrazionale(Traiettoria * t, bool dump_):Operazioni
     tipi_atomi=0;
 }
 
-SpettroVibrazionale::~SpettroVibrazionale(){
+template <class T>
+SpettroVibrazionale<T>::~SpettroVibrazionale(){
 
     fftw_free(trasformata);
 }
 
- fftw_plan SpettroVibrazionale::fftw3;
- unsigned int SpettroVibrazionale::fplan_natoms;
- unsigned int SpettroVibrazionale::fplan_size;
+template <class T>
+ fftw_plan SpettroVibrazionale<T>::fftw3;
+template <class T>
+ unsigned int SpettroVibrazionale<T>::fplan_natoms;
+template <class T>
+ unsigned int SpettroVibrazionale<T>::fplan_size;
 
-void SpettroVibrazionale::deallocate_plan(){
+template <class T>
+void SpettroVibrazionale<T>::deallocate_plan(){
     fftw_destroy_plan(fftw3);
     fplan_natoms=0;
     fplan_size=0;
 }
 
-unsigned int SpettroVibrazionale::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+template <class T>
+unsigned int SpettroVibrazionale<T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
     return 0;
 }
 
-void SpettroVibrazionale::reset(const unsigned int numeroTimestepsPerBlocco) {
+template <class T>
+void SpettroVibrazionale<T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 //inizializzo la memoria per i moduli quadri e basta, se necessario!
 // size è la lunghezza della trasformata. La lista che contiene i moduli quadri sarà size/2+1 (trasformata reale).
     if (numeroTimestepsPerBlocco!=size) {
@@ -68,7 +76,8 @@ void SpettroVibrazionale::reset(const unsigned int numeroTimestepsPerBlocco) {
 }
 
 //prima di chiamare questa la traiettoria deve essere impostata correttamente sulla finestra giusta (la funzione non sa qual'è lo timestep corrente.
-void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'inizio di quello che c'è in memoria (attenzione a caricare bene i dati!)
+template <class T>
+void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'inizio di quello che c'è in memoria (attenzione a caricare bene i dati!)
                                   ) {
     //alloca se necessario con fftw_malloc (che alloca la memoria in modo che sia allineata correttaemente per poter sfruttare le istruzioni SIMD del processore
     // e prepara il piano della trasformata. Trasformata_size è la dimensione della trasformata. Deve essere uguale a size, la dimensione dell'array dei moduli quadri.
@@ -163,7 +172,8 @@ void SpettroVibrazionale::calcola(unsigned int primo  ///ignorato: prendo l'iniz
     }
 }
 
-double SpettroVibrazionale::spettro(unsigned int frequenza, unsigned int dim,unsigned int tipo_atomo) {
+template <class T>
+double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,unsigned int tipo_atomo) {
     if (frequenza<lunghezza_lista/(3*tipi_atomi) && dim<3 && tipo_atomo < tipi_atomi) {
         return lista[tipo_atomo*lunghezza_lista/tipi_atomi+ frequenza*3+dim];
     } else {
@@ -172,11 +182,12 @@ double SpettroVibrazionale::spettro(unsigned int frequenza, unsigned int dim,uns
     }
 }
 
-SpettroVibrazionale & SpettroVibrazionale::operator = (const SpettroVibrazionale & destra) {
+template <class T>
+SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibrazionale<T> & destra) {
 #ifdef DEBUG
     std::cerr << "chiamato SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
 #endif
-    OperazioniSuLista<SpettroVibrazionale>::operator =(destra);
+    OperazioniSuLista<SpettroVibrazionale<T>>::operator =(destra);
 
     //TODO: cos'è sta roba?????
     fftw_free(trasformata);
@@ -185,3 +196,8 @@ SpettroVibrazionale & SpettroVibrazionale::operator = (const SpettroVibrazionale
     return *this;
 }
 
+template class SpettroVibrazionale<Traiettoria>;
+#ifdef PYTHON_SUPPORT
+#include "traiettoria_numpy.h"
+template class SpettroVibrazionale<Traiettoria_numpy>;
+#endif

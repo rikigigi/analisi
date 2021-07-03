@@ -28,23 +28,28 @@
 class Traiettoria;
 
 
-class SpettroVibrazionale : public OperazioniSuLista<SpettroVibrazionale>
+template <class T>
+class SpettroVibrazionale : public OperazioniSuLista<SpettroVibrazionale<T> >
 {
 public:
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
-    SpettroVibrazionale(Traiettoria *,bool dump=false);
+    SpettroVibrazionale(T* t,bool dump=false);
     ~SpettroVibrazionale();
+    std::vector<ssize_t> get_shape() const { return {static_cast<ssize_t> (tipi_atomi),static_cast<ssize_t>(size/2+1),static_cast<ssize_t>(3)} ; }
+    std::vector<ssize_t> get_stride() const { return { static_cast<ssize_t> (3*(size/2+1)*sizeof(double)),static_cast<ssize_t>(3*sizeof (double)),static_cast<ssize_t>(sizeof(double))};}
     static void deallocate_plan(); // da chiamare alla fine del programma!
     double spettro(unsigned int frequenza, unsigned int dim, unsigned int tipo_atomo);
-    SpettroVibrazionale & operator = (const SpettroVibrazionale &);
+    SpettroVibrazionale<T> & operator = (const SpettroVibrazionale<T> &);
 
 
 private:
-    Traiettoria * traiettoria;
+    T * traiettoria;
     unsigned int size;
     int tipi_atomi;
+    using OperazioniSuLista<SpettroVibrazionale<T> >::lista;
+    using OperazioniSuLista<SpettroVibrazionale<T> >::lunghezza_lista;
     unsigned int trasformata_size;
     fftw_complex * trasformata;
     static fftw_plan fftw3;

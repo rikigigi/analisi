@@ -153,6 +153,105 @@ def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,pri
     gofr.calculate(start)
     return np.array(gofr)#,copy=True)
 
+def analyze_vdos_single(traj,nstep=None,print=print):
+    '''
+      Computes vdos 
+      there are no start,stop options because spettrovibrazionale.calcola  do not  support the features
+      Parameters
+      ----------
+        traj : Trajectory instances
+        nstep : int
+                nstep to use for the computation of vdos if None it uses all
+      return:
+        vdos: numpy array (ntypes , nstep/2+1,3) 
+    '''
+    if nstep is None or nstep>=traj.getNtimesteps():
+       ntep = traj.getNtimesteps()
+
+    vdos=pyanalisi_wrapper('VibrationSpectrum',traj,False)
+    vdos.reset(nstep)
+    print('calculating vdos...',flush=True)
+    vdos.calculate(0)
+
+    return np.array(vdos)#,copy=True)
+
+def analyze_vdos_lammps(traj,nstep=None,start=0,resetAccess=True,print=print):
+    '''
+      Computes vdos from a lammps trajectory
+      Parameters
+      ----------
+        traj : Trajectory instances
+        nstep : int
+                nstep to use for the computation of vdos if None it uses all
+        start : int
+                initial step
+        resetAccess : bool
+                at the end reset the access to nstep and first step
+      return:
+        vdos: numpy array (ntypes , nstep/2+1,3) 
+    '''
+    if nstep is None or nstep>=traj.getNtimesteps():
+       nstep = traj.getNtimesteps()
+       if start!=0:
+          start=0
+          print('start setted to zero because all the timesteps are have been requested')
+    
+    #set the trajectory to what we want
+    traj.setAccessWindowSize(nstep)
+    traj.setAccessStart(start)
+    vdos = analyze_vdos_single(traj,nstep=nstep,print=print)
+
+    #reset Access 
+    if (resetAccess):
+       traj.setAccessWindowSize(traj.getNtimesteps())
+       traj.setAccessStart(0)
+       print('reset Access')
+       print('traj.setAccessWindowSize(traj.getNtimesteps())')
+       print('traj.setAccessStart(0)')
+       
+    return vdos #,copy=True)
+
+def analyze_vdos_numpy(pos, vel, types, box,
+                                    matrix_format=True, # matrix format for the box array
+                                    wrap=False # don't wrap the coordinates
+                                   ,nstep=None,start=0,
+                                    print=print):
+    '''
+      Computes vdos from numpy arrays
+      Parameters
+      ----------
+        pos : positions matrix (N_timesteps, N_atoms, 3)
+        vel : velocities matrix (N_timesteps, N_atoms, 3)
+        types : types vector (N_atoms)
+        box : box matrix  
+        matrix_format :bool
+                matrix format for the box array
+        wrap : bool 
+                wrap coordinate
+        nstep : int
+                nstep to use for the computation of vdos if None it uses all
+        start : int
+                initial step
+      return:
+        vdos: numpy array (ntypes , nstep/2+1,3) 
+    '''
+    totnstep = len(pos)
+    if nstep is None or nstep>=totnstep:
+       nstep = totnstep 
+       if start!=0:
+          start=0
+          print('start setted to zero because all the timesteps are have been requested')
+    
+    traj = pa.Trajectory(pos[start:start+nstep,:,:], vel[start:nstep+start,:,:], types, box[start:start+nstep,:,:],
+                                    matrix_format, # matrix format for the box array
+                                    wrap # don't wrap the coordinates
+                                    )
+    #set the trajectory to what we want
+    vdos = analyze_vdos_single(traj,nstep=nstep,print=print)
+
+       
+    return vdos #,copy=True)
+
 def analyze_sh(traj,start,stop,startr,endr, nbin, tmax=0, nthreads=4,tskip=10,print=print):
     tmax,n_ave = max_l(start,stop,tmax)
     sh=pyanalisi_wrapper('SphericalCorrelations',traj
