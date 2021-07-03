@@ -48,7 +48,7 @@ Traiettoria::Traiettoria(std::string filename)
     file=0;
     timestep_corrente=0;
     timestep_indicizzato=0;
-    timestep_finestra=0;
+    loaded_timesteps=0;
     tstep_size=0;
     natoms=0;
     n_timesteps=0;
@@ -59,6 +59,9 @@ Traiettoria::Traiettoria(std::string filename)
     buffer_posizioni=0;
     buffer_velocita=0;
     buffer_scatola=0;
+    buffer_posizioni_size=0;
+    loaded_timesteps=0;
+    buffer_cm_size=0;
     ntypes=0;
     ok=false;
     dati_caricati=false;
@@ -333,26 +336,30 @@ Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &
         return non_inizializzato;
     }
 
-    if (timestep_finestra==Ntimesteps)
+    if (loaded_timesteps==Ntimesteps)
         return Ok;
 
     dati_caricati=false;
-    if (timestep_finestra!=Ntimesteps){
+    if (loaded_timesteps!=Ntimesteps){
 
         //questo alloca la memoria in modo corretto per permettere l'utilizzo delle istruzioni SIMD in fftw3
         fftw_free(buffer_posizioni);
         fftw_free(buffer_posizioni_cm);
         fftw_free(buffer_velocita_cm);
-        fftw_free(buffer_velocita);
-        buffer_posizioni= (double*) fftw_malloc(sizeof(double)*natoms*3*Ntimesteps);
-        buffer_posizioni_cm= (double*) fftw_malloc(sizeof(double)*3*Ntimesteps*ntypes);
-        buffer_velocita_cm= (double*) fftw_malloc(sizeof(double)*3*Ntimesteps*ntypes);
-        buffer_velocita=(double*) fftw_malloc(sizeof(double)*natoms*3*Ntimesteps);
+        fftw_free(buffer_velocita); 
+        buffer_posizioni_size=sizeof(double)*natoms*3*Ntimesteps;
+        buffer_cm_size=sizeof(double)*3*Ntimesteps*ntypes;
+        buffer_posizioni= (double*) fftw_malloc(buffer_posizioni_size);
+        buffer_posizioni_cm= (double*) fftw_malloc(buffer_cm_size);
+        buffer_velocita_cm= (double*) fftw_malloc(buffer_cm_size);
+        buffer_velocita=(double*) fftw_malloc(buffer_posizioni_size);
+
+
         delete [] buffer_scatola;
         buffer_scatola= new double [6*Ntimesteps];
     }
 
-    timestep_finestra=Ntimesteps;
+    loaded_timesteps=Ntimesteps;
     return Ok;
 
 }
@@ -439,7 +446,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         return Ok;
 
 #ifdef DEBUG
-    std::cerr << "Imposto l'accesso della traiettoria dal timestep "<< timestep << " al timestep "<<timestep+timestep_finestra  << " (escluso).\n";
+    std::cerr << "Imposto l'accesso della traiettoria dal timestep "<< timestep << " al timestep "<<timestep+loaded_timesteps  << " (escluso).\n";
     if (wrap_pbc)
         std::cerr << "Applico le condizioni al contorno periodiche.\n";
 #endif
@@ -447,9 +454,9 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     //solo se effettivamente c'e' la possibilita' che nella traiettoria ci siano ancora nuovi timesteps
     //(vuol dire che la stima del numero di timesteps svolta all'inizio era sbagliata)
 
-    if (timestep+timestep_finestra>n_timesteps) {
-        if (fsize-timesteps[timestep_corrente]<(timestep-timestep_corrente + timestep_finestra)*tstep_size) {
-            allunga_timesteps(timestep+timestep_finestra+1);
+    if (timestep+loaded_timesteps>n_timesteps) {
+        if (fsize-timesteps[timestep_corrente]<(timestep-timestep_corrente + loaded_timesteps)*tstep_size) {
+            allunga_timesteps(timestep+loaded_timesteps+1);
         } else {
             std::cerr << "Non posso utilizzare timesteps oltre la fine del file! (forse le dimensioni della finestra sono troppo grandi oppure si e' andati troppo oltre)\n";
 //            return oltre_fine_file;
@@ -478,9 +485,9 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         perror(nullptr);
     }
 
-    if (timestep < timestep_corrente && timesteps[timestep]+tstep_size*timestep_finestra*2 < fsize ) { // avviso che le zone di memoria successive non mi servono
-        res=madvise(file+timesteps[timestep]+tstep_size*timestep_finestra*2,
-                    fsize-timesteps[timestep]+tstep_size*timestep_finestra*2,MADV_DONTNEED);
+    if (timestep < timestep_corrente && timesteps[timestep]+tstep_size*loaded_timesteps*2 < fsize ) { // avviso che le zone di memoria successive non mi servono
+        res=madvise(file+timesteps[timestep]+tstep_size*loaded_timesteps*2,
+                    fsize-timesteps[timestep]+tstep_size*loaded_timesteps*2,MADV_DONTNEED);
         if ( res==-1) {
             std::cerr << "Errore in madvise MADV_DONTNEED: "<< res<<"\n";
             perror(0);
@@ -491,8 +498,8 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
     //avviso il kernel che molto probabilmente mi serviranno presto le prossime due finestre
     size_t allinea=0;
-    if (timesteps[timestep]+tstep_size*timestep_finestra*2<fsize){
-        res=madvise(file+allinea_offset(timesteps[timestep],allinea),tstep_size*timestep_finestra*2+allinea,MADV_WILLNEED);   if ( res==-1) {
+    if (timesteps[timestep]+tstep_size*loaded_timesteps*2<fsize){
+        res=madvise(file+allinea_offset(timesteps[timestep],allinea),tstep_size*loaded_timesteps*2+allinea,MADV_WILLNEED);   if ( res==-1) {
             std::cerr << "Errore in madvise MADV_WILLNEED: "<< res<<"\n";
             perror(0);
         }
@@ -518,22 +525,22 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     // dati_caricati è vero se ho dei dati in memoria con la stessa dimensione della finestra
 
     int     timestep_copy_tstart=0,timestep_copy_tend=0,
-            timestep_read_start=timestep, timestep_read_end=timestep+timestep_finestra,
+            timestep_read_start=timestep, timestep_read_end=timestep+loaded_timesteps,
             finestra_differenza=timestep_corrente-timestep;
     if (dati_caricati) {
-        if (abs(finestra_differenza)<timestep_finestra) { // si sovrappongono
+        if (abs(finestra_differenza)<loaded_timesteps) { // si sovrappongono
             if (finestra_differenza>0){
                 timestep_copy_tstart=0;
-                timestep_copy_tend=timestep_finestra-finestra_differenza;
+                timestep_copy_tend=loaded_timesteps-finestra_differenza;
 
                 timestep_read_end=timestep_corrente;
                 timestep_read_start=timestep;
             } else {
                 timestep_copy_tstart=-finestra_differenza;
-                timestep_copy_tend=timestep_finestra;
+                timestep_copy_tend=loaded_timesteps;
 
-                timestep_read_start=timestep_corrente+timestep_finestra;
-                timestep_read_end=timestep+timestep_finestra;
+                timestep_read_start=timestep_corrente+loaded_timesteps;
+                timestep_read_end=timestep+loaded_timesteps;
             }
 #ifdef DEBUG
             std::cerr << "Ricopio i dati già letti da "<<timestep_corrente+timestep_copy_tstart << " a "
@@ -663,8 +670,8 @@ int64_t Traiettoria::get_timestep_lammps(int timestep) {
 
 
 double * Traiettoria::scatola_last() {
-    if (timestep_finestra>0) {
-        return &buffer_scatola[(unsigned int) 6*(timestep_finestra-1)];
+    if (loaded_timesteps>0) {
+        return &buffer_scatola[(unsigned int) 6*(loaded_timesteps-1)];
     } else {
         std::cerr << "Errore: non ho nessun dato in memoria per soddisfare la richiesta (scatola_last)!\n";
         abort();

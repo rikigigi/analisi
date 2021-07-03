@@ -194,7 +194,7 @@ void gk(py::module & m, std::string typestr){
 }
 
 PYBIND11_MODULE(pyanalisi,m) {
-    py::class_<Traiettoria>(m,"Traj")
+    py::class_<Traiettoria>(m,"Traj", py::buffer_protocol())
             .def(py::init<std::string>(),R"begend(
                  Parameters
                  ----------
@@ -230,6 +230,15 @@ PYBIND11_MODULE(pyanalisi,m) {
                  int -> first timestep to read
 )begend")
     //.def("getPosition",[](Traiettoria & t, int ts,int natoms){return std::array<>})
+            .def_buffer([](Traiettoria & g) -> py::buffer_info {
+                return py::buffer_info(
+                g.posizioni(0,0),                               /* Pointer to buffer */
+                sizeof(double),                          /* Size of one scalar */
+                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
+                g.get_shape().size(),                                      /* Number of dimensions */
+                g.get_shape(),                 /* Buffer dimensions */
+                g.get_stride());
+            })
     ;
 
     using RL = ReadLog<double>;

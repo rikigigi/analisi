@@ -131,6 +131,18 @@ public:
         return d2;
     }
 
+    size_t get_size_posizioni() const { return buffer_posizioni_size; }
+    size_t get_size_cm() const {return buffer_cm_size;}
+    std::vector<ssize_t> get_shape() {
+        return {static_cast<ssize_t>(loaded_timesteps),
+                static_cast<ssize_t>(natoms),
+                3};
+    }
+    std::vector<ssize_t> get_stride() {
+        return { static_cast<ssize_t> (natoms*3*sizeof(double)),
+                 static_cast<ssize_t>(3*sizeof (double)),
+                 static_cast<ssize_t>(sizeof(double))};
+    }
 
 protected:
 
@@ -141,9 +153,10 @@ protected:
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
     double * buffer_posizioni_cm; // posizioni del centro di massa
     double * buffer_velocita_cm; // velocità del centro di massa
+    size_t buffer_posizioni_size, buffer_cm_size; //sizes of allocated buffers
 
     int * buffer_tipi,*buffer_tipi_id;
-    int natoms,ntypes,min_type,max_type,n_timesteps;
+    int natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps;
     bool wrap_pbc;
 
 

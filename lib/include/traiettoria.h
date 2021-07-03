@@ -47,7 +47,7 @@ public:
 
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
             return &buffer_posizioni[t*3*natoms+atomo*3];
 
@@ -57,7 +57,7 @@ public:
     #endif
             if(imposta_inizio_accesso(timestep)) {
                 t=timestep-timestep_corrente;
-                if (t>0 && t< timestep_finestra)
+                if (t>0 && t< loaded_timesteps)
                     return &buffer_posizioni[t*3*natoms+atomo*3];
                 else
                     abort();
@@ -77,7 +77,7 @@ public:
 
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
             return &buffer_velocita[t*3*natoms+atomo*3];
 
@@ -88,7 +88,7 @@ public:
     #endif
             if(imposta_inizio_accesso(timestep)){
                 t=timestep-timestep_corrente;
-                if (t>0 && t< timestep_finestra)
+                if (t>0 && t< loaded_timesteps)
                     return &buffer_velocita[t*3*natoms+atomo*3];
                 else
                     abort();
@@ -103,7 +103,7 @@ public:
     double * scatola(const int &timestep) {
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
             return &buffer_scatola[t*6];
 
@@ -113,7 +113,7 @@ public:
     #endif
             if(imposta_inizio_accesso(timestep)){
                 t=timestep-timestep_corrente;
-                if (t>0 && t< timestep_finestra)
+                if (t>0 && t< loaded_timesteps)
                     return &buffer_scatola[t*6];
                 else
                     abort();
@@ -133,7 +133,7 @@ public:
 
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
             return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
 
@@ -143,7 +143,7 @@ public:
     #endif
             if(imposta_inizio_accesso(timestep)) {
                 t=timestep-timestep_corrente;
-                if (t>0 && t< timestep_finestra)
+                if (t>0 && t< loaded_timesteps)
                     return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
                 else
                     abort();
@@ -164,7 +164,7 @@ public:
 
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < timestep_finestra && t>=0) { // vuol dire che ho già caricato i dati
+        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
             return &buffer_velocita_cm[t*3*ntypes+tipo*3];
 
@@ -174,7 +174,7 @@ public:
     #endif
             if(imposta_inizio_accesso(timestep)) {
                 t=timestep-timestep_corrente;
-                if (t>0 && t< timestep_finestra)
+                if (t>0 && t< loaded_timesteps)
                     return &buffer_velocita_cm[t*3*ntypes+tipo*3];
                 else
                     abort();
@@ -205,7 +205,7 @@ private:
     int fd;
     size_t fsize,tstep_size;
     char * file;
-    int timestep_corrente,timestep_finestra,timestep_indicizzato;
+    int timestep_corrente,timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
     bool triclinic;
     bool calculate_center_of_mass;
