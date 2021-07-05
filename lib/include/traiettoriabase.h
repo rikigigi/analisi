@@ -35,6 +35,7 @@ public:
     DECL_CALL_BASE_2(double *, posizioni_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_2(double *, velocita_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_0(double *,scatola_last)
+    DECL_CALL_BASE_0(int, ntimesteps_loaded)
     std::vector<unsigned int> get_types(){
         get_ntypes();
         return types;
@@ -150,6 +151,10 @@ public:
 
     bool serving_pos() {
         return serve_pos;
+    }
+
+    int get_nloaded_timesteps() const {
+        return loaded_timesteps;
     }
 
 protected:

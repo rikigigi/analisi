@@ -14,6 +14,7 @@
 #include<thread>
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include "msd.h"
 #include "config.h"
 #include "traiettoria.h"
@@ -54,30 +55,11 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
 
     if (leff+ntimesteps+primo > traiettoria->get_ntimesteps()){
         throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the time lag");
+    } else if (leff+ntimesteps > traiettoria->get_nloaded_timesteps()) {
+        std::stringstream ss;
+        ss <<"there are not enough loade timesteps inside the trajectory object. I need at least " << leff+ntimesteps << " timesteps to do the requested calculation";
+        throw std::runtime_error(ss.str());
     }
-
-    if (nthread<1) {
-        unsigned int *cont=new unsigned int [ntypes*f_cm];
-
-        for (unsigned int t=0;t<leff;t++) {
-            for (unsigned int i=0;i<ntypes*f_cm;i++){
-                lista[ntypes*t*f_cm+i]=0.0;
-                cont[i]=0;
-            }
-            for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
-                for (int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                    double delta=(pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0],2)+
-                            pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1],2)+
-                            pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2],2))
-                            -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
-                    lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
-
-                }
-            }
-        }
-        delete [] cont;
-    } else { //nthread >1 (il codice precedente viene tenuto per verificare il corretto funzionamento di quello parallelo
-
         /*dividi il lavoro in gruppi
          t  --->  [0,leff[
          npassi     --->  leff
@@ -90,7 +72,7 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
 
         for (unsigned int ith=0;ith<nthread;ith++) {
             threads.push_back(std::thread([&,ith](){
-                unsigned int *cont=new unsigned int [ntypes*f_cm];
+                uint64_t *cont=new uint64_t [ntypes*f_cm];
                 unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
 
                 for (unsigned int t=npassith*ith;t<ultimo;t++) {
@@ -119,8 +101,8 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
                                             -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2])
                                         ,2))
                                         -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
-                                if constexpr (FPE) fpem.check_nan(delta);
                                 lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                                if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
 
                             }
                         }else{
@@ -129,8 +111,8 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
                                         pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1],2)+
                                         pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2],2))
                                         -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
-                                if constexpr (FPE) fpem.check_nan(delta);
                                 lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                                if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
 
                             }
                         }
@@ -140,8 +122,8 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
                                     pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[1]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[1],2)+
                                     pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2],2))
                                     -lista[ntypes*t*f_cm+ntypes+itype];
-                                if constexpr (FPE) fpem.check_nan(delta);
                                 lista[ntypes*t*f_cm+ntypes+itype]+=delta/(++cont[ntypes+itype]);
+                                if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+ntypes+itype]);
                            }
                         }
                     }
@@ -172,7 +154,7 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
         }
 
 
-    }
+
 }
 template <class T,bool FPE>
 MSD<T,FPE> & MSD<T,FPE>::operator=(const MSD<T,FPE> &destra) {

@@ -60,7 +60,6 @@ Traiettoria::Traiettoria(std::string filename)
     buffer_velocita=0;
     buffer_scatola=0;
     buffer_posizioni_size=0;
-    loaded_timesteps=0;
     buffer_cm_size=0;
     ntypes=0;
     ok=false;
@@ -445,9 +444,9 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         return Ok;
 
 #ifdef DEBUG
-    std::cerr << "Imposto l'accesso della traiettoria dal timestep "<< timestep << " al timestep "<<timestep+loaded_timesteps  << " (escluso).\n";
+    std::cerr << "Setting trajectory access from timestep "<< timestep << " to timestep "<<timestep+loaded_timesteps  << " (excluded).\n";
     if (wrap_pbc)
-        std::cerr << "Applico le condizioni al contorno periodiche.\n";
+        std::cerr << "Applying periodic boundary conditions.\n";
 #endif
     //se timestep+timestep_finestra e' oltre il numero di timesteps permessi, alloca un nuovo array
     //solo se effettivamente c'e' la possibilita' che nella traiettoria ci siano ancora nuovi timesteps
