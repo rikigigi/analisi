@@ -9,10 +9,15 @@ class Traiettoria_numpy : public TraiettoriaBase<Traiettoria_numpy>
 public:
     Traiettoria_numpy(pybind11::buffer &&buffer_pos, pybind11::buffer &&buffer_vel, pybind11::buffer &&buffer_types, pybind11::buffer &&buffer_box,bool matrix_box=true,bool pbc_wrap=false);
     ~Traiettoria_numpy();
+    template <bool SAFE=true>
     double * posizioni (const int & timestep, const int & atomo) {return buffer_posizioni+natoms*3*timestep+atomo*3;}
+    template <bool SAFE=true>
     double * velocita (const int & timestep, const int & atomo){return buffer_velocita+natoms*3*timestep+atomo*3;}
+    template <bool SAFE=true>
     double * scatola (const int & timestep){return buffer_scatola+timestep*6;}
+    template <bool SAFE=true>
     double * posizioni_cm(const int & timestep, const int & tipo){return buffer_posizioni_cm+timestep*ntypes*3 + tipo*3;}
+    template <bool SAFE=true>
     double * velocita_cm(const int & timestep, const int & tipo){return buffer_velocita_cm+timestep*ntypes*3 + tipo*3;}
     double *scatola_last(){return buffer_scatola + (n_timesteps-1)*6; }
     void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);

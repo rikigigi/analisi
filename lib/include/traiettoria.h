@@ -38,144 +38,170 @@ class Traiettoria : public TraiettoriaBase<Traiettoria>
 public:
     Traiettoria(std::string filename);
     ~Traiettoria();
+
+    template<bool SAFE=true>
     double * posizioni (const int &timestep, const int &atomo){
-
-        if (atomo<0 || atomo > natoms) {
-            std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
-            return 0;
-        }
-
-        int t=timestep-timestep_corrente;
-
-        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
-
-            return &buffer_posizioni[t*3*natoms+atomo*3];
-
-        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
-    #ifdef DEBUG
-            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
-    #endif
-            if(imposta_inizio_accesso(timestep)) {
-                t=timestep-timestep_corrente;
-                if (t>0 && t< loaded_timesteps)
-                    return &buffer_posizioni[t*3*natoms+atomo*3];
-                else
-                    abort();
-            } else {
-                std::cerr << "Errore nel caricamento del file.\n";
+        if constexpr (SAFE) {
+            if (atomo<0 || atomo > natoms) {
+                std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
                 return 0;
             }
-        }
 
-    }
-    double * velocita(const int &timestep, const int &atomo) {
-        if (atomo<0 || atomo > natoms) {
-            std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
-            return 0;
-        }
+            int t=timestep-timestep_corrente;
 
+            if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
-        int t=timestep-timestep_corrente;
+                return &buffer_posizioni[t*3*natoms+atomo*3];
 
-        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
-
-            return &buffer_velocita[t*3*natoms+atomo*3];
-
-        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
-
-    #ifdef DEBUG
-            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
-    #endif
-            if(imposta_inizio_accesso(timestep)){
-                t=timestep-timestep_corrente;
-                if (t>0 && t< loaded_timesteps)
-                    return &buffer_velocita[t*3*natoms+atomo*3];
-                else
-                    throw std::runtime_error("requested timestep is out of range");
-            } else {
-                throw  std::runtime_error("Error loading the file\n");
+            } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+#ifdef DEBUG
+                std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+                if(imposta_inizio_accesso(timestep)) {
+                    t=timestep-timestep_corrente;
+                    if (t>0 && t< loaded_timesteps)
+                        return &buffer_posizioni[t*3*natoms+atomo*3];
+                    else
+                        throw std::runtime_error("requested timestep is out of range");
+                } else {
+                    throw  std::runtime_error("Error loading the file\n");
+                }
             }
+        } else {
+            return &buffer_posizioni[(timestep-timestep_corrente)*3*natoms+atomo*3];
+        }
+    }
+    template<bool SAFE=true>
+    double * velocita(const int &timestep, const int &atomo) {
+        if constexpr (SAFE) {
+            if (atomo<0 || atomo > natoms) {
+                std::cerr << "Atomo richiesto ("<< atomo << ") non è compreso nel range di atomi 0-"<<natoms<<"\n";
+                return 0;
+            }
+
+
+            int t=timestep-timestep_corrente;
+
+            if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
+
+                return &buffer_velocita[t*3*natoms+atomo*3];
+
+            } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+
+#ifdef DEBUG
+                std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+                if(imposta_inizio_accesso(timestep)){
+                    t=timestep-timestep_corrente;
+                    if (t>0 && t< loaded_timesteps)
+                        return &buffer_velocita[t*3*natoms+atomo*3];
+                    else
+                        throw std::runtime_error("requested timestep is out of range");
+                } else {
+                    throw  std::runtime_error("Error loading the file\n");
+                }
+            }
+        } else {
+            return &buffer_velocita[(timestep-timestep_corrente)*3*natoms+atomo*3];
+
         }
 
     }
+    template<bool SAFE=true>
     double * scatola(const int &timestep) {
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
+        if constexpr (SAFE) {
+            if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
 
+                return &buffer_scatola[t*6];
+
+            } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+#ifdef DEBUG
+                std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+                if(imposta_inizio_accesso(timestep)){
+                    t=timestep-timestep_corrente;
+                    if (t>0 && t< loaded_timesteps)
+                        return &buffer_scatola[t*6];
+                    else
+                        throw std::runtime_error("requested timestep is out of range");
+                } else {
+                    throw  std::runtime_error("Error loading the file\n");
+                }
+            }
+        } else {
             return &buffer_scatola[t*6];
 
-        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
-    #ifdef DEBUG
-            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
-    #endif
-            if(imposta_inizio_accesso(timestep)){
-                t=timestep-timestep_corrente;
-                if (t>0 && t< loaded_timesteps)
-                    return &buffer_scatola[t*6];
-                else
-                    throw std::runtime_error("requested timestep is out of range");
-            } else {
-                throw  std::runtime_error("Error loading the file\n");
-            }
         }
     }
+    template<bool SAFE=true>
     double * posizioni_cm(const int &timestep, const int &tipo){
 
-        if (tipo<0 || tipo > ntypes) {
-            std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
-            return 0;
-        }
-
         int t=timestep-timestep_corrente;
-
-        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
-
-            return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
-
-        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
-    #ifdef DEBUG
-            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
-    #endif
-            if(imposta_inizio_accesso(timestep)) {
-                t=timestep-timestep_corrente;
-                if (t>0 && t< loaded_timesteps)
-                    return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
-                else
-                    throw std::runtime_error("requested timestep is out of range");
-            } else {
-                throw  std::runtime_error("Error loading the file\n");
+        if constexpr (SAFE) {
+            if (tipo<0 || tipo > ntypes) {
+                std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
+                return 0;
             }
+
+
+            if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
+
+                return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+
+            } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+#ifdef DEBUG
+                std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+                if(imposta_inizio_accesso(timestep)) {
+                    t=timestep-timestep_corrente;
+                    if (t>0 && t< loaded_timesteps)
+                        return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
+                    else
+                        throw std::runtime_error("requested timestep is out of range");
+                } else {
+                    throw  std::runtime_error("Error loading the file\n");
+                }
+            }
+        } else {
+            return &buffer_posizioni_cm[t*3*ntypes+tipo*3];
         }
 
     }
 
+    template<bool SAFE=true>
     double * velocita_cm(const int &timestep, const int &tipo){
-
-        if (tipo<0 || tipo > ntypes) {
-            std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
-            return 0;
-        }
 
         int t=timestep-timestep_corrente;
 
-        if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
-
-            return &buffer_velocita_cm[t*3*ntypes+tipo*3];
-
-        } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
-    #ifdef DEBUG
-            std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
-    #endif
-            if(imposta_inizio_accesso(timestep)) {
-                t=timestep-timestep_corrente;
-                if (t>0 && t< loaded_timesteps)
-                    return &buffer_velocita_cm[t*3*ntypes+tipo*3];
-                else
-                    throw std::runtime_error("requested timestep is out of range");
-            } else {
-                throw  std::runtime_error("Error loading the file\n");
+        if constexpr (SAFE) {
+            if (tipo<0 || tipo > ntypes) {
+                std::cerr << "Tipo richiesto ("<< tipo << ") non è compreso nel range di atomi 0-"<<ntypes<<"\n";
+                return 0;
             }
+
+
+            if (dati_caricati && t < loaded_timesteps && t>=0) { // vuol dire che ho già caricato i dati
+
+                return &buffer_velocita_cm[t*3*ntypes+tipo*3];
+
+            } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
+#ifdef DEBUG
+                std::cerr << "Attenzione: sto caricando dei timestep non richiesti in precedenza!\n";
+#endif
+                if(imposta_inizio_accesso(timestep)) {
+                    t=timestep-timestep_corrente;
+                    if (t>0 && t< loaded_timesteps)
+                        return &buffer_velocita_cm[t*3*ntypes+tipo*3];
+                    else
+                        throw std::runtime_error("requested timestep is out of range");
+                } else {
+                    throw  std::runtime_error("Error loading the file\n");
+                }
+            }
+        } else {
+            return &buffer_velocita_cm[t*3*ntypes+tipo*3];
         }
 
     }
@@ -186,8 +212,8 @@ public:
     Traiettoria::Errori imposta_inizio_accesso(const int & timesteps);
     int64_t get_timestep_lammps(int timestep);
     void index_all();
-//    void set_calculate_center_of_mass(bool);
-//    bool get_calculate_center_of_mass();
+    //    void set_calculate_center_of_mass(bool);
+    //    bool get_calculate_center_of_mass();
 private:
     std::map<int,unsigned int>id_map;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
