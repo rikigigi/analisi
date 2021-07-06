@@ -530,7 +530,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 timestep_read_end=timestep+loaded_timesteps;
             }
 #ifdef DEBUG
-            std::cerr << "Ricopio i dati già letti da "<<timestep_corrente+timestep_copy_tstart << " a "
+            std::cerr << "Copying data from buffer from "<<timestep_corrente+timestep_copy_tstart << " to "
                       << timestep_corrente+timestep_copy_tend << ".\n";
 #endif
         }

@@ -132,7 +132,7 @@ public:
         for (unsigned int iblock=0;iblock<n_b;iblock++){
 
 #ifdef DEBUG
-            std::cerr << "beginning of block calculation" <<iblock+1<<std::endl;
+            std::cerr << "beginning of block calculation " <<iblock+1<<std::endl;
 #endif
 
             calcolo->reset(s);
@@ -148,7 +148,7 @@ public:
         }
 #else // MPI
         int mpime=Mp::mpi().me(),mpisize=Mp::mpi().size();
-        std::cerr << "Inizio del calcolo con " << mpisize << " processi MPI...\n";
+        std::cerr << "Beginning of the calculation with " << mpisize << " MPI processes...\n";
 
         if (n_b%mpisize!=0){
             cron.set_expected(1.0/double(n_b/mpisize+1));
