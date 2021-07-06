@@ -93,7 +93,7 @@ Traiettoria::Traiettoria(std::string filename)
     if (file==MAP_FAILED) {
         fd=-1;
         close(fd);
-        throw std::runtime_error("Chiamata mmap fallita per il file \""+filename+"\".\n");
+        throw std::runtime_error("mmap failed for file \""+filename+"\".\n");
     }
 
     TimestepManager t0;
@@ -155,7 +155,7 @@ void Traiettoria::init_buffer_tipi() {
        }
    }
 
-   std::cerr << "Tipi e id degli atomi letti:\n";
+   std::cerr << "Types and ids of atoms:\n";
 
         for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
@@ -172,7 +172,7 @@ void Traiettoria::init_buffer_tipi() {
            int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
            int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
            std::cerr << id<<":\tid = " <<round(pezzi[ichunk].atomi[iatomo].id)<<
-                              "\ttipo = "<<tipo<<"\titipo ="<< buffer_tipi_id[id] <<"\n";
+                              "\ttype = "<<tipo<<"\ttype_index ="<< buffer_tipi_id[id] <<"\n";
        }
    }
    delete [] pezzi;
@@ -180,17 +180,6 @@ void Traiettoria::init_buffer_tipi() {
 
 }
 
-/*
-void Traiettoria::set_calculate_center_of_mass(bool t){
-    calculate_center_of_mass=t;
-    //rialloca l'array se necessario
-
-}
-
-bool Traiettoria::get_calculate_center_of_mass(){
-
-}
-*/
 
 /**
   * Restituisce l'indirizzo allineato alla memoria.
@@ -330,7 +319,7 @@ size_t Traiettoria::leggi_pezzo_intestazione(const size_t &partenza /// offset d
 
 Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &Ntimesteps){
     if (!ok) {
-        std::cerr << "mmap non inizializzata correttamente!\n";
+        std::cerr << "mmap not correctly initialized!\n";
         return non_inizializzato;
     }
 
@@ -394,11 +383,11 @@ void Traiettoria::index_all() {
 
     int res=madvise(file,fsize,MADV_SEQUENTIAL);
     if ( res==-1) {
-        std::cerr << "Errore in madvise MADV_SEQUENTIAL -- index_all(): "<< res<<"\n";
+        std::cerr << "Error in madvise MADV_SEQUENTIAL -- index_all(): "<< res<<"\n";
         perror(0);
     }
 #ifdef DEBUG
-    std::cerr << "Inizio a indicizzare tutti i timesteps... (può richiedere del tempo) ";
+    std::cerr << "Indexing all the timesteps (it can take a while...) ";
     std::cerr.flush();
     cronometro cron;
     cron.start();
@@ -420,12 +409,12 @@ void Traiettoria::index_all() {
     }
     res=madvise(file,fsize,MADV_NORMAL);
     if ( res==-1) {
-        std::cerr << "Errore in madvise MADV_NORMAL -- index_all(): "<< res<<"\n";
+        std::cerr << "Error in madvise MADV_NORMAL -- index_all(): "<< res<<"\n";
         perror(0);
     }
 #ifdef DEBUG
     cron.stop();
-    std::cerr << " OK, tempo "<<cron.time()  << "s.\nIndicizzati tutti i timesteps fino a "<<timestep_indicizzato<<" compreso\n";
+    std::cerr << " OK, tempo "<<cron.time()  << "s.\nIndexed all timesteps till "<<timestep_indicizzato<<"\n";
     std::cerr.flush();
 #endif
 }
@@ -436,7 +425,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     cron.start();
 
     if (!ok) {
-        std::cerr << "mmap non inizializzata correttamente!\n";
+        std::cerr << "mmap not initialized correctly!\n";
         return non_inizializzato;
     }
 
@@ -456,7 +445,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         if (fsize-timesteps[timestep_corrente]<(timestep-timestep_corrente + loaded_timesteps)*tstep_size) {
             allunga_timesteps(timestep+loaded_timesteps+1);
         } else {
-            std::cerr << "Non posso utilizzare timesteps oltre la fine del file! (forse le dimensioni della finestra sono troppo grandi oppure si e' andati troppo oltre)\n";
+            std::cerr << "Cannot use timesteps beyond the end of file (access window was too big?)\n";
 //            return oltre_fine_file;
         }
     }
@@ -464,7 +453,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     if (timestep>timestep_indicizzato) {
 
 #ifdef DEBUG
-        std::cerr << "Indicizzo i timesteps da "<< timestep_indicizzato+1 << " a " << timestep << "\n";
+        std::cerr << "Indexing timesteps from "<< timestep_indicizzato+1 << " to " << timestep << "\n";
 #endif
         //indicizza i timesteps che mancano
         for (int itimestep=timestep_indicizzato+1;itimestep<=timestep;itimestep++){
@@ -479,7 +468,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     //avviso il kernel che tutta la zona del file precedente non mi serve più (e anche quella successiva, avviserò dopo)
     int res=madvise(file,timesteps[timestep],MADV_DONTNEED);
     if ( res==-1) {
-        std::cerr << "Errore in madvise MADV_DONTNEED: "<< res<<"\n";
+        std::cerr << "Error in madvise MADV_DONTNEED: "<< res<<"\n";
         perror(nullptr);
     }
 
@@ -498,7 +487,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     size_t allinea=0;
     if (timesteps[timestep]+tstep_size*loaded_timesteps*2<fsize){
         res=madvise(file+allinea_offset(timesteps[timestep],allinea),tstep_size*loaded_timesteps*2+allinea,MADV_WILLNEED);   if ( res==-1) {
-            std::cerr << "Errore in madvise MADV_WILLNEED: "<< res<<"\n";
+            std::cerr << "Error in madvise MADV_WILLNEED: "<< res<<"\n";
             perror(0);
         }
 
@@ -506,7 +495,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         res=madvise(file+allinea_offset(timesteps[timestep],allinea),fsize-timesteps[timestep]+allinea,MADV_WILLNEED);
 
     if ( res==-1) {
-        std::cerr << "Errore in madvise MADV_WILLNEED: "<< res<<"\n";
+        std::cerr << "Error in madvise MADV_WILLNEED: "<< res<<"\n";
         perror(0);
     }
 
@@ -615,7 +604,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                     buffer_velocita[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].velocita[icoord];
 
                 if (buffer_tipi[id]!= tipo) {
-                    std::cerr << "Errore: il tipo di atomo per l'id "<<id<<"e' cambiato da "<<buffer_tipi[id]<< " a "<<tipo<<" !\n";
+                    std::cerr << "Error: atomic type for atom with id "<<id<<" is changing from "<<buffer_tipi[id]<< " to "<<tipo<<" !\n";
                     buffer_tipi[id]=tipo;
                 }
 
@@ -649,7 +638,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     cron.stop();
 
 #ifdef DEBUG
-    std::cerr << "Tempo per la lettura: "<< cron.time()<<"s.\n";
+    std::cerr << "Reading time: "<< cron.time()<<"s.\n";
 #endif
 
     return Ok;
@@ -662,7 +651,7 @@ int64_t Traiettoria::get_timestep_lammps(int timestep) {
         return timesteps_lammps[timestep];
     } else if (timestep < n_timesteps) {
 #ifdef DEBUG
-        std::cerr << "Attenzione! Richiesto il numero di timestep LAMMPS di una zona del file non ancora letta! ("<<timestep<<", "<<timestep_indicizzato<<" ultimo letto)\n";
+        std::cerr << "Warining! Requested lammps timestep for a timestep that is not indexed yet ("<<timestep<<", "<<timestep_indicizzato<<" was the last one)\n";
 #endif
         return timesteps_lammps[timestep];
     } else {
@@ -671,14 +660,3 @@ int64_t Traiettoria::get_timestep_lammps(int timestep) {
         throw std::runtime_error ( ss.str());
     }
 }
-
-
-double * Traiettoria::scatola_last() {
-    if (loaded_timesteps>0) {
-        return &buffer_scatola[(unsigned int) 6*(loaded_timesteps-1)];
-    } else {
-        throw std::runtime_error("Errore: non ho nessun dato in memoria per soddisfare la richiesta (scatola_last)!\n");
-    }
-}
-
-

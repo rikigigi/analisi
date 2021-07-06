@@ -118,7 +118,7 @@ public:
             s=timestepsPerBlocco;
             ok=true;
         } else {
-            std::cerr<< "Impossibile dividere la traiettoria in "<<n_b<<"blocchi!\n";
+            std::cerr<< "Cannot divide the trajectory in "<<n_b<<" blocks!\n";
             abort();
         }
         calcolo->reset(s);
@@ -132,7 +132,7 @@ public:
         for (unsigned int iblock=0;iblock<n_b;iblock++){
 
 #ifdef DEBUG
-            std::cerr << "calcolo->calcola(iblock*s);\n";
+            std::cerr << "beginning of block calculation" <<iblock+1<<std::endl;
 #endif
 
             calcolo->reset(s);
@@ -142,8 +142,8 @@ public:
             calc->calcola(calcolo);
             cron.stop();
 #ifdef DEBUG
-            std::cerr << "Tempo per il calcolo del blocco "<<iblock+1<<" su "<<n_b <<": "<< cron.time_last()<<
-                         "s. Tempo trascorso e rimanente: "<<cron.time()<<"s "<<cron.expected()<<"s.\n";
+            std::cerr << "Time for block "<<iblock+1<<" / "<<n_b <<": "<< cron.time_last()<<
+                         "s. Elapsed time and expected time to finish: "<<cron.time()<<"s "<<cron.expected()<<"s.\n";
 #endif
         }
 #else // MPI
@@ -152,7 +152,7 @@ public:
 
         if (n_b%mpisize!=0){
             cron.set_expected(1.0/double(n_b/mpisize+1));
-            std::cerr << "Attenzione: sto usando un numero di blocchi che non è multiplo del numero di processi MPI. Dei processi saranno inattivi per un certo periodo di tempo.\n";
+            std::cerr << "Warning: I'm using a number of blocks that is not a multiple of the number of MPI processes. Some of them, probabily at the end, will just wait the others without doing anything.\n";
         } else
             cron.set_expected(1.0/double(n_b/mpisize));
         cron.start();
@@ -173,7 +173,7 @@ public:
                     mpirecv=mpisize;
                 }else{
                     mpirecv=n_b-iblock;
-                    std::cerr << mpisize-mpirecv << " processi MPI inattivi per questa iterazione.\n";
+                    std::cerr << mpisize-mpirecv << " MPI processes idle for this iteration.\n";
                 }
                 for (unsigned int i=1;i<mpirecv;i++) {
                     cronmpi.start();
@@ -185,7 +185,7 @@ public:
                 Mp::mpi().send_to_root(calcolo);
             }
             cron.stop();
-            std::cerr << "Tempo trascorso per i blocchi "<<iblock<<"-"<<iblock+mpirecv-1<<": "<<cron.time()<<"s ;  Tempo rimanente: "<<cron.expected()<<"s.\nTempo mpi recv: "<<cronmpi.time()<<"s\n";
+            std::cerr << "Time for blocks "<<iblock<<"-"<<iblock+mpirecv-1<<": "<<cron.time()<<"s ;  Expected time to finish: "<<cron.expected()<<"s.\nmpi recv time: "<<cronmpi.time()<<"s\n";
             std::cerr.flush();
         }
 

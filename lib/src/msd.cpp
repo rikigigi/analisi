@@ -57,7 +57,7 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
         throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the time lag");
     } else if (leff+ntimesteps > traiettoria->get_nloaded_timesteps()) {
         std::stringstream ss;
-        ss <<"there are not enough loade timesteps inside the trajectory object. I need at least " << leff+ntimesteps << " timesteps to do the requested calculation";
+        ss <<"there are not enough loaded timesteps inside the trajectory object. I need at least " << leff+ntimesteps << " timesteps to do the requested calculation";
         throw std::runtime_error(ss.str());
     }
         /*dividi il lavoro in gruppi
@@ -102,7 +102,6 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
                                         ,2))
                                         -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
                                 lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
-                                if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
 
                             }
                         }else{
@@ -114,6 +113,11 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
                                 lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
                                 if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
 
+                            }
+                        }
+                        if constexpr (FPE) {
+                            for (int itype=0;itype<ntypes;++itype){
+                                fpem.check_nan(lista[ntypes*t*f_cm+itype]);
                             }
                         }
                         if (cm_msd) {
