@@ -138,12 +138,14 @@ void Traiettoria::init_buffer_tipi() {
    id_map.clear();
    // controlla che gli id degli atomi siano consistenti e crea una mappa
    int id_=0;
+   double id__,type__;
    for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
        for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
            if (id_>=natoms) {
                throw std::runtime_error("Error: the number of atoms does not correspond to the sum of the number of atoms of each chunk\n");
            }
-           int id=round(pezzi[ichunk].atomi[iatomo].id);
+           Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
+           int id=round(id__);
            if (id_map.find(id)==id_map.end()){
                id_map[id]=id_;
                id_++;
@@ -159,8 +161,10 @@ void Traiettoria::init_buffer_tipi() {
 
         for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
-                int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
-                int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
+
+                Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
+                int id=id_map.at(round(id__));
+                int tipo=round(type__);
                 buffer_tipi[id]=tipo;
             }
         }
@@ -169,9 +173,10 @@ void Traiettoria::init_buffer_tipi() {
 
    for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
        for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
-           int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
-           int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
-           std::cerr << id<<":\tid = " <<round(pezzi[ichunk].atomi[iatomo].id)<<
+           Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
+           int id=id_map.at(round(id__));
+           int tipo=round(type__);
+           std::cerr << id<<":\tid = " <<id<<
                               "\ttype = "<<tipo<<"\ttype_index ="<< buffer_tipi_id[id] <<"\n";
        }
    }
@@ -221,9 +226,10 @@ Traiettoria::~Traiettoria(){
   * restituisce la dimensione in byte del pezzo letto
   * (quindi il pezzo successivo si troverà ad un offset di "partenza" + "il risultato di questa chiamata")
 **/
+template <bool set_chunk>
 size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire (in "file")
-                                ,TimestepManager &timestep /// qui viene restituito un oggetto Intestazione_timestep, DA NON DEALLOCARE DOPO (è dentro "file")
-                                ,Chunk * &chunk /// qui viene restituito un array di oggetti Chunk, da deallocare dopo (chunk conterrà un array di Atomo, da non deallocare -- anche questo è dentro "file")
+                                ,TimestepManager &timestep /// timesteps header
+                                ,Chunk * &chunk /// actual data of the trajectory
                                 ){
 
     size_t letti=0;
@@ -250,21 +256,25 @@ size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire
 
     if (triclinic) {
         throw std::runtime_error("Triclinic cell not implemented (probabily it is an easy task)");
-
     }
-
-    chunk=new Chunk[timestep.nchunk()];
-
+    if (set_chunk){
+        chunk=new Chunk[timestep.nchunk()];
+    }
     for (int i=0;i<timestep.nchunk();i++){
-        if (*(int*)(file+partenza+letti)%NDOUBLE_ATOMO !=0 ) {
-            std::cerr << "Number of bytes of the chunk is not a multiple of the number of atoms\n";
+        int ndouble;
+        int natomi;
+        read_and_advance(file+partenza+letti,&ndouble);
+        if (ndouble%NDOUBLE_ATOMO !=0 ) {
+            throw std::runtime_error("Number of bytes of the chunk is not a multiple of the number of atoms\n");
         }
-        chunk[i].n_atomi=(*(int*)(file+partenza+letti))/NDOUBLE_ATOMO;
+        natomi=ndouble/NDOUBLE_ATOMO;
+        if (set_chunk)
+            chunk[i].n_atomi=natomi;
         letti+=sizeof(int);
-        chunk[i].atomi=(Atomo*) (file+partenza+letti);
-        letti+=chunk[i].n_atomi*sizeof(Atomo);
+        if (set_chunk)
+            chunk[i].atomi=file+partenza+letti;
+        letti+=natomi*sizeof(double)*NDOUBLE_ATOMO;
 
-        // qui chunk è configurato correttamente e contiene i dati
     }
 
     return letti;
@@ -279,41 +289,8 @@ size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire
 size_t Traiettoria::leggi_pezzo_intestazione(const size_t &partenza /// offset da cui partire (in "file")
                                 ,TimestepManager &timestep /// qui viene restituito un oggetto TimestepManager
                                 ){
-
-    if (partenza+sizeof(Intestazione_timestep)>fsize) {
-        throw std::runtime_error("Error: trying to read beyond the end of file");
-    }
-    size_t letti=0;
-
-    letti+=timestep.read(file+partenza,file+fsize);
-
-    if (natoms != 0 && natoms!=timestep.natoms()) {
-        std::stringstream ss;
-        ss << "Error: at the LAMMPS timestep "<< timestep.timestep()<< " the number of atoms has changed \n";
-        throw std::runtime_error(ss.str());
-    }
-    natoms=timestep.natoms();
-
-
-    if (timestep.triclinic()) {
-        triclinic=true;
-    } else {
-        triclinic=false;
-    }
-
-    if (triclinic) {
-        throw std::runtime_error("Triclinic cell not implemented (probabily it is an easy task)");
-    }
-
-
-    for (int i=0;i<timestep.nchunk();i++){
-        int n_double=(* (int*)(file+partenza+letti)); // numero di dati double nel pezzo he sto per leggere
-        letti+=sizeof(int);
-        letti+=n_double*sizeof(double);
-    }
-
-    return letti;
-
+    Chunk * ch;
+    return leggi_pezzo<false>(partenza,timestep,ch);
 }
 
 
@@ -340,7 +317,6 @@ Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &
         buffer_posizioni_cm= (double*) fftw_malloc(buffer_cm_size);
         buffer_velocita_cm= (double*) fftw_malloc(buffer_cm_size);
         buffer_velocita=(double*) fftw_malloc(buffer_posizioni_size);
-
 
         delete [] buffer_scatola;
         buffer_scatola= new double [6*Ntimesteps];
@@ -414,7 +390,7 @@ void Traiettoria::index_all() {
     }
 #ifdef DEBUG
     cron.stop();
-    std::cerr << " OK, tempo "<<cron.time()  << "s.\nIndexed all timesteps till "<<timestep_indicizzato<<"\n";
+    std::cerr << " OK, elapsed time "<<cron.time()  << "s.\nIndexed all timesteps till "<<timestep_indicizzato<<"\n";
     std::cerr.flush();
 #endif
 }
@@ -575,12 +551,10 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
             throw;
         }
         timesteps_lammps[i]=intestazione.timestep();
-        for (unsigned int iscatola=0;iscatola<6;iscatola++) {
-            buffer_scatola[t*6+iscatola]=intestazione.scatola()[iscatola];
-        }
-        double l[3]={intestazione.scatola()[1]-intestazione.scatola()[0],
-                     intestazione.scatola()[3]-intestazione.scatola()[2],
-                     intestazione.scatola()[5]-intestazione.scatola()[4]};
+        memcpy(buffer_scatola+t*6,intestazione.scatola(),6*sizeof (double));
+        double l[3]={buffer_scatola[t*6+1]-buffer_scatola[t*6+0],
+                     buffer_scatola[t*6+3]-buffer_scatola[t*6+2],
+                     buffer_scatola[t*6+5]-buffer_scatola[t*6+4]};
         //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
         for (int itype=0;itype<ntypes*3;itype++){
@@ -592,19 +566,18 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         }
         for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
             for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
-                int id=id_map.at(round(pezzi[ichunk].atomi[iatomo].id));
-                int tipo=round(pezzi[ichunk].atomi[iatomo].tipo);
-                for (unsigned int icoord=0;icoord<3;icoord++){
-                    if (wrap_pbc)
-                        buffer_posizioni[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].posizione[icoord]-round(pezzi[ichunk].atomi[iatomo].posizione[icoord]/l[icoord])*l[icoord];
-                    else
-                        buffer_posizioni[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].posizione[icoord];
+                double id_,tipo_;
+                char * read_pos=Atomo::read_id_tipo(pezzi[ichunk].atomi + iatomo*sizeof (double)*NDOUBLE_ATOMO,id_,tipo_);
+                int id=id_map.at(round(id_));
+                int tipo=round(tipo_);
+                read_pos=Atomo::read_pos_vel(read_pos,buffer_posizioni + t*3*natoms+id*3,buffer_velocita+t*3*natoms+id*3);
+                if (wrap_pbc){
+                    for (unsigned int icoord=0;icoord<3;icoord++){
+                        buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]/l[icoord])*l[icoord];
+                    }
                 }
-                for (unsigned int icoord=0;icoord<3;icoord++)
-                    buffer_velocita[t*3*natoms+id*3+icoord]=pezzi[ichunk].atomi[iatomo].velocita[icoord];
-
                 if (buffer_tipi[id]!= tipo) {
-                    std::cerr << "Error: atomic type for atom with id "<<id<<" is changing from "<<buffer_tipi[id]<< " to "<<tipo<<" !\n";
+                    std::cerr << "WARNING: atomic type for atom with id "<<id<<" is changing from "<<buffer_tipi[id]<< " to "<<tipo<<" !\n";
                     buffer_tipi[id]=tipo;
                 }
 
@@ -613,10 +586,10 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 cont_cm[tipo_id]++;
                 for (unsigned int icoord=0;icoord<3;icoord++){
                     buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord]+=
-                            (pezzi[ichunk].atomi[iatomo].posizione[icoord]
+                            (buffer_posizioni[t*3*natoms+id*3+icoord]
                              -buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord])   /(cont_cm[tipo_id]);
                     buffer_velocita_cm[t*3*ntypes+3*tipo_id+icoord]+=
-                            (pezzi[ichunk].atomi[iatomo].velocita[icoord]-
+                            (buffer_velocita[t*3*natoms+id*3+icoord]-
                              buffer_velocita_cm[t*3*ntypes+3*tipo_id+icoord])     /(cont_cm[tipo_id]);
                 }
             }

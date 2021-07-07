@@ -117,6 +117,7 @@ private:
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps
     int64_t * timesteps_lammps; // timesteps secondo lammps
     void allunga_timesteps(int nuova_dimensione);
+    template <bool set_chunk=true>
     size_t leggi_pezzo(const size_t & partenza, TimestepManager &timestep, Chunk * &chunk);
     size_t leggi_pezzo_intestazione(const size_t & partenza, TimestepManager &timestep);
     void init_buffer_tipi();
