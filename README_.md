@@ -139,7 +139,6 @@ Dependencies:
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- included in the package)
 - python (optional) 
-- x86 architecture: probably the code has issues (because of memory alignment constraints) on arm architecture when reading a binary dump from lammps (at least from 2020 version on). If you don't use binary trajectory created by lammps there is no issue.
 
 ## MPI build (why not?)
 ```
@@ -486,7 +485,9 @@ where $\langle \cdot \rangle$ is an average operator, and we do an additional av
 ### Calculation procedure:
 The implemented equation is:
 
-<img src="https://latex.codecogs.com/gif.latex?\bg_white&space;D_{\alpha}(\omega)&space;=&space;\frac{1}{3N_{\alpha}}&space;\sum_{n}^{N_{\alpha}}&space;\int_{-&space;\infty}^{&space;\infty}&space;\langle&space;\mathbf{v}_{n}(0)\cdot&space;\mathbf{v}_{n}&space;(t)&space;\rangle&space;e^{i&space;\omega&space;t}&space;dt" title="D_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle \mathbf{v}_{n}(0)\cdot \mathbf{v}_{n} (t) \rangle e^{i \omega t} dt" />
+$$
+D_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle \mathbf{v}_{n}(0)\cdot \mathbf{v}_{n} (t) \rangle e^{i \omega t} dt
+$$
 
 where $\alpha$ is the type of atom.
 The diffusivity can be computed as half of the zero value of D.
