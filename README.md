@@ -10,9 +10,9 @@ conda config --set channel_priority strict #if not already done
 conda install analisi
 ```
 
-| Name | Downloads | Version | Platforms | Repository |
-| --- | --- | --- | --- | --- |
-| [![Conda Recipe](https://img.shields.io/badge/recipe-analisi-green.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi)
+| Name | Downloads | Version | Platforms |
+| --- | --- | --- | --- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-analisi-green.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/analisi.svg)](https://anaconda.org/conda-forge/analisi) |
 
 or by compiling from source following this [section](#building-from-source)
 
@@ -109,7 +109,7 @@ Features:
 
  - python interface (reads numpy array)
  - command line interface (reads binary lammps-like files or time series in column format)
- - multithreaded
+ - multithreaded ( defaults to number of threads specifies by the shell variable OMP_NUM_THREADS )
  - command line interface has MPI too (for super-heavy calculations)
  - command line calculates variance of every quantity and every function (in python you can do it by yourselves with numpy.var )
  - jupyter notebook example of the python interface
@@ -464,6 +464,16 @@ The two function can be found in the `common.py` file
 
 Both functions returns a numpy array with dimensions: `(ntypes, freq, Cartesian_coordinate)`.
 The units are the same of the `command line version`, thus the matrix must be multiplied by `dt/nstep`.
+
+
+# Abstract multithreaded calculation C++ class implementation
+
+The `CalcolaMultiThread` class tries to abstract away common features of most of the calculations over the trajectory, allowing to easily write parallel calculations that take advantage of the modern multicore architectures of every computer.
+
+# Abstract block averages calculation for transparent use of MPI
+
+All the logic about MPI and block averages is self contained in `mediablocchi.h`, a small file of only ~200 lines, that take care of doing block averages of both the MPI and the non MPI case. Calculations that needs (or take advantage of) block averages and want to use this tool must implement few functions, as found in all the classes, and must use the Traiettoria class to read the trajectory. In this way the user can concentrate on implementing the actual calculation without thinking of the boilerplate code needed to compute block averages and MPI-parallelize it. The calculation class with the data that must be averaged over the blocks must be a class derived from `OperazioniSuLista`
+
 
 # Credits
 
