@@ -3,8 +3,10 @@
 #include "lammps_struct.h"
 #include "buffer_utils.h"
 
-Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::buffer &&buffer_vel_, pybind11::buffer &&buffer_types_, pybind11::buffer &&buffer_box_, bool matrix_box, bool pbc_wrap) : buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}, matrix_box{matrix_box}
+Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::buffer &&buffer_vel_, pybind11::buffer &&buffer_types_, pybind11::buffer &&buffer_box_, bool matrix_box, bool pbc_wrap) :
+    buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}, matrix_box{matrix_box}
 {
+    loaded_timesteps=0;
     wrap_pbc=pbc_wrap;
     pybind11::buffer_info info_pos{buffer_pos.request()};
     pybind11::buffer_info info_vel{buffer_vel.request()};
@@ -116,6 +118,8 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
     //calculate center of mass velocity and position (without pbc)
     calc_cm_pos_vel(static_cast<double*>(info_pos.ptr),buffer_posizioni_cm);
     calc_cm_pos_vel(static_cast<double*>(info_vel.ptr),buffer_velocita_cm);
+
+    loaded_timesteps=n_timesteps;
 }
 
 void

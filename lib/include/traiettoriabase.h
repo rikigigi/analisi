@@ -26,7 +26,7 @@ public:
     wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
     buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
     buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
-    buffer_tipi{nullptr},buffer_tipi_id{nullptr} {}
+    buffer_tipi{nullptr},buffer_tipi_id{nullptr}, serve_pos{true} {}
 
     //double * posizioni (const int & timestep, const int & atomo) { return static_cast<T*>(this)->posizioni(timestep,atomo);}
     DECL_CALL_BASE_2(double *, posizioni, (const int &, timestep), (const int &, atomo))
@@ -35,6 +35,7 @@ public:
     DECL_CALL_BASE_2(double *, posizioni_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_2(double *, velocita_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_0(double *,scatola_last)
+    DECL_CALL_BASE_0(int, ntimesteps_loaded)
     std::vector<unsigned int> get_types(){
         get_ntypes();
         return types;
@@ -50,11 +51,11 @@ public:
         }
     }
     enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
-    Errori imposta_dimensione_finestra_accesso(const int & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
-    Errori imposta_inizio_accesso(const int & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
+    Errori imposta_dimensione_finestra_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
+    Errori imposta_inizio_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
     //void index_all();
 
-    //this can produce multiple bugs: what happen if I call it in the wrong moment?
+    //this can produce multiple bugs: what happens if I call it in the wrong moment?
     void set_pbc_wrap(bool p){
         wrap_pbc=p;
     }
@@ -66,15 +67,15 @@ public:
             min_type=buffer_tipi[0];
             max_type=buffer_tipi[0];
             bool *duplicati = new bool[natoms];
-            for (unsigned int i=0;i<natoms;i++)
+            for (size_t i=0;i<natoms;i++)
                 duplicati[i]=false;
-            for (unsigned int i=0;i<natoms;i++) {
+            for (size_t i=0;i<natoms;i++) {
                 if (!duplicati[i]) {
                     if (buffer_tipi[i]>max_type)
                         max_type=buffer_tipi[i];
                     if (buffer_tipi[i]<min_type)
                         min_type=buffer_tipi[i];
-                    for (unsigned int j=i+1;j<natoms;j++){
+                    for (size_t j=i+1;j<natoms;j++){
                         if (buffer_tipi[j]==buffer_tipi[i]){
                             duplicati[j]=true;
                         }
@@ -92,7 +93,7 @@ public:
             masse = new double [ntypes];
             cariche = new double [ntypes];
 
-            for (unsigned int i=0;i<natoms;i++) {
+            for (size_t i=0;i<natoms;i++) {
                 buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
             }
         }
@@ -102,20 +103,20 @@ public:
     double * velocita_inizio(){return buffer_velocita;}
     int get_type_min() {return min_type;}
     int get_type_max() {return max_type;}
-    int get_natoms()const {return natoms;}
-    int get_ntimesteps() const{return n_timesteps;}
-    double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; std::cerr<< "Cannot get mass for a type that does not exists!\n";abort(); return 0.0;}
+    size_t get_natoms()const {return natoms;}
+    size_t get_ntimesteps() const{return n_timesteps;}
+    double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; throw std::runtime_error("Cannot get mass for a type that does not exists!\n");}
     void set_mass(unsigned int i,double m) {if (i<get_ntypes()) masse[i]=m;}
     void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; std::cerr<< "Cannot get charge for a type that does not exists!\n";abort(); return 0.0;}
-    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,double *l){
+    double d2_minImage(size_t i,size_t j, size_t itimestep,double *l){
         return d2_minImage(i,j,itimestep,itimestep,l);
     }
-    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l){
+    double d2_minImage(size_t i,size_t j, size_t itimestep, size_t jtimestep, double *l){
         double x[3];
         return d2_minImage(i,j,itimestep,jtimestep,l,x);
     }
-    double d2_minImage(unsigned int i,unsigned int j, unsigned int itimestep,unsigned int jtimestep,double *l,double *x){
+    double d2_minImage(size_t i,size_t j, size_t itimestep, size_t jtimestep,double *l,double *x){
         double d2=0.0;
         double *xi=posizioni(itimestep,i);
         double *xj=posizioni(jtimestep,j);
@@ -131,6 +132,30 @@ public:
         return d2;
     }
 
+    size_t get_size_posizioni() const { return buffer_posizioni_size; }
+    size_t get_size_cm() const {return buffer_cm_size;}
+    std::vector<ssize_t> get_shape() {
+        return {static_cast<ssize_t>(loaded_timesteps),
+                static_cast<ssize_t>(natoms),
+                3};
+    }
+    std::vector<ssize_t> get_stride() {
+        return { static_cast<ssize_t> (natoms*3*sizeof(double)),
+                 static_cast<ssize_t>(3*sizeof (double)),
+                 static_cast<ssize_t>(sizeof(double))};
+    }
+
+    void toggle_pos_vel() {
+        serve_pos=!serve_pos;
+    }
+
+    bool serving_pos() {
+        return serve_pos;
+    }
+
+    size_t get_nloaded_timesteps() const {
+        return loaded_timesteps;
+    }
 
 protected:
 
@@ -141,14 +166,18 @@ protected:
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
     double * buffer_posizioni_cm; // posizioni del centro di massa
     double * buffer_velocita_cm; // velocità del centro di massa
+    size_t buffer_posizioni_size, buffer_cm_size; //sizes of allocated buffers
 
     int * buffer_tipi,*buffer_tipi_id;
-    int natoms,ntypes,min_type,max_type,n_timesteps;
+    size_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps;
     bool wrap_pbc;
 
 
     std::vector<unsigned int> types;
     std::map<int,unsigned int>type_map;
+
+private:
+    bool serve_pos;
 };
 
 #endif // TRAIETTORIABASE_H

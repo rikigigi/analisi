@@ -16,8 +16,8 @@
 #include "operazionisulista.h"
 #include <vector>
 
-template <class T>
-class MSD : public OperazioniSuLista<MSD<T> >
+template <class T,bool FPE=false>
+class MSD : public OperazioniSuLista<MSD<T,FPE> >
 {
 public:
     MSD(T *t,
@@ -32,14 +32,14 @@ public:
     std::vector<ssize_t> get_stride() const { return { static_cast<ssize_t> (ntypes*f_cm*sizeof(double)),static_cast<ssize_t>(ntypes*sizeof (double)),static_cast<ssize_t>(sizeof(double))};}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
-    MSD<T> & operator =(const MSD<T> & destra);
+    MSD<T,FPE> & operator =(const MSD<T,FPE> & destra);
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
 
 private:
-    using OperazioniSuLista<MSD<T> >::lista;
-    using OperazioniSuLista<MSD<T> >::lunghezza_lista;
+    using OperazioniSuLista<MSD<T,FPE> >::lista;
+    using OperazioniSuLista<MSD<T,FPE> >::lunghezza_lista;
     T * traiettoria;
-    unsigned int ntimesteps,skip,lmax,leff,nthread,f_cm,ntypes;
+    size_t ntimesteps,skip,lmax,leff,nthread,f_cm,ntypes;
     bool cm_msd,cm_self,debug;
 };
 

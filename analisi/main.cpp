@@ -9,6 +9,7 @@
 **/
 
 
+#pragma STDC FENV_ACCESS ON
 
 #include <iostream>
 #include <array>
@@ -158,7 +159,7 @@ int main(int argc, char ** argv)
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
     int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0,buffer_size=10;
-    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false;
+    bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false,fpe=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
     std::pair<int,double> nk;
     std::array<double,3> kdir;
@@ -217,6 +218,7 @@ int main(int argc, char ** argv)
             ("spatial-correlator-dir",boost::program_options::value(&kdir)->default_value({1.0,0.0,0.0})->multitoken(),"Direzione di k")
 #endif
             ("write-mass-currents",boost::program_options::bool_switch(&debug2)->default_value(false),"write in the output the columns (specified with -a) of the input log file ( specified with -l). Then eventually write an additional current calculated by summing all the velocities from the input trajectory file and multiplying each velocity by the corresponding number specified in the -a string as the following: '#custom_name N q1 ... qN' where # is mandatory, custom_name is a arbitrary string, and q1 ... qN are N floating point numbers that multiplies the velocity of the corresponding atomic type ")
+            ("fpe", boost::program_options::bool_switch(&fpe)->default_value(false), "look for floating point exceptions, where implemented")
         #ifdef DEBUG
             ("test-debug",boost::program_options::bool_switch(&debug)->default_value(false),"small test of the trajectory reading routine")
         #endif
@@ -526,14 +528,20 @@ int main(int argc, char ** argv)
                 }
 
                 Traiettoria test(input);
-                using MSD=MSD<Traiettoria>;
-                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);
-                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);
-                for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {
-                    for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)
-                        std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<
-                                     Msd.varianza()->elemento(i*test.get_ntypes()*f_cm+j) << " ";
-                    std::cout << "\n";
+#define MSD_(fpe_)\
+                {using MSD=MSD<Traiettoria,fpe_>;\
+                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
+                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
+                for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {\
+                    for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)\
+                        std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<\
+                                     Msd.varianza()->elemento(i*test.get_ntypes()*f_cm+j) << " ";\
+                    std::cout << "\n";\
+                }}
+                if (fpe){
+                    MSD_(true) //with fpe
+                } else {
+                    MSD_(false)
                 }
 
             }else if (gofrt>0) {
@@ -597,7 +605,7 @@ int main(int argc, char ** argv)
 
 
             }else if (vicini_r>0){
-                std::cerr << "Inizio del calcolo dell'istogramma del numero di vicini per tipo di tutti gli atomi\n";
+                std::cerr << "Beginning of calculation of neighbour histogram\n";
                 Traiettoria test(input);
                 test.set_pbc_wrap(true);
 
@@ -663,7 +671,7 @@ int main(int argc, char ** argv)
                 }
 
             } else if (nk.first>0) {
-                std::cerr << "Inizio del calcolo delle correlazioni spaziali delle velocità...\n";
+                std::cerr << "Spatial correlations of velocities...\n";
                 //generate k-list
                 std::vector<std::array<double,3> > klist;
                 klist.reserve(nk.first);

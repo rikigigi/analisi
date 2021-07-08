@@ -10,7 +10,8 @@
 
 #include <stdexcept>
 #include <algorithm>
-#include "stdint.h"
+#include <stdint.h>
+#include <cstring>
 
 #ifndef LAMMPS_STRUCT_H
 #define LAMMPS_STRUCT_H
@@ -18,10 +19,14 @@
 typedef int tagint;
 typedef int64_t bigint;
 
-//poi basterà convertire il puntatore char a un puntatore Intestazione_timestep*
 
-//pragma pack(1) dice al compilatore (dalla documentazione funziona con gcc e il compilatore microsoft) di non inserire byte di allineamento
-#pragma pack(push,1)
+
+template <class T> char * read_and_advance(char * start, T * destination, size_t n =1) {
+    std::copy_n((T*) start, n, destination);
+    return start + sizeof (T)*n;
+}
+
+
 struct Intestazione_timestep {
     bigint timestep;
     bigint natoms;
@@ -30,10 +35,24 @@ struct Intestazione_timestep {
     double scatola[6]; //xlo,xhi,ylo,yhi,zlo,zhi
     int dimensioni_riga_output;
     int nchunk;
+    char * read(char * file) {
+        file=read_and_advance(file, &timestep);
+        file=read_and_advance(file, &natoms);
+        file=read_and_advance(file,&triclinic);
+        file=read_and_advance(file, condizioni_al_contorno,6);
+        file=read_and_advance(file,scatola,6);
+        file=read_and_advance(file,&dimensioni_riga_output);
+        file=read_and_advance(file,&nchunk);
+        return file;
+    }
+    static int get_triclinic(char * file) {
+        int triclinic;
+        read_and_advance(file+sizeof (timestep)+sizeof (natoms),&triclinic);
+        return triclinic;
+    }
 };
 
 
-// se si usa questo va sostituito ovunque al posto di Intestazione_timestep
 struct Intestazione_timestep_triclinic {
     bigint timestep;
     bigint natoms;
@@ -43,6 +62,17 @@ struct Intestazione_timestep_triclinic {
     double xy_xz_yz[3];
     int dimensioni_riga_output;
     int nchunk;
+    char * read(char * file) {
+        file=read_and_advance(file, &timestep);
+        file=read_and_advance(file, &natoms);
+        file=read_and_advance(file,&triclinic);
+        file=read_and_advance(file, condizioni_al_contorno,6);
+        file=read_and_advance(file,scatola,6);
+        file=read_and_advance(file,xy_xz_yz,3);
+        file=read_and_advance(file,&dimensioni_riga_output);
+        file=read_and_advance(file,&nchunk);
+        return file;
+    }
 };
 
 
@@ -57,9 +87,17 @@ struct Atomo {
     double posizione[3];
     double velocita[3];
     static_assert (NDOUBLE_ATOMO==8, "You have to modify class Atomo if you change NDOUBLE_ATOMO" );
+    static char * read_id_tipo(char * begin, double & id_, double & tipo_) {
+        begin = read_and_advance(begin,&id_);
+        begin = read_and_advance(begin,&tipo_);
+        return begin;
+    }
+    static char * read_pos_vel(char * begin, double * pos, double * vel) {
+        begin = read_and_advance(begin,pos,3);
+        begin = read_and_advance(begin,vel,3);
+        return begin;
+    }
 };
-#pragma pack(pop)
-
 //questo non potrà essere puntato direttamente ad una posizione nel file...
 struct Intestazione_timestep_new : public Intestazione_timestep_triclinic {
     bigint magic_string_len;
@@ -80,6 +118,49 @@ struct Intestazione_timestep_new : public Intestazione_timestep_triclinic {
         delete [] columns;
         delete [] unit_style;
     }
+
+    char * read(char * current_ptr) {
+        current_ptr=read_and_advance(current_ptr, &magic_string_len);
+        magic_string_len=-magic_string_len;
+        delete [] magic_string;
+        magic_string = new char[magic_string_len];
+
+        current_ptr=read_and_advance(current_ptr,magic_string,magic_string_len);
+#define READ_ADV(what) \
+current_ptr=read_and_advance(current_ptr,&what);
+#define READ_ADV_A(what,n) \
+current_ptr=read_and_advance(current_ptr,what,n);
+
+        READ_ADV(endian);
+        READ_ADV(revision);
+        READ_ADV(timestep);
+        READ_ADV(natoms);
+        READ_ADV(triclinic);
+        READ_ADV_A(condizioni_al_contorno,6);
+        READ_ADV_A(scatola,6);
+        if(triclinic) {
+            READ_ADV_A(xy_xz_yz,6);
+        }
+        READ_ADV(dimensioni_riga_output);
+        if (revision > 0x0001) {
+            READ_ADV(unit_style_len);
+            if (unit_style_len>0){
+                delete [] unit_style;
+                unit_style = new char[unit_style_len];
+                READ_ADV_A(unit_style,unit_style_len);
+            }
+            READ_ADV(time_flag);
+            if (time_flag){
+                READ_ADV(time);
+            }
+            READ_ADV(columns_len);
+            delete columns;
+            columns = new char[columns_len];
+            READ_ADV_A(columns,columns_len);
+        }
+        READ_ADV(nchunk);
+        return current_ptr;
+    }
 };
 
 //#include <iostream>
@@ -87,73 +168,29 @@ class TimestepManager {
     enum class Type {
         Old, Old_triclinic, F2020
     };
-    template <class T> char * read_and_advance(char * start, T * destination, int n =1) const {
-        //destination = * (T*) start;
-        std::copy_n((T*) start, n, destination);
-        //std::cerr<<sizeof (T) <<std::endl;
-        return start + sizeof (T)*n;
-    }
 
 public:
 
-    TimestepManager() : intestazione_old{nullptr}, intestazione_old_tri{nullptr}, intestazione_new{nullptr} {}
+    TimestepManager() {}
 
     size_t read(char * begin, char * file_end){
         char * current_ptr=begin;
         if (begin+sizeof (Intestazione_timestep)>=file_end) {
             throw std::runtime_error("Error: end of file reached");
         }
-        intestazione_old = (Intestazione_timestep *) begin;
-        if (intestazione_old->timestep <0) {
+        bigint timestep;
+        read_and_advance(begin, &timestep);
+        if (timestep <0) {
             type=Type::F2020;
-            delete intestazione_new;
-            intestazione_new = new Intestazione_timestep_new;
-            //read intestazione
-            intestazione_new->magic_string_len=-intestazione_old->timestep;
-            current_ptr+=sizeof(bigint);
-            intestazione_new->magic_string = new char[intestazione_new->magic_string_len];
-            current_ptr=read_and_advance(current_ptr,intestazione_new->magic_string,intestazione_new->magic_string_len);
-#define READ_ADV(what) \
-    current_ptr=read_and_advance(current_ptr,&(intestazione_new->what));
-#define READ_ADV_A(what,n) \
-    current_ptr=read_and_advance(current_ptr,intestazione_new->what,n);
-
-            READ_ADV(endian);
-            READ_ADV(revision);
-            READ_ADV(timestep);
-            READ_ADV(natoms);
-            READ_ADV(triclinic);
-            READ_ADV_A(condizioni_al_contorno,6);
-            READ_ADV_A(scatola,6);
-            if(intestazione_new->triclinic) {
-                READ_ADV_A(xy_xz_yz,6);
-            }
-            READ_ADV(dimensioni_riga_output);
-            if (intestazione_new->revision > 0x0001) {
-                READ_ADV(unit_style_len);
-                if (intestazione_new->unit_style_len>0){
-                    intestazione_new->unit_style = new char[intestazione_new->unit_style_len];
-                    READ_ADV_A(unit_style,intestazione_new->unit_style_len);
-                }
-                READ_ADV(time_flag);
-                if (intestazione_new->time_flag){
-                    READ_ADV(time);
-                }
-                READ_ADV(columns_len);
-                intestazione_new->columns = new char[intestazione_new->columns_len];
-                READ_ADV_A(columns,intestazione_new->columns_len);
-            }
-            READ_ADV(nchunk);
-
+            current_ptr=intestazione_new.read(begin);
         } else {
-            if (intestazione_old->triclinic) {
+            if (Intestazione_timestep::get_triclinic(begin)) {
                 type=Type::Old_triclinic;
-                intestazione_old_tri = (Intestazione_timestep_triclinic*) begin;
-                intestazione_old=nullptr;
-                current_ptr+=sizeof (Intestazione_timestep_triclinic);
+                current_ptr = intestazione_old_tri.read(begin);
+
             } else {
                 type= Type::Old;
-                current_ptr+=sizeof (Intestazione_timestep);
+                current_ptr=intestazione_old.read(begin);
             }
         }
         if (current_ptr>=file_end) {
@@ -166,14 +203,14 @@ public:
     }
 
 #define select_var(what, kind)\
-    kind what() const {\
+    kind what() {\
         switch (type) {\
         case Type::Old:\
-            return intestazione_old->what;\
+            return intestazione_old.what;\
         case Type::Old_triclinic:\
-            return intestazione_old_tri->what;\
+            return intestazione_old_tri.what;\
         case Type::F2020:\
-            return intestazione_new->what;\
+            return intestazione_new.what;\
         }\
         throw std::runtime_error("Undefined binary type");\
     }
@@ -185,22 +222,19 @@ public:
     select_var(dimensioni_riga_output,int)
 
     ~TimestepManager () {
-        delete intestazione_new;
     }
 
 
 private:
     Type type;
-    Intestazione_timestep * intestazione_old;
-    Intestazione_timestep_triclinic * intestazione_old_tri;
-    Intestazione_timestep_new * intestazione_new;
+    Intestazione_timestep intestazione_old;
+    Intestazione_timestep_triclinic intestazione_old_tri;
+    Intestazione_timestep_new intestazione_new;
 };
 
-//ce ne sono nchunk
-//questa non basta traslarla
 struct Chunk {
-    int n_atomi;
-    Atomo * atomi; // questa cella di memoria andrà impostata
+    int n_atomi; //check if this can be size_t
+    char * atomi; // questa cella di memoria andrà impostata
 
 };
 
