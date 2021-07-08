@@ -39,7 +39,7 @@ private:
     using OperazioniSuLista<MSD<T,FPE> >::lista;
     using OperazioniSuLista<MSD<T,FPE> >::lunghezza_lista;
     T * traiettoria;
-    unsigned int ntimesteps,skip,lmax,leff,nthread,f_cm,ntypes;
+    size_t ntimesteps,skip,lmax,leff,nthread,f_cm,ntypes;
     bool cm_msd,cm_self,debug;
 };
 

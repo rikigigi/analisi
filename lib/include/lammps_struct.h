@@ -10,7 +10,7 @@
 
 #include <stdexcept>
 #include <algorithm>
-#include "stdint.h"
+#include <stdint.h>
 #include <cstring>
 
 #ifndef LAMMPS_STRUCT_H
@@ -21,7 +21,7 @@ typedef int64_t bigint;
 
 
 
-template <class T> char * read_and_advance(char * start, T * destination, int n =1) {
+template <class T> char * read_and_advance(char * start, T * destination, size_t n =1) {
     std::copy_n((T*) start, n, destination);
     return start + sizeof (T)*n;
 }
@@ -233,7 +233,7 @@ private:
 };
 
 struct Chunk {
-    int n_atomi;
+    int n_atomi; //check if this can be size_t
     char * atomi; // questa cella di memoria andrà impostata
 
 };

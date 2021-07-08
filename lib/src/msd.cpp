@@ -73,21 +73,21 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
         for (unsigned int ith=0;ith<nthread;ith++) {
             threads.push_back(std::thread([&,ith](){
                 uint64_t *cont=new uint64_t [ntypes*f_cm];
-                unsigned int ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
+                size_t ultimo= (ith != nthread-1 )?npassith*(ith+1):leff;
 
-                for (unsigned int t=npassith*ith;t<ultimo;t++) {
-                    for (unsigned int i=0;i<ntypes*f_cm;i++){
+                for (size_t t=npassith*ith;t<ultimo;t++) {
+                    for (size_t i=0;i<ntypes*f_cm;i++){
                         lista[ntypes*t*f_cm+i]=0.0;
                         cont[i]=0;
                     }
-                    for (unsigned int imedia=0;imedia<ntimesteps;imedia+=skip){
+                    for (size_t imedia=0;imedia<ntimesteps;imedia+=skip){
 
                         auto fpem = FloatingPointExceptionManager<void,FPE>([=](int fpe)->void{
                             std::cerr<<fpe << " Thread "<<ith<< ", timesteps "<<primo+imedia<< " and " <<primo+imedia+t<< " raised a floating point exception or a NaN was found"<<std::endl;
                         });
                         if (cm_self){
-                            for (int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                                unsigned int itype=traiettoria->get_type(iatom);
+                            for (size_t iatom=0;iatom<traiettoria->get_natoms();iatom++) {
+                                size_t itype=traiettoria->get_type(iatom);
                                 double delta=(pow(
                                                traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0]
                                               -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[0]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[0])
@@ -105,7 +105,7 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
 
                             }
                         }else{
-                            for (int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
+                            for (size_t iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                                 double delta=(pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0],2)+
                                         pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1],2)+
                                         pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2],2))
@@ -116,12 +116,12 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
                             }
                         }
                         if constexpr (FPE) {
-                            for (int itype=0;itype<ntypes;++itype){
+                            for (size_t itype=0;itype<ntypes;++itype){
                                 fpem.check_nan(lista[ntypes*t*f_cm+itype]);
                             }
                         }
                         if (cm_msd) {
-                            for (unsigned int itype=0; itype < ntypes; itype++) {
+                            for (size_t itype=0; itype < ntypes; itype++) {
                             double delta=(pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[0]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[0],2)+
                                     pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[1]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[1],2)+
                                     pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2],2))
@@ -147,7 +147,7 @@ void MSD<T,FPE>::calcola(unsigned int primo) {
 #else
             std::ofstream out(Mp::mpi().outname("msd.dump"));
 #endif
-            for (unsigned int ts=0;ts<leff;ts++) {
+            for (size_t ts=0;ts<leff;ts++) {
                 out << ts;
                 for (unsigned int itype=0;itype<ntypes*f_cm;itype++){
                     out <<" "<<lista[ntypes*ts*f_cm+itype];

@@ -36,6 +36,7 @@
 #include "lammps_struct.h"
 #include <stdexcept>
 #include <sstream>
+#include "macros.h"
 
 
 
@@ -105,7 +106,7 @@ Traiettoria::Traiettoria(std::string filename)
     buffer_tipi=new int [natoms];
     buffer_tipi_id=new int [natoms];
 
-    for (int i=0;i<natoms;i++) {
+    for (size_t i=0;i<natoms;i++) {
         buffer_tipi[i]=buffer_tipi_id[i]=-1;
     }
 
@@ -117,7 +118,7 @@ Traiettoria::Traiettoria(std::string filename)
     //alloco la memoria per l'indice
     timesteps=new size_t [n_timesteps];
     timesteps_lammps= new int64_t [n_timesteps];
-    for (int i=0;i<n_timesteps;i++){
+    for (size_t i=0;i<n_timesteps;i++){
         timesteps[i]=0;
         timesteps_lammps[i]=0;
     }
@@ -146,6 +147,9 @@ void Traiettoria::init_buffer_tipi() {
            }
            Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
            int id=round(id__);
+           if (id<0) {
+               throw std::runtime_error("Error: found a negativa atomic id in the trajectory");
+           }
            if (id_map.find(id)==id_map.end()){
                id_map[id]=id_;
                id_++;
@@ -260,7 +264,10 @@ size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire
     if (set_chunk){
         chunk=new Chunk[timestep.nchunk()];
     }
-    for (int i=0;i<timestep.nchunk();i++){
+    if (timestep.nchunk()<=0) {
+        throw std::runtime_error("Error: the number of chunks of the timestep cannot be <= 0");
+    }
+    for (size_t i=0;i<timestep.nchunk();i++){
         int ndouble;
         int natomi;
         read_and_advance(file+partenza+letti,&ndouble);
@@ -294,7 +301,7 @@ size_t Traiettoria::leggi_pezzo_intestazione(const size_t &partenza /// offset d
 }
 
 
-Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &Ntimesteps){
+Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const size_t &Ntimesteps){
     if (!ok) {
         std::cerr << "mmap not correctly initialized!\n";
         return non_inizializzato;
@@ -331,16 +338,16 @@ Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const int &
   * alloca un array (timesteps) piu' lungo e copia il contenuto del vecchio indice in quello nuovo.
   * Inizializza a zero gli elementi in piu' che ci sono alla fine dell'array
 **/
-void Traiettoria::allunga_timesteps(int nuova_dimensione){
+void Traiettoria::allunga_timesteps(size_t nuova_dimensione){
     if (nuova_dimensione<=n_timesteps)
         return;
     size_t *tmp=new size_t [nuova_dimensione];
     int64_t *tmp2=new int64_t [nuova_dimensione];
-    for (int i=0;i<n_timesteps;i++){
+    for (size_t i=0;i<n_timesteps;i++){
         tmp[i]=timesteps[i];
         tmp2[i]=timesteps_lammps[i];
     }
-    for (int i=n_timesteps;i<nuova_dimensione;i++){
+    for (size_t i=n_timesteps;i<nuova_dimensione;i++){
         tmp[i]=0;
         tmp2[i]=0;
     }
@@ -368,7 +375,7 @@ void Traiettoria::index_all() {
     cronometro cron;
     cron.start();
 #endif
-    for (int itimestep=timestep_indicizzato+1;itimestep<n_timesteps;itimestep++){
+    for (size_t itimestep=timestep_indicizzato+1;itimestep<n_timesteps;itimestep++){
         TimestepManager intestazione;
         size_t offset = leggi_pezzo_intestazione(timesteps[itimestep-1],intestazione);
         timesteps[itimestep]=timesteps[itimestep-1]+offset;
@@ -395,7 +402,7 @@ void Traiettoria::index_all() {
 #endif
 }
 
-Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
+Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) {
 
     cronometro cron;
     cron.start();
@@ -432,7 +439,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         std::cerr << "Indexing timesteps from "<< timestep_indicizzato+1 << " to " << timestep << "\n";
 #endif
         //indicizza i timesteps che mancano
-        for (int itimestep=timestep_indicizzato+1;itimestep<=timestep;itimestep++){
+        for (size_t itimestep=timestep_indicizzato+1;itimestep<=timestep;itimestep++){
             TimestepManager intestazione;
             size_t offset = leggi_pezzo_intestazione(timesteps[itimestep-1],intestazione);
             timesteps[itimestep]=timesteps[itimestep-1]+offset;
@@ -487,9 +494,10 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     // trova l'intersezione con i timestep già caricati.
     // dati_caricati è vero se ho dei dati in memoria con la stessa dimensione della finestra
 
-    int     timestep_copy_tstart=0,timestep_copy_tend=0,
-            timestep_read_start=timestep, timestep_read_end=timestep+loaded_timesteps,
-            finestra_differenza=timestep_corrente-timestep;
+    size_t  timestep_copy_tstart=0,timestep_copy_tend=0,
+            timestep_read_start=timestep, timestep_read_end=timestep+loaded_timesteps;
+
+    ssize_t finestra_differenza=timestep_corrente-timestep;
     if (dati_caricati) {
         if (abs(finestra_differenza)<loaded_timesteps) { // si sovrappongono
             if (finestra_differenza>0){
@@ -499,7 +507,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 timestep_read_end=timestep_corrente;
                 timestep_read_start=timestep;
             } else {
-                timestep_copy_tstart=-finestra_differenza;
+                timestep_copy_tstart=abs(finestra_differenza);
                 timestep_copy_tend=loaded_timesteps;
 
                 timestep_read_start=timestep_corrente+loaded_timesteps;
@@ -513,8 +521,8 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
     }
     //copia i dati già letti
-    for (int i=timestep_copy_tstart;i<timestep_copy_tend;i++) {
-        for (int idata=0;idata<3*natoms;idata++) {
+    for (size_t i=timestep_copy_tstart;i<timestep_copy_tend;i++) {
+        for (size_t idata=0;idata<3*natoms;idata++) {
             buffer_velocita[(finestra_differenza+i)*3*natoms+idata] =
                     buffer_velocita[i*3*natoms + idata];
             buffer_posizioni[(finestra_differenza+i)*3*natoms+idata]=
@@ -522,11 +530,11 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
         }
 
         //anche la velocità del centro di massa
-        for (int itype=0;itype<ntypes*3;itype++)
+        for (size_t itype=0;itype<ntypes*3;itype++)
         buffer_posizioni_cm[(finestra_differenza+i)*3*ntypes+itype]=
                 buffer_posizioni_cm[i*3*ntypes + itype];
         //anche la velocità del centro di massa
-        for (int itype=0;itype<ntypes*3;itype++)
+        for (size_t itype=0;itype<ntypes*3;itype++)
         buffer_velocita_cm[(finestra_differenza+i)*3*ntypes+itype]=
                 buffer_velocita_cm[i*3*ntypes + itype];
 
@@ -535,10 +543,13 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
     //leggi quelli che non sono già in memoria (tutti se necessario)
 
     //contatore per calcolare la media del centro di massa
-    unsigned int *cont_cm=new unsigned int[ntypes];
+    size_t *cont_cm=new size_t[ntypes];
 
-    for (int i=timestep_read_start;i<timestep_read_end;i++){
-        int t=i-timestep;
+    for (size_t i=timestep_read_start;i<timestep_read_end;i++){
+        size_t t=i-timestep;
+        if (i<timestep) {
+            throw std::runtime_error("BUG: wrong logic " AT);
+        }
         TimestepManager intestazione;
         Chunk * pezzi=0;
         //legge i vari pezzi del timestep e copia le posizioni e le velocita' degli atomi nei buffer
@@ -557,22 +568,25 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                      buffer_scatola[t*6+5]-buffer_scatola[t*6+4]};
         //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
-        for (int itype=0;itype<ntypes*3;itype++){
+        for (size_t itype=0;itype<ntypes*3;itype++){
             buffer_posizioni_cm[t*3*ntypes+itype]=0.0;
             buffer_velocita_cm[t*3*ntypes+itype]=0.0;
         }
-        for (int itype=0;itype<ntypes;itype++){
+        for (size_t itype=0;itype<ntypes;itype++){
             cont_cm[itype]=0;
         }
-        for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
-            for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
+        if (intestazione.nchunk()<=0) {
+            throw std::runtime_error("Error reading trajectory: a timestep cannot have a number of chunks <=0");
+        }
+        for (size_t ichunk=0;ichunk<intestazione.nchunk();ichunk++){
+            for (size_t iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
                 double id_,tipo_;
                 char * read_pos=Atomo::read_id_tipo(pezzi[ichunk].atomi + iatomo*sizeof (double)*NDOUBLE_ATOMO,id_,tipo_);
-                int id=id_map.at(round(id_));
-                int tipo=round(tipo_);
+                size_t id=id_map.at(round(id_));
+                size_t tipo=round(tipo_);
                 read_pos=Atomo::read_pos_vel(read_pos,buffer_posizioni + t*3*natoms+id*3,buffer_velocita+t*3*natoms+id*3);
                 if (wrap_pbc){
-                    for (unsigned int icoord=0;icoord<3;icoord++){
+                    for (size_t icoord=0;icoord<3;icoord++){
                         buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]/l[icoord])*l[icoord];
                     }
                 }
@@ -584,7 +598,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
                 //aggiorna la media delle posizioni e delle velocità del centro di massa
                 unsigned int tipo_id=buffer_tipi_id[id];
                 cont_cm[tipo_id]++;
-                for (unsigned int icoord=0;icoord<3;icoord++){
+                for (size_t icoord=0;icoord<3;icoord++){
                     buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord]+=
                             (buffer_posizioni[t*3*natoms+id*3+icoord]
                              -buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord])   /(cont_cm[tipo_id]);
@@ -619,7 +633,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const int &timestep) {
 
 
 
-int64_t Traiettoria::get_timestep_lammps(int timestep) {
+int64_t Traiettoria::get_timestep_lammps(size_t timestep) {
     if (timestep<=timestep_indicizzato) {
         return timesteps_lammps[timestep];
     } else if (timestep < n_timesteps) {
