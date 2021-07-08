@@ -13,11 +13,11 @@
 #include <thread>
 
 namespace CalcolaMultiThread_Flags {
-constexpr int PARALLEL_SPLIT_AVERAGE =  0b00000001;
-constexpr int PARALLEL_SPLIT_TIME =     0b00000010;
-constexpr int PARALLEL_SPLIT_ATOM =     0b00000100;
-constexpr int PARALLEL_LOOP_AVERAGE =   0b00010000;
-constexpr int PARALLEL_LOOP_TIME =      0b00100000;
+constexpr int PARALLEL_SPLIT_AVERAGE =  0b00000001; // assign to the single thread worker different averages range
+constexpr int PARALLEL_SPLIT_TIME =     0b00000010; // assigne to the single thread worker different time differences ranges
+constexpr int PARALLEL_SPLIT_ATOM =     0b00000100; // assign to the single thread worker different atom ranges
+constexpr int PARALLEL_LOOP_AVERAGE =   0b00010000; // do the loop for computing the average outside the parallelized region
+constexpr int PARALLEL_LOOP_TIME =      0b00100000; // do the loop over the times outside the parallelized region
 constexpr int CALL_INNER_JOIN_DATA =    0b01000000;
 constexpr int CALL_DEBUG_ROUTINE =      0b10000000;
 constexpr int CALL_CALC_INIT    =      0b100000000;
@@ -79,8 +79,8 @@ public:
             static_cast<T*>(this)->calc_init(primo);
         }
         std::vector<std::thread> threads;
-        for (int t=t0;t<t1;t++){ // loop over time lags. Can be a loop over a single value if disabled
-            for (int i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
+        for (ssize_t t=t0;t<t1;t++){ // loop over time lags. Can be a loop over a single value if disabled
+            for (ssize_t i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
                 for (unsigned int ith=0;ith<nthreads;++ith){
                     threads.push_back(std::thread([&,ith,t,i](){
                         auto range=splitter(ith,nthreads,primo);
@@ -141,12 +141,12 @@ public:
     // void reset(const unsigned int numeroTimestepsPerBlocco)=0;
 
 protected:
-    unsigned int nthreads,skip,ntimesteps, leff;
+    ssize_t nthreads,skip,ntimesteps, leff;
 
 private:
-    unsigned int npassith,end;
-    int natoms;
-    int t0,t1,i0,i1;
+    size_t npassith,end;
+    ssize_t natoms;
+    ssize_t t0,t1,i0,i1;
 };
 
 #endif // CALCOLAMULTITHREAD_H

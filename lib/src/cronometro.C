@@ -31,7 +31,7 @@ void cronometro::set_print_interval(double P){
 
 void cronometro::print_interval(unsigned int nthread){
     if (tempo-last_print>pi && nthread==0){
-		cerr << "passati: "<<tempo<<"s stimati rimanenti: "<<tempo_exp<<"s\n";
+        cerr << "elapsed: "<<tempo<<"s estimated time left: "<<tempo_exp<<"s\n";
 		last_print=tempo;
 	}
 }
