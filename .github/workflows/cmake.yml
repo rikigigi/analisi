@@ -44,3 +44,9 @@ jobs:
         ctest -C ${{env.BUILD_TYPE}}
         ../install/install_test.sh
         cd ../tests/ && pytest -sv .
+    - name: TestCli
+      run: |
+        ${{github.workspace}}/tests/test_cli.sh
+      env:
+        SOURCE_DIR: ${{github.workspace}}
+        BUILD_DIR: ${{github.workspace}}/build
