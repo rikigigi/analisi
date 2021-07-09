@@ -5,13 +5,14 @@
 #include <vector>
 #include <deque>
 #include <algorithm>
+#include "macros.h"
 
 template <class Data, class K = int, class Container=std::unordered_map<K,size_t> >
 class CalcBuffer {
 public:
     CalcBuffer(const size_t & max_size_, const size_t & chunk_size_, const size_t & n_valid_last=2):data{nullptr},n_valid_last{n_valid_last},hit{0}, miss{0} {
         if (n_valid_last>=max_size_) {
-            throw std::runtime_error("cannot ask for more elements than the size of the buffer");
+            throw std::runtime_error("cannot ask for more elements than the size of the buffer " AT);
         }
         set_max_size(max_size_, chunk_size_);
     }
@@ -36,7 +37,7 @@ public:
                     while ( std::find(requested_keys.begin(),requested_keys.end(),rkey->first ) != requested_keys.end()){
                         ++rkey;
                         if (rkey==buffer.end()){
-                            throw std::runtime_error("error: cannot find a element to delete in the buffer");
+                            throw std::runtime_error("error: cannot find a element to delete in the buffer" AT);
                         }
                     }
                     remove_item(rkey->first);

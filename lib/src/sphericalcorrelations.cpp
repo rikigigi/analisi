@@ -117,11 +117,18 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
     //wow! advanced work splitting procedure
     unsigned int block_t=leff/nthreads;
+    if (block_t==0) {
+        throw std::runtime_error("Don't have enough timesteps to parallelize the calculation. Try again with a smaller number of threads. " AT);
+    }
     //buffer_size should be block+1 for maximum efficiency
     if (block_t>buffer_size){
         block_t=buffer_size-1;
     } else {
         buffer_size=block_t+1;
+    }
+    if (buffer_size<3) {
+        buffer_size=3;
+        std::cerr << "Warning: setting buffer_size to 3 (not optimal, because there are too few timesteps) " AT;
     }
     TwoLoopSplit<unsigned int> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
 
