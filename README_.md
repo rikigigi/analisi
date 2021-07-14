@@ -155,17 +155,31 @@ cmake ../
 make
 ```
 
-After compiling the code you will find the executable `analisi` and the shared library `pyanalisi.*.so` (with a  part of the name that depends on your particular python installation) in the building folder. To install the python library, simply copy it in your site-library folder, for example by executing the command
+## installation and test suite
+
+After compiling the code you will find the executable `analisi` and the shared library `pyanalisi.*.so` (with a  part of the name that depends on your particular python installation) in the build folder. To install the python library, simply copy the pyanalisi folder it in your site-library folder, and then copy inside it the `pyanalisi.*.so library`. This is done by the script `install/install_python.sh` after exporting the variables `SP_DIR`, setted to your python's package directory, `BUILD_DIR`, setted to the build directory, and `SOURCE_DIR`, setted to the main directory of the repository. The python's packages folders can be found with the command `python -m site`
 ```
-cp pyanalisi.*.so "`python3 -m site --user-site`/pyanalisi.so"
+export SP_DIR="/path/to/python/package/folder"
+export SOURCE_DIR="/path/to/repository/dir"
+export BUILD_DIR="/path/to/build/directory"
+install/install_python.sh
 ```
 Be careful to choose the correct python executable, the same that you used to compile the library.
-This task can be performed as well by the command `make install/local` inside a python virtual environment, for example a miniconda installation.
 
 To test that the library was compiled correctly and that there are no regressions, you can run the (small) test suite with the command
 ```
 make test
 ```
+Then you can run the 
+```
+test_cli.sh
+```
+script inside the `tests` folder, that tests the command line interface. You have to export the same variables used by `install/install_python.sh`.
+Then after the python library is installed, you can test it with
+```
+pytest -sv
+```
+in the tests folder. If all tests passed, your installation probably is working correctly. Testing is strongly suggested, you should  _always_ do it, since often you can find unstable environments or buggy compilers on you super-machine.
 
 ## additional cmake options
 
@@ -294,6 +308,16 @@ analisi_traj.setAccessStart(first_timestep_to_read)
 ```
 The first line is to set the pbc wrapping (don't use this if you have to compute the MSD!). Since the access to the trajectory is done in blocks, the second line sets the size of the reading block. The bigger the block the bigger the memory allocated to store the positions and the velocities. The last call sets the index of the first timestep that is going to be read, and then read it. In this moment the selected chunk of the trajectory is loaded into your memory. At this point you are able to call the needed compute routine, making sure that it is not going to read past the last timestep of the block. Later you can call again `setAccessStart` to load a different part of the trajectory and compute the quantity again. Only the data of the current block is stored in the memory, and if evenutally there is some overlap with the previous block, the data is copied from memory and the overlapped part is not read again from the filesystem.
 
+The `Traj` class has a normal buffer protocol interface, so you can use it as a numpy array. By defaults the array interfaced with python is the position's one. If you want to read the velocities, you can do
+```
+analisi_traj.toggle_pos_vel() # to change from positions to velocities and vice-versa
+#do whatever you want
+if not analisi_traj.serving_pos():
+   np.sum(analisi_traj) # sum all velocities
+else:
+   np.sum(analisi_traj) # sum all positions
+   
+```
 
 ### Creating a time series object
 

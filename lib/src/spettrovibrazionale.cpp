@@ -67,7 +67,7 @@ void SpettroVibrazionale<T>::reset(const unsigned int numeroTimestepsPerBlocco) 
         lunghezza_lista=(size/2+1)*3*tipi_atomi; // uno per ogni direzione dello spazio, per testare l'isotropia, e per tipo di atomo
         lista = new double[lunghezza_lista];
 #ifdef DEBUG
-        std::cerr << "chiamato SpettroVibrazionale::reset " __FILE__ ":"<<__LINE__<<"\n";
+        std::cerr << "called SpettroVibrazionale::reset " __FILE__ ":"<<__LINE__<<"\n";
         std::cerr << "new double [] "<<lista<<"\n";
 #endif
 
@@ -177,15 +177,14 @@ double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,
     if (frequenza<lunghezza_lista/(3*tipi_atomi) && dim<3 && tipo_atomo < tipi_atomi) {
         return lista[tipo_atomo*lunghezza_lista/tipi_atomi+ frequenza*3+dim];
     } else {
-        std::cerr << "Errore: indice richesto fuori dal range!\n";
-        return 0;
+        throw std::runtime_error("Error: index out of range!\n");
     }
 }
 
 template <class T>
 SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibrazionale<T> & destra) {
 #ifdef DEBUG
-    std::cerr << "chiamato SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
+    std::cerr << "called SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
 #endif
     OperazioniSuLista<SpettroVibrazionale<T>>::operator =(destra);
 
