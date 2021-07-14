@@ -162,7 +162,7 @@ After compiling the code you will find the executable `analisi` and the shared l
 export SP_DIR="/path/to/python/package/folder"
 export SOURCE_DIR="/path/to/repository/dir"
 export BUILD_DIR="/path/to/build/directory"
-"$SOURCE_DIR/install/install_python.sh"
+install/install_python.sh
 ```
 Be careful to choose the correct python executable, the same that you used to compile the library.
 
