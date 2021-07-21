@@ -31,6 +31,7 @@ TESTS=( "MSD_normal_full"   "-i $INPUT -Q"
 N_arr=${#TESTS[@]}
 N=$(( N_arr - 1 ))
 RETURN=0
+FLIST=""
 for i in $(seq 0 2 $N )
 do
     ip=$(( i + 1 ))
@@ -41,12 +42,16 @@ do
     if [ -f "$FTEST" ]
     then
         OUTPUT_F="`cat $FTEST`"
-         
-        if [ -z "`diff <(echo "$OUTPUT") <(echo "$OUTPUT_F")`" ]
+        #the sign of nan is not defined by the standard
+        DIFF="`diff <(echo "$OUTPUT" | sed 's/-nan/nan/g') <(echo "$OUTPUT_F" | sed 's/-nan/nan/g') || true `" 
+        if [ -z "$DIFF" ]
         then
             echo SUCCESS $NAME
         else
             echo FAILED $NAME
+            echo "$DIFF"
+            FLIST="$FLIST
+FAILED $NAME"
             RETURN=$(( RETURN + 1 ))
         fi
     else
@@ -55,4 +60,5 @@ do
     fi
 
 done
+echo "$FLIST"
 exit $RETURN

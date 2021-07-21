@@ -28,7 +28,7 @@ template <class T, int FLAGS_T = CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAG
 class CalcolaMultiThread
 {
 public:
-    CalcolaMultiThread(unsigned int nthreads=0, unsigned int skip=0, int natoms=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms}
+    CalcolaMultiThread(ssize_t nthreads=0, ssize_t skip=0, size_t natoms=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms}
 {
     if (nthreads==0) nthreads=1;
     if (skip==0) skip=1;
@@ -36,8 +36,8 @@ public:
 }
     static constexpr int FLAGS=FLAGS_T;
 
-    std::pair<int,int> splitter(int ith, int nthreads, int primo) const {
-        std::pair<int,int> res;
+    std::pair<size_t,size_t> splitter(size_t ith, size_t primo) const {
+        std::pair<size_t,size_t> res;
         res.first=ith*npassith;
         if (ith==nthreads-1) {
             res.second=end;
@@ -73,7 +73,7 @@ public:
         }
     }
 
-    void calcola(unsigned int primo){
+    void calcola(size_t primo){
         init_split();
         if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT)) {
             static_cast<T*>(this)->calc_init(primo);
@@ -83,7 +83,7 @@ public:
             for (ssize_t i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
                 for (unsigned int ith=0;ith<nthreads;++ith){
                     threads.push_back(std::thread([&,ith,t,i](){
-                        auto range=splitter(ith,nthreads,primo);
+                        auto range=splitter(ith,primo);
                         // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
                         // select a different signature of the calculation function depending on where the loops (if present) are parallelized
                         if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME)) {
@@ -144,8 +144,7 @@ protected:
     ssize_t nthreads,skip,ntimesteps, leff;
 
 private:
-    size_t npassith,end;
-    ssize_t natoms;
+    size_t npassith,end, natoms;
     ssize_t t0,t1,i0,i1;
 };
 

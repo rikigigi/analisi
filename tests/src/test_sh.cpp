@@ -15,7 +15,8 @@ struct ShFixture{
     ~ShFixture(){}
     TrajSetup traj;
     unsigned int nbin;
-    int natoms,ntypes;
+    size_t natoms;
+    int ntypes;
     SphericalCorrelations<l,double,Traiettoria> sh;
     DataRegression<double> data;
     double  workspace[(l+1)*(l+1)], cheby[(l+1)*2];

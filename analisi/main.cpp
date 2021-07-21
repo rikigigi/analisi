@@ -239,6 +239,8 @@ int main(int argc, char ** argv)
 
         if (argc<=1 || ( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( debug2 || heat_coeff ) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
             std::cout << options << "\n";
+            if (vm.count("help"))
+                return 0;
             return 1;
         }
 
