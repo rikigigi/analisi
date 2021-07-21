@@ -42,7 +42,8 @@ do
     if [ -f "$FTEST" ]
     then
         OUTPUT_F="`cat $FTEST`"
-        DIFF="`diff <(echo "$OUTPUT") <(echo "$OUTPUT_F") || true `" 
+        #the sign of nan is not defined by the standard
+        DIFF="`diff <(echo "$OUTPUT" | sed 's/-nan/nan/g') <(echo "$OUTPUT_F" | sed 's/-nan/nan/g') || true `" 
         if [ -z "$DIFF" ]
         then
             echo SUCCESS $NAME
