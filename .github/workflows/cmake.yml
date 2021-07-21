@@ -40,7 +40,8 @@ jobs:
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
         sudo -E ${{github.workspace}}/install/install_python.sh
       env:
-        SP_DIR: /usr/lib/python3/dist-packages
+        SP_DIR: /usr/lib/python${{ matrix.python-version }}/dist-packages
+        PYTHONPATH: /usr/lib/python${{ matrix.python-version }}/dist-packages
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
 
@@ -58,3 +59,4 @@ jobs:
       env:
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
+        PYTHONPATH: /usr/lib/python${{ matrix.python-version }}/dist-packages
