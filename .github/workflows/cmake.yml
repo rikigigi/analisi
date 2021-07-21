@@ -40,8 +40,7 @@ jobs:
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
         sudo -E ${{github.workspace}}/install/install_python.sh
       env:
-        SP_DIR: /usr/lib/python${{ matrix.python-version }}/dist-packages
-        PYTHONPATH: /usr/lib/python${{ matrix.python-version }}/dist-packages
+        SP_DIR: ${{github.workspace}}/tests
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
 
@@ -52,7 +51,7 @@ jobs:
       run: |
         ctest -C ${{env.BUILD_TYPE}}
         ../install/install_test.sh
-        cd ../tests/ && pytest -sv .
+        cd ../tests/ && python -m pytest -sv .
     - name: TestCli
       run: |
         ${{github.workspace}}/tests/test_cli.sh
