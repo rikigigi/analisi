@@ -42,7 +42,7 @@ do
     if [ -f "$FTEST" ]
     then
         OUTPUT_F="`cat $FTEST`"
-        DIFF="`diff <(echo "$OUTPUT") <(echo "$OUTPUT_F")`" 
+        DIFF="`diff <(echo "$OUTPUT") <(echo "$OUTPUT_F") || true `" 
         if [ -z "$DIFF" ]
         then
             echo SUCCESS $NAME
