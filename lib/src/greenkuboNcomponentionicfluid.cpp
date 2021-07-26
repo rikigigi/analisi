@@ -420,10 +420,12 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> std::string GreenKuboNC
 
 
 
+#ifdef BUILD_MMAP
 #include "readlog.h"
 template class GreenKuboNComponentIonicFluid<ReadLog<double>, double,double>;
 template class GreenKuboNComponentIonicFluid<ReadLog<double>, long double,double>;
 template class GreenKuboNComponentIonicFluid<ReadLog<long double>, long double,long double>;
+#endif
 
 #ifdef PYTHON_SUPPORT
 #include "readlog_numpy.h"

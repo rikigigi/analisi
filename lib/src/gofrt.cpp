@@ -165,7 +165,9 @@ template <class TFLOAT, class T> Gofrt<TFLOAT,T> & Gofrt<TFLOAT,T>::operator =(c
     return *this;
 }
 
+#ifdef BUILD_MMAP
 template class Gofrt<double,Traiettoria>;
+#endif
 #ifdef PYTHON_SUPPORT
 #include "traiettoria_numpy.h"
 template class Gofrt<double, Traiettoria_numpy>;

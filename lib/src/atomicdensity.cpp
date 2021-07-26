@@ -66,8 +66,10 @@ std::vector<ssize_t>  AtomicDensity<T,Hist>::get_stride() const {
     return {static_cast<long>(sizeof (Hist))*static_cast<long>(nbin[0]*nbin[1]*nbin[2]),static_cast<long>(nbin[1]*nbin[2]*sizeof (Hist)),static_cast<long>(nbin[2]*sizeof (Hist)),static_cast<long>(sizeof (Hist))};
 }
 
+#ifdef BUILD_MMAP
 #include "traiettoria.h"
 template class AtomicDensity<Traiettoria,long>;
+#endif
 
 #ifdef PYTHON_SUPPORT
 #include "traiettoria_numpy.h"

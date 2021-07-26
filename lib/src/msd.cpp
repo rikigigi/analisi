@@ -152,8 +152,10 @@ MSD<T,FPE> & MSD<T,FPE>::operator=(const MSD<T,FPE> &destra) {
     return *this;
 }
 
+#ifdef BUILD_MMAP
 template class MSD<Traiettoria,true>;
 template class MSD<Traiettoria,false>;
+#endif
 #ifdef PYTHON_SUPPORT
 #include "traiettoria_numpy.h"
 template class MSD<Traiettoria_numpy,true>;
