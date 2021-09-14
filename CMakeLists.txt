@@ -14,6 +14,15 @@ option(SYSTEM_EIGEN3 "Use system's eigen3 library" OFF)
 option(SYSTEM_BOOST "Use system's boost library" OFF)
 #option(SYSTEM_PYBIND11 "Use system's pybind11 library" OFF)
 option(SYSTEM_XDRFILE "Use system's xdrfile" OFF)
+option(BUILD_MMAP "Build command line interface and lammps binary interface. If OFF removes dependency over unix's mmap" ON)
+
+if (NOT PYTHON_INTERFACE AND NOT BUILD_MMAP)
+message(FATAL_ERROR "Cannot set both PYTHON_INTERFACE and BUILD_MMAP to OFF: in this way I'm building nothing but thin air")
+endif()
+
+if (NOT BUILD_MMAP AND BUILD_TESTS)
+message(FATAL_ERROR "tests are implemented only if BUILD_MMAP is ON")
+endif()
 
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
@@ -117,30 +126,32 @@ set (XDR_FILE xdrfile)
     message(STATUS "using packaged xdrfile library")
     set (HAVE_XDRFILE 1)
 endif()
-set (ANALISI_LIB
-    lib/src/calcoliblocchi.cpp
+set (MMAP_LIB
+    lib/src/readlog.cpp
+    lib/src/testtraiettoria.cpp
+    lib/src/traiettoria.cpp
+    lib/src/greenkubo2componentionicfluid.cpp
+    lib/src/posizioniequilibrio.cpp
     lib/src/chargefluxts.cpp
+    )
+set (ANALISI_LIB
+    lib/src/mp.cpp
+    lib/src/calcoliblocchi.cpp
     lib/src/convertibinario.cpp
     lib/src/convolution.cpp
     lib/src/correlatorespaziale.cpp
     lib/src/cronometro.C
     lib/src/doubleround.cpp
     lib/src/gofrt.cpp
-    lib/src/greenkubo2componentionicfluid.cpp
     lib/src/greenkuboNcomponentionicfluid.cpp
     lib/src/heatfluxts.cpp
     lib/src/interpolator.cpp
     lib/src/istogrammaatomiraggio.cpp
     lib/src/istogrammavelocita.cpp
     lib/src/modivibrazionali.cpp
-    lib/src/mp.cpp
     lib/src/msd.cpp
-    lib/src/posizioniequilibrio.cpp
-    lib/src/readlog.cpp
     lib/src/rnd.c
     lib/src/spettrovibrazionale.cpp
-    lib/src/testtraiettoria.cpp
-    lib/src/traiettoria.cpp
     lib/src/heatc.cpp
     lib/src/calcolamultithread.cpp
     lib/src/centerdiff.cpp
@@ -150,6 +161,9 @@ set (ANALISI_LIB
     lib/src/atomicdensity.cpp
     )
 
+if (BUILD_MMAP)
+set (ANALISI_LIB ${ANALISI_LIB} ${MMAP_LIB} )
+endif()
 
 if(PYTHON_INTERFACE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/pybind11/tools")
@@ -179,11 +193,12 @@ set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC Threads::Threads)
+if (BUILD_MMAP)
 add_executable(${PROJECT_NAME} 
 	analisi/main.cpp
 	)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
-
+endif()
 
 ## test suite
 if (BUILD_TESTS)
@@ -243,8 +258,9 @@ else()
     set (FFTW_MT "" )
 endif()
 
-
+if (BUILD_MMAP)
 target_link_libraries(${PROJECT_NAME} boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
+endif()
 target_link_libraries(${PROJECT_NAME}_lib "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)
 #add_definitions(-DANALISI)

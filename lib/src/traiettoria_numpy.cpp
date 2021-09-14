@@ -172,7 +172,7 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
         head.nchunk=1;
         int n_data=head.natoms*head.dimensioni_riga_output;
         //write timestep header
-        out.write((char*) &head,sizeof(Intestazione_timestep));
+        head.write(out);
         out.write((char*) &n_data,sizeof(int));
 
         for (unsigned int iatom=0;iatom<head.natoms;++iatom) {

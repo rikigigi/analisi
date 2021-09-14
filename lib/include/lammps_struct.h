@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <cstring>
+#include <fstream>
 
 #ifndef LAMMPS_STRUCT_H
 #define LAMMPS_STRUCT_H
@@ -44,6 +45,15 @@ struct Intestazione_timestep {
         file=read_and_advance(file,&dimensioni_riga_output);
         file=read_and_advance(file,&nchunk);
         return file;
+    }
+    void write(std::ofstream & out) {
+        out.write((char*) &timestep, sizeof (bigint));
+        out.write((char*) &natoms, sizeof(bigint));
+        out.write((char*) &triclinic, sizeof(int));
+        out.write((char*) condizioni_al_contorno, sizeof(int)*6);
+        out.write((char*) scatola, sizeof(double)*6);
+        out.write((char*)&dimensioni_riga_output, sizeof(int));
+        out.write((char*)&nchunk, sizeof(int));
     }
     static int get_triclinic(char * file) {
         int triclinic;
@@ -197,7 +207,7 @@ public:
             throw std::runtime_error("Error: end of file reached");
         }
         if (dimensioni_riga_output() != NDOUBLE_ATOMO) {
-            throw std::runtime_error("ERROR: the binary format does not have "+std::to_string(NDOUBLE_ATOMO)+" numbers per atom");
+            throw std::runtime_error("ERROR: the binary format does not have "+std::to_string(NDOUBLE_ATOMO)+" numbers per atom but it has "+ std::to_string(dimensioni_riga_output()));
         }
         return current_ptr-begin;
     }

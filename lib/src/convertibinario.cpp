@@ -153,7 +153,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
         head.nchunk=1;
         int n_data=head.natoms*NDOUBLE_ATOMO;
         //qui ho impostato l'intestazione, la scrivo
-        out.write((char*) &head,sizeof(Intestazione_timestep));
+        head.write(out);
         out.write((char*) &n_data,sizeof(int));
         //adesso devo scrivere tutte le righe, una dopo l'altra
 
