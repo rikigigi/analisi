@@ -148,7 +148,7 @@ void Traiettoria::init_buffer_tipi() {
            Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
            int id=round(id__);
            if (id<0) {
-               throw std::runtime_error("Error: found a negativa atomic id in the trajectory");
+               throw std::runtime_error("Error: found a negative atomic id in the trajectory");
            }
            if (id_map.find(id)==id_map.end()){
                id_map[id]=id_;
@@ -178,17 +178,44 @@ void Traiettoria::init_buffer_tipi() {
    for (int ichunk=0;ichunk<intestazione.nchunk();ichunk++){
        for (int iatomo=0;iatomo<pezzi[ichunk].n_atomi;iatomo++) {
            Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
-           int id=id_map.at(round(id__));
+           int id_lammps=round(id__);
+           int id=id_map.at(id_lammps);
            int tipo=round(type__);
-           std::cerr << id<<":\tid = " <<id<<
-                              "\ttype = "<<tipo<<"\ttype_index ="<< buffer_tipi_id[id] <<"\n";
+           std::cerr << id<<" :\tid = " <<id_lammps<<
+                              "\ttype = "<<tipo<<"\ttype_index = "<< buffer_tipi_id[id] <<"\n";
        }
    }
    delete [] pezzi;
-
-
 }
 
+/**
+ * return the original lammps id for each atom
+ * allocate a new array that is returned, no ownership by this class
+ **/
+int * Traiettoria::get_lammps_id() {
+   size_t natoms=get_natoms();               
+   int *types = new int[natoms];             
+   for (size_t i=0;i<natoms;++i) types[i]=-1;
+
+   for (auto id : id_map ) {
+      types[id.second]=id.first;
+   }
+
+   return types;
+}
+
+/**
+ * return the original lammps type for each atom
+ * allocate a new array that is returned, no ownership by this class
+ **/
+int * Traiettoria::get_lammps_type() {
+   size_t natoms=get_natoms();               
+   int *types = new int[natoms];             
+   for (size_t i=0;i<natoms;++i) {
+      types[i]=buffer_tipi[i];
+   }
+   return types;
+}
 
 /**
   * Restituisce l'indirizzo allineato alla memoria.

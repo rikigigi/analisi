@@ -35,7 +35,7 @@ except:
     print('WARINING: cannot import thermocepstrum')
 
 
-import pyanalisi as pa
+import pyanalisi.pyanalisi as pa
 
 print(pa.info())
 
@@ -393,8 +393,11 @@ def plt_err(ax,x,v,var,*args,**kwargs):
     else:
         ax.plot(x,v,*args,**kwargs)
 
-def plot_msd(times,res,cm,title='',res_var=None):
-    fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+def plot_msd(times,res,cm,title='',res_var=None, fig_ax=None):
+    if fig_ax is not None:
+       fig, ax = fig_ax
+    else:
+       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
     ax=fig.add_axes([0,0,1,1])
     for i in range(res.shape[-1]):
         plt_err(ax,times[:res.shape[0]]-times[0],res[:,cm,i],res_var[:,cm,i] if res_var is not None else res_var,label='type='+str(i))
@@ -402,7 +405,7 @@ def plot_msd(times,res,cm,title='',res_var=None):
     ax.set_title('{}MSD'.format(title))
     ax.set_xlabel('time (ps)')
     ax.set_ylabel('$\AA^2/ps$')
-    return ax
+    return fig,ax
     
 def norm_fit(p):
     """ put to zero the last exponential and move it to the constant part of the fit,
@@ -467,7 +470,8 @@ def fit_sh(times,res,type1,type2,ibin,lmin=0,lmax=11,
 
 
 def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_var=None,
-            maxt=-1.0,fitmax=-1.0,fitmin=-1.0,pre_fit=-1.0,log=True,rescale_array=True,scale_exp_coeff=0.1):
+            maxt=-1.0,fitmax=-1.0,fitmin=-1.0,pre_fit=-1.0,log=True,rescale_array=True,scale_exp_coeff=0.1,
+            fig_ax=None):
     t=times[:res.shape[0]]-times[0]
     r = res
     r_var = res_var
@@ -483,7 +487,10 @@ def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_v
         return maxt,idx_end
     maxt,idx_end=get_idx(t,maxt)
     dr=(endr-startr)/r.shape[3]
-    fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+    if fig_ax is not None:
+       fig, ax = fig_ax
+    else:
+       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
     ax=fig.add_axes([0,0,1,1])
     axins=inset_axes(ax,width='20%',height='20%',loc='upper right')
     fits = fit_sh(t,res,type1,type2,ibin,lmin,lmax,maxt,fitmax,fitmin,pre_fit,
@@ -508,18 +515,21 @@ def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_v
     ax.set_xlim(0,maxt)
     ax.set_xlabel('time (ps)')
     ax.set_ylabel('$c_{{\ell}}^{{{0}\,{1}}}(t)/c_{{\ell}}^{{{0}\,{1}}}(0)$'.format(type1,type2))
-    return ax,axins, fits
+    return fig,ax,axins, fits
 
 
-def plot_gofr(startr,endr,res,title='',res_var=None):
-    fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None):
+    if fig_ax is not None:
+       fig, ax = fig_ax
+    else:
+       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
     r=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
     for i in range(0,res.shape[1]//2):
         plt_err(ax,r,res[0,i,:]/(r**2),(res_var[0,i,:]/(r**4)) if res_var is not None else res_var)
     ax.set_xlabel('$\AA$')
     ax.set_ylabel('number of atoms in the shell / $r^2$')
     ax.set_title('{}$g(r)$'.format(title))
-    return ax
+    return fig, ax
 
 def sph_tangent(r,phi,theta,x,y,z):
     a=math.cos(theta)*math.sin(phi)

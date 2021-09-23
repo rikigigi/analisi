@@ -339,6 +339,13 @@ else:
    
 ```
 
+To access the atomic lammps ids and the atomic lamms types, you can use the following two functions:
+```
+analisi_traj.get_lammps_id()
+analisi_traj.get_lammps_type()
+```
+don't call them too often since every time a new numpy array of ints is created
+
 ### Creating a time series object
 
 Before analyzing a time series, for example to calculate the integral of the autocorrelation function, it is necessary to create a time series object. This object will hold the data that a different function can analyze. It is created with the following:

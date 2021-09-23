@@ -54,6 +54,9 @@ import numpy as np
 pos = np.load( 'tests/data/positions.npy')
 vel = np.load( 'tests/data/velocities.npy')
 box = np.load( 'tests/data/cells.npy')
+#atomic types: load an array with length equal to the number of atoms
+#in this example I set all the atoms to type 0 but the last 16, 
+#wich are 8 of type 1 and 8 of type 2
 types = np.zeros(pos.shape[1], dtype = np.int32)
 types[-16:-8]=1
 types[-8:]=2
@@ -62,13 +65,23 @@ print('first cell matrix is {}'.format(box[0]))
 
 #create trajectory object
 import pyanalisi
-analisi_traj = pyanalisi.Trajectory(pos, vel, types, box,True, False)
+analisi_traj = pyanalisi.Trajectory(
+      pos, #shape (ntimesteps, natoms, 3)
+      vel, #same shape as pos
+      types, #shape (natoms)
+      box, #shape (ntimesteps, 3,3) or (ntimesteps, 6)
+      True, # if True, box for a single frame is 3,3,
+            # if False is 6
+      False # don't apply pbc
+  )
 
 #do the calculation that you want
+#see MSD section
 msd=pyanalisi.MeanSquareDisplacement(analisi_traj,10,4000,4,True,False,False)
 msd.reset(3000)
 msd.calculate(0)
 
+#the calculation object can be used as an array
 result=np.array(msd,copy=False)
 
 
@@ -81,17 +94,22 @@ result=np.array(msd,copy=False)
 Heat transport coefficient calculation: correlation functions and gk integral for a multicomponent fluid example
 ```
 import numpy as np
+#read first line, that is an header, and the column formatted data file
 with open(filepath_tests + '/data/gk_integral.dat', 'r') as flog:
     headers = flog.readline().split()
 log = np.loadtxt(filepath_tests + '/data/gk_integral.dat', skiprows=1)
 
 import pyanalisi
+#wrapper for the pyanalisi interface
 traj = pyanalisi.ReadLog(log, headers)
+#see Green Kubo section
 gk = pyanalisi.GreenKubo(analisi_log,'',
        1,['c_flux[1]','c_vcm[1][1]'],
        False, 2000, 2,False,0,4,False,1,100)
 gk.reset(analisi_log.getNtimesteps()-2000)
 gk.calculate(0)
+
+#the calculation object can be used as a python array
 result = np.array(gk,copy=False)
 
 ```
@@ -105,19 +123,21 @@ If you use this program and you like it, spread the word around and give it cred
 This is a framework for computing averages on molecular dynamics trajectories and block averages.
 An mpi parallelization over the blocks is implemented in a very abstract and general way, so it is easy to implement a new calculation that can be parallelized with no effort using MPI. The code has two interfaces: a command line interface that is parallelized with MPI and threads, and a python interface that is parallelized on threads only. With such many parallelization levels more accurate averages can be performed, as described in details in the next sections.
 
+Every MPI processes uses the same amount of memory by loading the part of the trajectory that it is used to do the calculation in every block. For this reason it is suggested to use one MPI process per machine, and parallelize by using threads only inside the single machine.
+
 Features:
 
  - python interface (reads numpy array)
  - command line interface (reads binary lammps-like files or time series in column format)
  - multithreaded ( defaults to number of threads specifies by the shell variable OMP_NUM_THREADS )
- - command line interface has MPI too (for super-heavy calculations)
+ - command line interface has MPI too (for super-heavy multi-machine calculations)
  - command line calculates variance of every quantity and every function (in python you can do it by yourselves with numpy.var )
  - jupyter notebook example of the python interface
 
 Calculations:
 
 - g of r ( and time too!)
-- vibrational spectrum (this is nothing special)
+- vibrational spectrum with FFTW3
 - histogram of number of neighbours
 - mean square displacement
 - green kubo integral of currents
@@ -132,7 +152,7 @@ Dependencies:
 
 - C++17 compatible compiler (GCC 7+, clang 6+, intel 19.0.1+, [source](https://en.cppreference.com/w/cpp/compiler_support) )
 - cmake
-- linux or macOS (mmap - maybe this dependency can be removed with some additional work)
+- linux or macOS (mmap - maybe this dependency can be removed with some additional work, and it is not used in the python interface)
 - FFTW3 (included in the package)
 - Eigen3 (included in the package)
 - Boost (included in the package)
@@ -318,6 +338,13 @@ else:
    np.sum(analisi_traj) # sum all positions
    
 ```
+
+To access the atomic lammps ids and the atomic lamms types, you can use the following two functions:
+```
+analisi_traj.get_lammps_id()
+analisi_traj.get_lammps_type()
+```
+don't call them too often since every time a new numpy array of ints is created
 
 ### Creating a time series object
 
