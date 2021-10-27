@@ -160,6 +160,14 @@ Dependencies:
 - libxdrfile (for gromacs file conversion -- included in the package)
 - python (optional) 
 
+Documentation build:
+
+- r-rsvg
+- pandoc
+- rsvg-convert
+- texlive
+- readme2tex (pip)
+
 ## MPI build (why not?)
 ```
 mkdir build
@@ -537,11 +545,23 @@ where $\langle \cdot \rangle$ is an average operator, and we do an additional av
 The implemented equation is:
 
 $$
-D_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle \mathbf{v}_{n}(0)\cdot \mathbf{v}_{n} (t) \rangle e^{i \omega t} dt
+D^{k}_{\alpha}(\omega) = \frac{1}{3N_{\alpha}} \sum_{n}^{N_{\alpha}} \int_{- \infty}^{ \infty} \langle v^{k}_{n}(0)  v^{k}_{n} (t) \rangle e^{i \omega t} dt
 $$
 
-where $\alpha$ is the type of atom.
+where $\alpha$ is the type of atom and $k$ is one of the spatial direction x,y,z.
 The diffusivity can be computed as half of the zero value of D.
+
+The columns of the output are ordered like the following:
+
+$$
+\begin{aligned}
+&\{0&,&D_{0}^{x}(\omega_0),D_{0}^{y}(\omega_0),D_{0}^{z}(\omega_0),& \dots ,&D_{M}^{x}(\omega_0),D_{M}^{y}(\omega_0),D_{M}^{z}(\omega_0)&\}\\
+&\{\;\vdots&,&\dots, & \dots,&\vdots &\}\\
+&\{N&,&D_{N}^{x}(\omega_N),D_{N}^{y}(\omega_N),D_{N}^{z}(\omega_N),&\dots ,&D_{M}^{x}(\omega_N),D_{M}^{y}(\omega_N),D_{M}^{z}(\omega_N)&\}\\
+\end{aligned}
+$$
+
+where $M$ is the number of atomic species and $N$ the number of timesteps. Note that in the command line versione each column but the first is followed by its variance
 
 ### command line version
 The options that you can use for this calculation are simply:
@@ -551,12 +571,15 @@ The options that you can use for this calculation are simply:
 </code>
 
 the code will generate a file with a number of line equal to the number of frequencies, and with `ntypes_atoms*2+1` columns where:
-- the first column rappresent the index of the frequncies 
-- then there are the block average and variance of the spectrum for each atomic type
+
+ - the first column rappresent the index of the frequencies 
+ - then there are the block average and variance of the spectrum for each atomic type
 
 The code is trasparent ot units of measuares of the quantities. If a user wants the diffusivity in the correct units ( e.g. metal) must porcede in the following way:
-- the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
-- the other columns can be multiplied by `dt/nstep`;
+
+ - the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
+ - the other columns can be multiplied by `dt/nstep`;
+
 where `nstep` is the total number of step of the block used to compute  VDOS, `dt` is the time difference of two consecutive molecular dynamis steps.
 
 ### python interface

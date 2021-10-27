@@ -160,6 +160,14 @@ Dependencies:
 - libxdrfile (for gromacs file conversion -- included in the package)
 - python (optional) 
 
+Documentation build:
+
+- r-rsvg
+- pandoc
+- rsvg-convert
+- texlive
+- readme2tex (pip)
+
 ## MPI build (why not?)
 ```
 mkdir build
@@ -466,10 +474,16 @@ where <img src="svgs/1154b2711344812ed220c9c2cb9fdc49.svg?invert_in_darkmode" al
 ### Calculation procedure:
 The implemented equation is:
 
-<p align="center"><img src="svgs/2bd6ddca99e95c087db7cb6d817b33d9.svg?invert_in_darkmode" align=middle width=309.3120327pt height=47.49793455pt/></p>
+<p align="center"><img src="svgs/2dffde5e18cde45e1794c82325eef7bb.svg?invert_in_darkmode" align=middle width=293.4219519pt height=47.49793455pt/></p>
 
-where <img src="svgs/c745b9b57c145ec5577b82542b2df546.svg?invert_in_darkmode" align=middle width=10.57650494999999pt height=14.15524440000002pt/> is the type of atom.
+where <img src="svgs/c745b9b57c145ec5577b82542b2df546.svg?invert_in_darkmode" align=middle width=10.57650494999999pt height=14.15524440000002pt/> is the type of atom and <img src="svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> is one of the spatial direction x,y,z.
 The diffusivity can be computed as half of the zero value of D.
+
+The columns of the output are ordered like the following:
+
+<p align="center"><img src="svgs/7ded6b2994b505ccc139d8bee7e8cef1.svg?invert_in_darkmode" align=middle width=521.3424876pt height=79.58436255pt/></p>
+
+where <img src="svgs/fb97d38bcc19230b0acd442e17db879c.svg?invert_in_darkmode" align=middle width=17.73973739999999pt height=22.465723500000017pt/> is the number of atomic species and <img src="svgs/f9c4988898e7f532b9f826a75014ed3c.svg?invert_in_darkmode" align=middle width=14.99998994999999pt height=22.465723500000017pt/> the number of timesteps. Note that in the command line versione each column but the first is followed by its variance
 
 ### command line version
 The options that you can use for this calculation are simply:
@@ -479,12 +493,15 @@ The options that you can use for this calculation are simply:
 </code>
 
 the code will generate a file with a number of line equal to the number of frequencies, and with `ntypes_atoms*2+1` columns where:
-- the first column rappresent the index of the frequncies 
-- then there are the block average and variance of the spectrum for each atomic type
+
+ - the first column rappresent the index of the frequencies 
+ - then there are the block average and variance of the spectrum for each atomic type
 
 The code is trasparent ot units of measuares of the quantities. If a user wants the diffusivity in the correct units ( e.g. metal) must porcede in the following way:
-- the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
-- the other columns can be multiplied by `dt/nstep`;
+
+ - the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
+ - the other columns can be multiplied by `dt/nstep`;
+
 where `nstep` is the total number of step of the block used to compute  VDOS, `dt` is the time difference of two consecutive molecular dynamis steps.
 
 ### python interface
