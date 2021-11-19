@@ -109,8 +109,8 @@ public:
     Traiettoria::Errori imposta_inizio_accesso(const size_t & timesteps);
     int64_t get_timestep_lammps(size_t timestep);
     void index_all();
-    //    void set_calculate_center_of_mass(bool);
-    //    bool get_calculate_center_of_mass();
+    int * get_lammps_id();
+    int *get_lammps_type();
 private:
     std::map<int,unsigned int>id_map;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps

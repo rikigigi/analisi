@@ -54,6 +54,9 @@ import numpy as np
 pos = np.load( 'tests/data/positions.npy')
 vel = np.load( 'tests/data/velocities.npy')
 box = np.load( 'tests/data/cells.npy')
+#atomic types: load an array with length equal to the number of atoms
+#in this example I set all the atoms to type 0 but the last 16, 
+#wich are 8 of type 1 and 8 of type 2
 types = np.zeros(pos.shape[1], dtype = np.int32)
 types[-16:-8]=1
 types[-8:]=2
@@ -62,13 +65,23 @@ print('first cell matrix is {}'.format(box[0]))
 
 #create trajectory object
 import pyanalisi
-analisi_traj = pyanalisi.Trajectory(pos, vel, types, box,True, False)
+analisi_traj = pyanalisi.Trajectory(
+      pos, #shape (ntimesteps, natoms, 3)
+      vel, #same shape as pos
+      types, #shape (natoms)
+      box, #shape (ntimesteps, 3,3) or (ntimesteps, 6)
+      True, # if True, box for a single frame is 3,3,
+            # if False is 6
+      False # don't apply pbc
+  )
 
 #do the calculation that you want
+#see MSD section
 msd=pyanalisi.MeanSquareDisplacement(analisi_traj,10,4000,4,True,False,False)
 msd.reset(3000)
 msd.calculate(0)
 
+#the calculation object can be used as an array
 result=np.array(msd,copy=False)
 
 
@@ -81,17 +94,22 @@ result=np.array(msd,copy=False)
 Heat transport coefficient calculation: correlation functions and gk integral for a multicomponent fluid example
 ```
 import numpy as np
+#read first line, that is an header, and the column formatted data file
 with open(filepath_tests + '/data/gk_integral.dat', 'r') as flog:
     headers = flog.readline().split()
 log = np.loadtxt(filepath_tests + '/data/gk_integral.dat', skiprows=1)
 
 import pyanalisi
+#wrapper for the pyanalisi interface
 traj = pyanalisi.ReadLog(log, headers)
+#see Green Kubo section
 gk = pyanalisi.GreenKubo(analisi_log,'',
        1,['c_flux[1]','c_vcm[1][1]'],
        False, 2000, 2,False,0,4,False,1,100)
 gk.reset(analisi_log.getNtimesteps()-2000)
 gk.calculate(0)
+
+#the calculation object can be used as a python array
 result = np.array(gk,copy=False)
 
 ```
@@ -105,19 +123,21 @@ If you use this program and you like it, spread the word around and give it cred
 This is a framework for computing averages on molecular dynamics trajectories and block averages.
 An mpi parallelization over the blocks is implemented in a very abstract and general way, so it is easy to implement a new calculation that can be parallelized with no effort using MPI. The code has two interfaces: a command line interface that is parallelized with MPI and threads, and a python interface that is parallelized on threads only. With such many parallelization levels more accurate averages can be performed, as described in details in the next sections.
 
+Every MPI processes uses the same amount of memory by loading the part of the trajectory that it is used to do the calculation in every block. For this reason it is suggested to use one MPI process per machine, and parallelize by using threads only inside the single machine.
+
 Features:
 
  - python interface (reads numpy array)
  - command line interface (reads binary lammps-like files or time series in column format)
  - multithreaded ( defaults to number of threads specifies by the shell variable OMP_NUM_THREADS )
- - command line interface has MPI too (for super-heavy calculations)
+ - command line interface has MPI too (for super-heavy multi-machine calculations)
  - command line calculates variance of every quantity and every function (in python you can do it by yourselves with numpy.var )
  - jupyter notebook example of the python interface
 
 Calculations:
 
 - g of r ( and time too!)
-- vibrational spectrum (this is nothing special)
+- vibrational spectrum with FFTW3
 - histogram of number of neighbours
 - mean square displacement
 - green kubo integral of currents
@@ -132,13 +152,21 @@ Dependencies:
 
 - C++17 compatible compiler (GCC 7+, clang 6+, intel 19.0.1+, [source](https://en.cppreference.com/w/cpp/compiler_support) )
 - cmake
-- linux or macOS (mmap - maybe this dependency can be removed with some additional work)
+- linux or macOS (mmap - maybe this dependency can be removed with some additional work, and it is not used in the python interface)
 - FFTW3 (included in the package)
 - Eigen3 (included in the package)
 - Boost (included in the package)
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- included in the package)
 - python (optional) 
+
+Documentation build:
+
+- r-rsvg
+- pandoc
+- rsvg-convert
+- texlive
+- readme2tex (pip)
 
 ## MPI build (why not?)
 ```
@@ -319,6 +347,13 @@ else:
    
 ```
 
+To access the atomic lammps ids and the atomic lamms types, you can use the following two functions:
+```
+analisi_traj.get_lammps_id()
+analisi_traj.get_lammps_type()
+```
+don't call them too often since every time a new numpy array of ints is created
+
 ### Creating a time series object
 
 Before analyzing a time series, for example to calculate the integral of the autocorrelation function, it is necessary to create a time series object. This object will hold the data that a different function can analyze. It is created with the following:
@@ -439,10 +474,16 @@ where <img src="svgs/1154b2711344812ed220c9c2cb9fdc49.svg?invert_in_darkmode" al
 ### Calculation procedure:
 The implemented equation is:
 
-<p align="center"><img src="svgs/2bd6ddca99e95c087db7cb6d817b33d9.svg?invert_in_darkmode" align=middle width=309.3120327pt height=47.49793455pt/></p>
+<p align="center"><img src="svgs/2dffde5e18cde45e1794c82325eef7bb.svg?invert_in_darkmode" align=middle width=293.4219519pt height=47.49793455pt/></p>
 
-where <img src="svgs/c745b9b57c145ec5577b82542b2df546.svg?invert_in_darkmode" align=middle width=10.57650494999999pt height=14.15524440000002pt/> is the type of atom.
+where <img src="svgs/c745b9b57c145ec5577b82542b2df546.svg?invert_in_darkmode" align=middle width=10.57650494999999pt height=14.15524440000002pt/> is the type of atom and <img src="svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> is one of the spatial direction x,y,z.
 The diffusivity can be computed as half of the zero value of D.
+
+The columns of the output are ordered like the following:
+
+<p align="center"><img src="svgs/7ded6b2994b505ccc139d8bee7e8cef1.svg?invert_in_darkmode" align=middle width=521.3424876pt height=79.58436255pt/></p>
+
+where <img src="svgs/fb97d38bcc19230b0acd442e17db879c.svg?invert_in_darkmode" align=middle width=17.73973739999999pt height=22.465723500000017pt/> is the number of atomic species and <img src="svgs/f9c4988898e7f532b9f826a75014ed3c.svg?invert_in_darkmode" align=middle width=14.99998994999999pt height=22.465723500000017pt/> the number of timesteps. Note that in the command line versione each column but the first is followed by its variance
 
 ### command line version
 The options that you can use for this calculation are simply:
@@ -452,12 +493,15 @@ The options that you can use for this calculation are simply:
 </code>
 
 the code will generate a file with a number of line equal to the number of frequencies, and with `ntypes_atoms*2+1` columns where:
-- the first column rappresent the index of the frequncies 
-- then there are the block average and variance of the spectrum for each atomic type
+
+ - the first column rappresent the index of the frequencies 
+ - then there are the block average and variance of the spectrum for each atomic type
 
 The code is trasparent ot units of measuares of the quantities. If a user wants the diffusivity in the correct units ( e.g. metal) must porcede in the following way:
-- the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
-- the other columns can be multiplied by `dt/nstep`;
+
+ - the first column can be multiplied by `1/(nstep*dt)` to obtain the frequencies in multiples of Hz
+ - the other columns can be multiplied by `dt/nstep`;
+
 where `nstep` is the total number of step of the block used to compute  VDOS, `dt` is the time difference of two consecutive molecular dynamis steps.
 
 ### python interface

@@ -2,7 +2,7 @@
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
-
+#include <pybind11/numpy.h>
 #include "traiettoria.h"
 #include "spettrovibrazionale.h"
 #include "readlog.h"
@@ -242,6 +242,35 @@ PYBIND11_MODULE(pyanalisi,m) {
                 g.get_shape(),                 /* Buffer dimensions */
                 g.get_stride());
             })
+            .def("get_lammps_id", [](Traiettoria & t) {
+                int * foo=t.get_lammps_id();
+                pybind11::capsule free_when_done(foo, [](void *f) {
+                 int *foo = reinterpret_cast<int *>(f);
+                 std::cerr << "freeing memory @ " << f << "\n";
+                 delete[] foo;
+                });
+                size_t natoms=t.get_natoms();
+                return pybind11::array_t<int>(
+                    {natoms}, //shape
+                    {sizeof(int)},
+                    foo,
+                    free_when_done
+                 );})
+            .def("get_lammps_type", [](Traiettoria & t) {
+                int * foo=t.get_lammps_type();
+                pybind11::capsule free_when_done(foo, [](void *f) {
+                 int *foo = reinterpret_cast<int *>(f);
+                 std::cerr << "freeing memory @ " << f << "\n";
+                 delete[] foo;
+                });
+                size_t natoms=t.get_natoms();
+                return pybind11::array_t<int>(
+                    {natoms}, //shape
+                    {sizeof(int)},
+                    foo,
+                    free_when_done
+                 );})
+                
     ;
 
     using RL = ReadLog<double>;
