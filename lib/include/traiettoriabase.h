@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <map>
 #include <algorithm>
-
+#include "compiler_types.h"
 
 #define DECL_ARG(a,b) a b
 #define NAME_ARG(a,b) b

@@ -4,7 +4,7 @@ using namespace SpecialFunctions;
 
 
 
-int test() {
+void test() {
 
     //init data
     double theta,phi;
