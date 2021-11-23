@@ -187,6 +187,7 @@ add_executable(${PROJECT_NAME}
 	analisi/main.cpp
 	)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 endif()
 
 ## test suite
@@ -201,7 +202,6 @@ set(BOOST_LIB boost)
 endif()
 target_link_libraries(test_sh ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
 add_executable(test_2loop tests/src/test_double_loop_splitter.cpp)
-set_property(TARGET test_2loop PROPERTY CXX_STANDARD 17)
 target_link_libraries(test_2loop ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
 add_executable(test_calcBuffer tests/src/test_calc_buffer.cpp)
 target_link_libraries(test_calcBuffer ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
@@ -211,6 +211,12 @@ add_executable(test_ph tests/src/test_position_histogram.cpp)
 target_link_libraries(test_ph ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
 add_executable(test_lammps2020 tests/src/test_lammps2020.cpp)
 target_link_libraries(test_lammps2020 ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
+set_property(TARGET test_2loop PROPERTY CXX_STANDARD 17)
+set_property(TARGET test_calcBuffer PROPERTY CXX_STANDARD 17)
+set_property(TARGET test_gk PROPERTY CXX_STANDARD 17)
+set_property(TARGET test_sh PROPERTY CXX_STANDARD 17)
+set_property(TARGET test_ph PROPERTY CXX_STANDARD 17)
+set_property(TARGET test_lammps2020 PROPERTY CXX_STANDARD 17)
 
 enable_testing()
 add_test(NAME sh COMMAND test_sh)

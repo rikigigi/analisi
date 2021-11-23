@@ -23,7 +23,7 @@ def numpy_traj(filepath_tests):
     pos = np.load(filepath_tests + '/data/positions.npy')
     vel = np.load(filepath_tests + '/data/velocities.npy')
     box = np.load(filepath_tests + '/data/cells.npy')
-    types = np.zeros(pos.shape[1], dtype = np.int32)
+    types = np.zeros(pos.shape[1], dtype = 'i')
     types[-16:-8]=1
     types[-8:]=2
     print('position array shape is {}'.format(pos.shape))
