@@ -194,6 +194,7 @@ void gk(py::module & m, std::string typestr){
 }
 
 PYBIND11_MODULE(pyanalisi,m) {
+#ifdef BUILD_MMAP
     py::class_<Traiettoria>(m,"Traj", py::buffer_protocol())
             .def(py::init<std::string>(),R"begend(
                  Parameters
@@ -291,6 +292,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                  return number of timesteps read
 )begend");
 
+#endif
     py::class_<ReadLog_numpy<double> >(m,"ReadLog")
             .def(py::init<py::buffer, std::vector<std::string> >() ,R"begend(
                  proxy class between python arrays and library
@@ -304,6 +306,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                  return number of timesteps read
 )begend");
 
+#ifdef BUILD_MMAP
     py::class_<CorrelatoreSpaziale>(m,"_CurrentCalc", py::buffer_protocol())
             .def(py::init<Traiettoria*,std::vector< std::array<double,3> >,double,unsigned int,unsigned int,bool>(),R"begend(
                  calculates  \dot \tilde e(k) / |k|  (can be useful to define some new current)
@@ -387,7 +390,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             })
             .def("__enter__",[](CenterOfMassDiff & c) -> CenterOfMassDiff & { return c;} )
             .def("__exit__",[](CenterOfMassDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
-
+#endif
 
     py::class_<Traiettoria_numpy>(m,"Trajectory")
             .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,bool,bool>(),R"lol(
@@ -410,11 +413,20 @@ PYBIND11_MODULE(pyanalisi,m) {
                  end timestep (int)  -- if < 0 it will dump all the trajectory
 )lol");
 
+#ifdef BUILD_MMAP
     define_atomic_traj<Traiettoria>(m,"_lammps");
-    define_atomic_traj<Traiettoria_numpy>(m,"");
     gk<ReadLog<> >(m,"_file");
+#endif
+    define_atomic_traj<Traiettoria_numpy>(m,"");
     gk<ReadLog_numpy<double> >(m,"");
     m.def("info",[]() -> std::string{
         return _info_msg ;
+    });
+    m.def("has_mmap",[]() -> bool {
+#ifdef BUILD_MMAP
+		    return true;
+#else
+		    return false;
+#endif
     });
 }
