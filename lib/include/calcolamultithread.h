@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <sys/types.h>
+#include "compiler_types.h"
 
 /**
   * CRTP class that makes easy to implement a multithreaded calculation. The calculation is divided in blocks of contiguous timesteps, and then a function that calculates the quantity for every block is called.

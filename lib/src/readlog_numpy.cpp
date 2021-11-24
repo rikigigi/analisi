@@ -1,3 +1,6 @@
+#if defined(_MSC_VER)
+#include <corecrt.h>
+#endif
 #include "readlog_numpy.h"
 #include "buffer_utils.h"
 template <class TFLOAT>

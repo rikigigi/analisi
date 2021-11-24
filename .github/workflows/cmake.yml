@@ -11,7 +11,7 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  build_unix:
     # The CMake configure and build commands are platform agnostic and should work equally
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
@@ -59,3 +59,39 @@ jobs:
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
         PYTHONPATH: /usr/lib/python${{ matrix.python-version }}/dist-packages
+  build_windows:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+        matrix:
+            os: [windows-latest ]
+            python-version: [ "3.7" ] 
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup python
+      uses: actions/setup-python@v2
+      with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_MMAP=OFF -DBUILD_TESTS=OFF -DSYSTEM_XDRFILE=ON
+
+    - name: Build
+      # Build your program with the given configuration
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: TestPy
+      working-directory: ${{github.workspace}}/tests
+      # Execute tests defined by the CMake configuration.  
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: |
+        copy ${{github.workspace}}/build/${{env.BUILD_TYPE}}/pyanalisi* .
+        pip install pytest pytest-regressions pandas matplotlib numpy scipy
+        pytest -sv .

@@ -52,7 +52,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
     if (info_box.format != pybind11::format_descriptor<double>::format())
         throw std::runtime_error("Format of box array should be double");
     if (info_types.format != pybind11::format_descriptor<int>::format())
-        throw std::runtime_error("Format of types array should be int");
+        throw std::runtime_error("Format of types array should be int ("+ pybind11::format_descriptor<int>::format()+") while it was "+info_types.format);
     if (info_vel.format != pybind11::format_descriptor<double>::format())
         throw std::runtime_error("Format of velocities array should be double");
     if (info_pos.format != pybind11::format_descriptor<double>::format())

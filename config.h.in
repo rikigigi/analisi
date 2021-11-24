@@ -39,6 +39,13 @@
 #define XDR_FILE
 #endif
 
+#ifndef CMAKE_CXX_FLAGS
+#define CMAKE_CXX_FLAGS ""
+#endif
+#ifndef CMAKE_C_FLAGS
+#define CMAKE_C_FLAGS ""
+#endif
+
 const static char * _info_msg=
 "cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2021\n=========\n"
  "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags (Release)"
@@ -53,7 +60,7 @@ const static char * _info_msg=
 #ifdef XDR_FILE
 "\nWith gromacs XDR file conversion support"
 #endif
-"\nv0.3.3"
+"\nv0.3.4"
 ;
 
 
