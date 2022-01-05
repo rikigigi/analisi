@@ -45,9 +45,7 @@ public:
         if (atomo < natoms) {
             return buffer_tipi_id[atomo];
         } else {
-            std::cerr << "Errore: tipo atomo fuori dal range! ("<< atomo <<" su un massimo di "<<natoms<<")\n";
-            abort();
-            return 0;
+            throw std::runtime_error("Atom index out of range\n");
         }
     }
     enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
@@ -108,7 +106,7 @@ public:
     double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; throw std::runtime_error("Cannot get mass for a type that does not exists!\n");}
     void set_mass(unsigned int i,double m) {if (i<get_ntypes()) masse[i]=m;}
     void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
-    double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; std::cerr<< "Cannot get charge for a type that does not exists!\n";abort(); return 0.0;}
+    double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; throw std::runtime_error("Cannot get charge for a type that does not exists!\n");}
     double d2_minImage(size_t i,size_t j, size_t itimestep,double *l){
         return d2_minImage(i,j,itimestep,itimestep,l);
     }

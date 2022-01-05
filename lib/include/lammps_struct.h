@@ -108,7 +108,7 @@ struct Atomo {
         return begin;
     }
 };
-//questo non potrà essere puntato direttamente ad una posizione nel file...
+
 struct Intestazione_timestep_new : public Intestazione_timestep_triclinic {
     bigint magic_string_len;
     char * magic_string;
@@ -149,7 +149,7 @@ current_ptr=read_and_advance(current_ptr,what,n);
         READ_ADV_A(condizioni_al_contorno,6);
         READ_ADV_A(scatola,6);
         if(triclinic) {
-            READ_ADV_A(xy_xz_yz,6);
+            READ_ADV_A(xy_xz_yz,3);
         }
         READ_ADV(dimensioni_riga_output);
         if (revision > 0x0001) {
