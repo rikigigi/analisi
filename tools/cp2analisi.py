@@ -150,6 +150,7 @@ if __name__ == "__main__" :
 	parser.add_argument('--nstep',
 			type = int, 
 			default = None,
+                        required = True,
 			help = 'Number of steps to convert.')
 	parser.add_argument('--natoms',
 			type = int, 

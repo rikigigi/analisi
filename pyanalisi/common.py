@@ -22,17 +22,20 @@ if HAS_QECPWORKCHAIN:
     from aiida_QECpWorkChain import write_cp_traj
 
 import numpy as np
-import matplotlib as mpl
-mpl.rcParams['agg.path.chunksize'] = 1000000
-import matplotlib.pyplot as plt
-import matplotlib.colors as pltc
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+try:
+   import matplotlib as mpl
+   mpl.rcParams['agg.path.chunksize'] = 1000000
+   import matplotlib.pyplot as plt
+   import matplotlib.colors as pltc
+   from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+except:
+   print('WARNING: cannot import matplotlib')
 import pickle
 
 try:
     import thermocepstrum as tc
 except:
-    print('WARINING: cannot import thermocepstrum')
+    print('WARNING: cannot import thermocepstrum')
 
 
 import pyanalisi.pyanalisi as pa
@@ -303,13 +306,14 @@ def analyze(traj,traj_unw,start,stop,nthreads=4,
     print('all done',flush=True)
     return msd, gofr, sh
 
-import scipy as sp
-import scipy.optimize 
+try:
+    import scipy as sp
+    import scipy.optimize 
+except:
+    print('WARNING: cannot import scipy')
 import math
 
-np.ALLOW_THREADS=4
 
-sp.ALLOW_THREADS=4
 
 def _int_gaussian(a,b):
     return a*(np.pi/b)**0.5
