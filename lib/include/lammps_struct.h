@@ -66,7 +66,7 @@ struct Intestazione_timestep {
 struct Intestazione_timestep_triclinic {
     bigint timestep;
     bigint natoms;
-    int triclinic;
+    int triclinic=1;
     int condizioni_al_contorno[6];
     double scatola[6];
     double xy_xz_yz[3];
@@ -78,10 +78,25 @@ struct Intestazione_timestep_triclinic {
         file=read_and_advance(file,&triclinic);
         file=read_and_advance(file, condizioni_al_contorno,6);
         file=read_and_advance(file,scatola,6);
-        file=read_and_advance(file,xy_xz_yz,3);
+        if (triclinic) file=read_and_advance(file,xy_xz_yz,3);
         file=read_and_advance(file,&dimensioni_riga_output);
         file=read_and_advance(file,&nchunk);
         return file;
+    }
+    void write(std::ofstream & out) {
+        out.write((char*) &timestep, sizeof (bigint));
+        out.write((char*) &natoms, sizeof(bigint));
+        out.write((char*) &triclinic, sizeof(int));
+        out.write((char*) condizioni_al_contorno, sizeof(int)*6);
+        out.write((char*) scatola, sizeof(double)*6);
+        if (triclinic) out.write((char*) xy_xz_yz, sizeof(double)*3);
+        out.write((char*)&dimensioni_riga_output, sizeof(int));
+        out.write((char*)&nchunk, sizeof(int));
+    }
+    static int get_triclinic(char * file) {
+        int triclinic;
+        read_and_advance(file+sizeof (timestep)+sizeof (natoms),&triclinic);
+        return triclinic;
     }
 };
 

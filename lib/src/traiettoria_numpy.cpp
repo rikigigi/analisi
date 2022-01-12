@@ -224,12 +224,16 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
         stop_ts=n_timesteps;
     std::ofstream out(fname,std::ofstream::binary);
     for (int t=start_ts;t<stop_ts;++t){
-        Intestazione_timestep head;
+        Intestazione_timestep_triclinic head;
         head.natoms=natoms;
-        for (unsigned int i=0;i<buffer_scatola_stride;++i)
+        for (unsigned int i=0;i<6;++i)
             head.scatola[i]=scatola(t)[i];
         head.timestep=t;
         head.triclinic=triclinic;
+        if (triclinic) {
+            for (unsigned int i=0;i<3;++i)
+                head.xy_xz_yz[i]=scatola(t)[6+i];
+        }
         head.condizioni_al_contorno[0]=0;
         head.condizioni_al_contorno[1]=0;
         head.condizioni_al_contorno[2]=0;
