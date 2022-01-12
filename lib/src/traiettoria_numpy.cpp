@@ -2,9 +2,15 @@
 #include <fstream>
 #include "lammps_struct.h"
 #include "buffer_utils.h"
+#include "triclinic.h"
 
-Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::buffer &&buffer_vel_, pybind11::buffer &&buffer_types_, pybind11::buffer &&buffer_box_, bool matrix_box, bool pbc_wrap) :
-    buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}, matrix_box{matrix_box}
+Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
+                                     pybind11::buffer &&buffer_vel_,
+                                     pybind11::buffer &&buffer_types_,
+                                     pybind11::buffer &&buffer_box_,
+                                     TraiettoriaBase::BoxFormat matrix_box,
+                                     bool pbc_wrap) :
+    buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}
 {
     loaded_timesteps=0;
     wrap_pbc=pbc_wrap;
@@ -35,19 +41,24 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
 
     //check boxes
     pybind11::buffer_info info_box{buffer_box.request()};
-    if (matrix_box){
+    if (matrix_box == BoxFormat::Cell_vectors){
         if (info_box.ndim != 3)
-            throw std::runtime_error("Wrong number of dimensions of box array (must be 3)");
+            throw std::runtime_error("Wrong number of dimensions of box array (must be 3) for cell matrix format");
         if (info_box.shape[0]!=info_pos.shape[0] || info_box.shape[1]!=3 || info_box.shape[2] != 3)
-            throw std::runtime_error("Wrong shape of box array");
+            throw std::runtime_error("Wrong shape of box array: must be (nsteps, 3, 3) for matrix format");
     } else {
         if (info_box.ndim != 2)
-            throw std::runtime_error("Wrong number of dimensions of box array (must be 2)");
-        if (info_box.shape[0]!=info_pos.shape[0] || info_box.shape[1]!=6 )
-            throw std::runtime_error("Wrong shape of box array: must be (nsteps, 6)");
-
+            throw std::runtime_error("Wrong number of dimensions of box array (must be 2 for lammps ortho/triclinic cell format)");
+        if (info_box.shape[0]!=info_pos.shape[0] ){
+            throw std::runtime_error("Wrong shape of box array: first dimension must be nsteps");
+        }
+        if (matrix_box == BoxFormat::Lammps_ortho && info_box.shape[1]!=6 ) {
+            throw std::runtime_error("Wrong shape of box array: must be (:, 6) for orthogonal lammps cell format");
+        }
+        if (matrix_box == BoxFormat::Lammps_triclinic && info_box.shape[1]!=9 ) {
+            throw std::runtime_error("Wrong shape of box array: must be (:, 9) for triclinic lammps cell format");
+        }
     }
-
     //check formats of stuff
     if (info_box.format != pybind11::format_descriptor<double>::format())
         throw std::runtime_error("Format of box array should be double");
@@ -69,14 +80,92 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
         throw std::runtime_error("Unsupported stride in pos array");
 
     // set positions and velocities and boxes array
+
     natoms=info_pos.shape[1];
     n_timesteps=info_pos.shape[0];
-    if (wrap_pbc){
+    buffer_scatola_stride = 6;
+    triclinic=false;
+    std::vector<std::pair<ssize_t,TriclinicLammpsCell<double> >> cells_qr; // first step, rotation matrix
+    if (matrix_box== BoxFormat::Lammps_ortho || matrix_box==BoxFormat::Lammps_triclinic){ //nothing to do; maybe here we could do a copy, but maybe not
+        buffer_scatola=static_cast<double *>(info_box.ptr);
+        box_allocated=false;
+        triclinic = matrix_box==BoxFormat::Lammps_triclinic;
+        std::cerr << "Input format is triclinic "<<std::endl;
+    } else if (matrix_box==BoxFormat::Cell_vectors){
+        //decide if we have to use triclinic or orthogonal cell; goes through all cells and convert/test to lammps format
+        for (ssize_t i=0;i<info_box.shape[0];++i){
+            double * cur_box=static_cast<double*>(info_box.ptr)+9*i;
+            //check for triclinic
+            auto lammps_cell=TriclinicLammpsCell(cur_box);
+            if (!lammps_cell.isDiagonal()) {
+                triclinic=true;
+            }
+            if (cells_qr.size()==0 || !lammps_cell.is_same_cell(cells_qr.back().second.getCell())) {
+                cells_qr.push_back({i,std::move(lammps_cell)});
+            }
+        }
+        ssize_t stride;
+        if (triclinic){
+            std::cerr << "Detected non orthorombic simulation cell. Using triclinic format"<<std::endl;
+            velocities_allocated=true;
+            buffer_velocita=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
+            stride=9;
+        } else {
+            stride=6;
+        }
+        buffer_scatola = new double[info_box.shape[0]*stride];
+        ssize_t cur_idx=0;
+        for (ssize_t i=0;i<n_timesteps;++i){
+            //copy everything in the box array and rotate velocities and positions
+            cells_qr[cur_idx].second.set_lammps_cell(buffer_scatola+i*stride,triclinic);
+            if (cells_qr[cur_idx].first-1 == i) cur_idx++;
+        }
+    } else {
+        throw std::runtime_error("Invalid input cell format");
+    }
+
+    if (!triclinic) { //no need for a copy of the velocities
+        velocities_allocated=false;
+        buffer_velocita=static_cast<double*>(info_vel.ptr);
+        box_format=BoxFormat::Lammps_ortho;
+    } else {
+        buffer_scatola_stride = 9;
+        box_format=BoxFormat::Lammps_triclinic;
+    }
+    if (wrap_pbc || triclinic){ // when I need also a copy of the positions
         buffer_posizioni=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
         posizioni_allocated=true;
-        std::cerr << "WARNING: pbc lazily implemented only for a non rotated orthogonal cell"<<std::endl;
-        for (int i=0;i<n_timesteps;++i) {
-            for (int iatom=0;iatom<natoms;++iatom) {
+    }else {
+        posizioni_allocated=false;
+        buffer_posizioni=static_cast<double*>(info_pos.ptr);
+        velocities_allocated=false;
+        buffer_velocita=static_cast<double*>(info_vel.ptr);
+    }
+    //now everything is allocated/moved. Do the work of translation to the lammps (wapped) format
+
+    if (triclinic &&matrix_box==BoxFormat::Cell_vectors ) {
+        if (wrap_pbc){ //do a rotation of vel and pos and apply pbc
+            throw std::runtime_error("pbc for triclinic system not implemented");
+        } else {
+            //do a rotation of vel and pos
+            ssize_t cur_idx=0;
+            for (ssize_t i=0;i<n_timesteps;++i){
+                // rotate velocities and positions
+                for (ssize_t n=0;n<natoms;++n){
+                    double *pos = buffer_posizioni+i*3*natoms+n*3;
+                    double *vel = buffer_velocita+i*3*natoms+n*3;
+                    std::memcpy(pos,&static_cast<double*>(info_pos.ptr)[i*3*natoms+n*3],3*sizeof (double));
+                    std::memcpy(vel,&static_cast<double*>(info_vel.ptr)[i*3*natoms+n*3],3*sizeof (double));
+                    cells_qr[cur_idx].second.rotate_vec(pos);
+                    cells_qr[cur_idx].second.rotate_vec(vel);
+                }
+                if (cells_qr[cur_idx].first-1 == i) cur_idx++;
+            }
+        }
+    }else if (wrap_pbc && !triclinic){ // apply pbc in orthogonal case
+        std::cerr << "Applying pbc to a orthorombic system"<<std::endl;
+        for (ssize_t i=0;i<n_timesteps;++i) {
+            for (ssize_t iatom=0;iatom<natoms;++iatom) {
                 for (int idim=0;idim<3;++idim) {
                     double l=static_cast<double*>(info_box.ptr)[i*9+idim*3+idim];
                     double x=static_cast<double*>(info_pos.ptr)[i*3*natoms+iatom*3+idim];
@@ -84,31 +173,10 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_, pybind11::b
                 }
             }
         }
-    }else {
-        posizioni_allocated=false;
-        buffer_posizioni=static_cast<double*>(info_pos.ptr);
+    } else if (wrap_pbc && triclinic) {
+        throw std::runtime_error("pbc for triclinic system not implemented");
     }
-    buffer_velocita=static_cast<double*>(info_vel.ptr);
 
-    if (!matrix_box){
-        buffer_scatola=static_cast<double *>(info_box.ptr);
-    } else {
-        buffer_scatola = new double[info_box.shape[0]*6];
-        for (int i=0;i<info_box.shape[0];++i){
-            //check it is an orthogonal (and non rotated) cell
-            double * cur_box=static_cast<double*>(info_box.ptr)+9*i;
-            for (int l=0;l<3;++l){
-                for (int m=l+1;m<3;++m) {
-                    if (cur_box[l*3+m] != 0.0 || cur_box[m*3+l] != 0.0){
-                        throw std::runtime_error("Non orthogonal cell (or rotated orthogonal one) not implemented");
-                    }
-                }
-                buffer_scatola[i*6+2*l]=0.0;
-                buffer_scatola[i*6+2*l+1]=cur_box[3*l+l];
-            }
-        }
-    }
-    //TODO: convert everything in the program to general lattice matrix format
 
     buffer_tipi=static_cast<int*>(info_types.ptr);
     buffer_tipi_id=new int[natoms];
@@ -158,10 +226,10 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
     for (int t=start_ts;t<stop_ts;++t){
         Intestazione_timestep head;
         head.natoms=natoms;
-        for (unsigned int i=0;i<6;++i)
+        for (unsigned int i=0;i<buffer_scatola_stride;++i)
             head.scatola[i]=scatola(t)[i];
         head.timestep=t;
-        head.triclinic=false;
+        head.triclinic=triclinic;
         head.condizioni_al_contorno[0]=0;
         head.condizioni_al_contorno[1]=0;
         head.condizioni_al_contorno[2]=0;
@@ -190,9 +258,10 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
 }
 
 Traiettoria_numpy::~Traiettoria_numpy() {
-    if (matrix_box) {
+    if (box_allocated)
         delete [] buffer_scatola;
-    }
+    if (velocities_allocated)
+        delete [] buffer_velocita;
     if (posizioni_allocated)
         delete [] buffer_posizioni;
     delete [] buffer_tipi_id;

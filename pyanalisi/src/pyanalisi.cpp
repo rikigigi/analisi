@@ -393,7 +393,7 @@ PYBIND11_MODULE(pyanalisi,m) {
 #endif
 
     py::class_<Traiettoria_numpy>(m,"Trajectory")
-            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,bool,bool>(),R"lol(
+            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Traiettoria_numpy::BoxFormat,bool>(),R"lol(
                 Parameters
                 ----------
                 positions (double) python array (ntimesteps,natoms,3)
@@ -412,6 +412,11 @@ PYBIND11_MODULE(pyanalisi,m) {
                  starting timestep (int)
                  end timestep (int)  -- if < 0 it will dump all the trajectory
 )lol");
+    py::enum_<Traiettoria_numpy::BoxFormat>(m, "BoxFormat", py::arithmetic())
+            .value("Invalid", Traiettoria_numpy::BoxFormat::Invalid)
+            .value("CellVectors", Traiettoria_numpy::BoxFormat::Cell_vectors)
+            .value("LammpsOrtho", Traiettoria_numpy::BoxFormat::Lammps_ortho)
+            .value("LammpsTriclinic", Traiettoria_numpy::BoxFormat::Lammps_triclinic);
 
 #ifdef BUILD_MMAP
     define_atomic_traj<Traiettoria>(m,"_lammps");

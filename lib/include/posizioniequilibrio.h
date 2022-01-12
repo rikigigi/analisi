@@ -18,11 +18,7 @@
 #include <map>
 #include <array>
 #include <vector>
-#ifdef HAVEeigen3EigenDense
-#include <eigen3/Eigen/Dense>
-#else
-#include <Eigen/Dense>
-#endif
+#include "eigen_include.h"
 
 class PosizioniEquilibrio : public OperazioniSuLista<PosizioniEquilibrio>
 {

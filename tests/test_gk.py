@@ -7,4 +7,5 @@ def test_gk(analisi_log,num_regression):
     gk.reset(analisi_log.getNtimesteps()-2000)
     gk.calculate(0)
     m=np.array(gk,copy=False)
+    print(m)
     num_regression.check({'gk':m.flatten()})

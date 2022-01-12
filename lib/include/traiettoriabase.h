@@ -20,13 +20,16 @@
 template <class T>
 class TraiettoriaBase {
 
+
 public:
+    enum class BoxFormat{Lammps_ortho,Lammps_triclinic,Cell_vectors, Invalid};
 
     TraiettoriaBase() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},
     wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
     buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
     buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
-    buffer_tipi{nullptr},buffer_tipi_id{nullptr}, serve_pos{true} {}
+    buffer_tipi{nullptr},buffer_tipi_id{nullptr}, serve_pos{true},
+    box_format{BoxFormat::Invalid}{}
 
     //double * posizioni (const int & timestep, const int & atomo) { return static_cast<T*>(this)->posizioni(timestep,atomo);}
     DECL_CALL_BASE_2(double *, posizioni, (const int &, timestep), (const int &, atomo))
@@ -162,13 +165,15 @@ protected:
     double * masse;
     double * cariche;
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
+    size_t buffer_scatola_stride; // 6 for orthorombic, 9 for triclinic
+    BoxFormat box_format; //format used to store box information
     double * buffer_posizioni_cm; // posizioni del centro di massa
     double * buffer_velocita_cm; // velocità del centro di massa
     size_t buffer_posizioni_size, buffer_cm_size; //sizes of allocated buffers
 
     int * buffer_tipi,*buffer_tipi_id;
-    size_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps;
-    bool wrap_pbc;
+    ssize_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps;
+    bool wrap_pbc, triclinic;
 
 
     std::vector<unsigned int> types;
