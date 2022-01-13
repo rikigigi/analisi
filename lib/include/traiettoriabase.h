@@ -158,7 +158,7 @@ public:
         double d2=0.0;
         double *xi=posizioni(itimestep,i);
         double *xj=posizioni(jtimestep,j);
-        const double *l=scatola(itimestep);
+        const double *l=scatola(itimestep)+3;
         const double *xy_xz_yz = scatola(itimestep)+6;
         d2=d2_minImage_triclinic(xi,xj,l,x,xy_xz_yz);
         return d2;
