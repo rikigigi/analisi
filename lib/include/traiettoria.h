@@ -85,7 +85,7 @@ public:
     }
     template<bool SAFE=true>
     double * scatola(const size_t &timestep) {
-        return get_array<SAFE,false>(buffer_scatola,timestep,0,6,0);
+        return get_array<SAFE,false>(buffer_scatola,timestep,0,buffer_scatola_stride,0);
     }
     template<bool SAFE=true>
     double * posizioni_cm(const size_t &timestep, const size_t &tipo){
@@ -98,7 +98,7 @@ public:
     }
     double *scatola_last(){
         if (loaded_timesteps>0) {
-            return &buffer_scatola[ 6*(loaded_timesteps-1)];
+            return &buffer_scatola[ buffer_scatola_stride*(loaded_timesteps-1)];
         } else {
             throw std::runtime_error("No data is loaded!\n");
         }
@@ -125,7 +125,6 @@ private:
     char * file;
     size_t timestep_corrente,timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
-    bool triclinic;
     bool calculate_center_of_mass;
     long pagesize;
     size_t allinea_offset(const long &offset, size_t & differenza);

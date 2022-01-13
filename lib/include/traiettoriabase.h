@@ -8,6 +8,9 @@
 #include <algorithm>
 #include "compiler_types.h"
 
+#include "restrict.h"
+#include <cmath>
+
 #define DECL_ARG(a,b) a b
 #define NAME_ARG(a,b) b
 #define DECL_CALL_BASE_0(ret, fname) ret fname () { return static_cast<T*>(this)-> fname ( ); }
@@ -61,6 +64,30 @@ public:
         wrap_pbc=p;
     }
 
+    void lammps_to_internal(double * c) const {
+        // xlo,  xhi,   ylo,   yhi,     zlo,     zhi
+        // becomes:
+        // xlo,  ylo,   zlo,   (xhi-xlo) / 2, (yhi-ylo) / 2, (zhi-zlo) / 2
+        //first low coords and then high-low coordinates
+        double t=c[4];
+        c[5]=(c[5]-c[4])/2;
+        c[4]=(c[3]-c[2])/2;
+        c[3]=(c[1]-c[0])/2;
+        c[1]=c[2];
+        c[2]=t; //c[4]
+    }
+    void internal_to_lammps(double * c) const {
+        //first low coords and then high-low coordinates
+        // xlo,  ylo,   zlo,   (xhi-xlo) / 2, (yhi-ylo) / 2, (zhi-zlo) / 2
+        // becomes:
+        // xlo,  xhi,   ylo,   yhi,     zlo,     zhi
+        double t=c[3];
+        c[3]=c[4]*2+c[1];
+        c[5]=c[5]*2+c[2];
+        c[4]=c[2];
+        c[2]=c[1];
+        c[1]=c[0]+t*2;
+    }
 
     int get_ntypes (){
         if (ntypes==0) {
@@ -110,28 +137,96 @@ public:
     void set_mass(unsigned int i,double m) {if (i<get_ntypes()) masse[i]=m;}
     void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; throw std::runtime_error("Cannot get charge for a type that does not exists!\n");}
-    double d2_minImage(size_t i,size_t j, size_t itimestep,double *l){
-        return d2_minImage(i,j,itimestep,itimestep,l);
-    }
-    double d2_minImage(size_t i,size_t j, size_t itimestep, size_t jtimestep, double *l){
+
+
+
+    double d2_minImage(size_t i,
+                       size_t j,
+                       size_t itimestep,
+                       size_t jtimestep
+                       ) {
         double x[3];
-        return d2_minImage(i,j,itimestep,jtimestep,l,x);
+        return d2_minImage(i,j,itimestep,jtimestep,x);
     }
-    double d2_minImage(size_t i,size_t j, size_t itimestep, size_t jtimestep,double *l,double *x){
+
+    double d2_minImage(size_t i,
+                       size_t j,
+                       size_t itimestep,
+                       size_t jtimestep,
+                       double *x
+                       ) {
         double d2=0.0;
         double *xi=posizioni(itimestep,i);
         double *xj=posizioni(jtimestep,j);
+        const double *l=scatola(itimestep);
+        const double *xy_xz_yz = scatola(itimestep)+6;
+        d2=d2_minImage_triclinic(xi,xj,l,x,xy_xz_yz);
+        return d2;
+    }
+    double d2_minImage_triclinic(double * xi, ///position of first atom
+                                 double *xj, ///position of second atom
+                                 const double *l, /// half orthorombic edges
+                                 double *x, /// min image distance
+                                 const double * xy_xz_yz ///offsets of triclinic wrt orthorombic
+                                 ) const{
+        double d2=0.0;
         for (unsigned int idim=0;idim<3;idim++) {
             x[idim]=xi[idim]-xj[idim];
-            int k= (x[idim]/l[idim] + ((x[idim]>=0.0) ? 0.5 : -0.5));
-            x[idim]-=l[idim]*k;
-            /*
-            if (x[idim] >   l[idim] * 0.5) x[idim] = x[idim] - l[idim];
-            if (x[idim] <= -l[idim] * 0.5) x[idim] = x[idim] + l[idim];*/
+        }
+        if (triclinic){
+            minImage_triclinic<true>(x,l,xy_xz_yz);
+        } else {
+            minImage_triclinic<false>(x,l,xy_xz_yz);
+        }
+        for (unsigned int idim=0;idim<3;idim++) {
             d2+=x[idim]*x[idim];
         }
         return d2;
     }
+    template <bool TRICLINIC>
+    static void minImage_triclinic(double * __restrict delta, const double * __restrict l_half, const double * __restrict xy_xz_yz) {
+        double xy;
+        double xz;
+        double yz;
+        if constexpr (TRICLINIC) {
+            xy=xy_xz_yz[0];
+            xz=xy_xz_yz[1];
+            yz=xy_xz_yz[2];
+        }
+        while (fabs(delta[2]) > l_half[2]) {
+            if (delta[2] < 0.0) {
+                delta[2] += l_half[2];
+                if constexpr(TRICLINIC){
+                    delta[1] += yz;
+                    delta[0] += xz;
+                }
+            } else {
+                delta[2] -= l_half[2];
+                if constexpr(TRICLINIC){
+                    delta[1] -= yz;
+                    delta[0] -= xz;
+                }
+            }
+        }
+        while (fabs(delta[1]) > l_half[1]) {
+            if (delta[1] < 0.0) {
+                delta[1] += l_half[1];
+                if constexpr(TRICLINIC){
+                    delta[0] += xy;
+                }
+            } else {
+                delta[1] -= l_half[1];
+                if constexpr(TRICLINIC){
+                    delta[0] -= xy;
+                }
+            }
+        }
+        while (fabs(delta[0]) > l_half[0]) {
+            if (delta[0] < 0.0) delta[0] += l_half[0];
+            else delta[0] -= l_half[0];
+        }
+    }
+
 
     size_t get_size_posizioni() const { return buffer_posizioni_size; }
     size_t get_size_cm() const {return buffer_cm_size;}
@@ -156,6 +251,10 @@ public:
 
     size_t get_nloaded_timesteps() const {
         return loaded_timesteps;
+    }
+
+    bool is_triclinic() const {
+        return triclinic;
     }
 
 protected:

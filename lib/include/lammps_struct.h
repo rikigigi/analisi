@@ -246,6 +246,18 @@ public:
     select_var(scatola, double *)
     select_var(dimensioni_riga_output,int)
 
+    double * xy_xz_yz() {
+        switch (type) {
+        case Type::Old:
+            return nullptr;
+        case Type::Old_triclinic:
+            return intestazione_old_tri.xy_xz_yz;
+        case Type::F2020:
+            return intestazione_new.xy_xz_yz;
+        }
+        throw std::runtime_error("Undefined binary type");
+    }
+
     ~TimestepManager () {
     }
 

@@ -36,12 +36,12 @@ public:
         }
     }
     void set_lammps_cell(T * cel,bool triclinic=true) const{
-        //xlo,xhi,ylo,yhi,zlo,zhi,xy,xz,yz
+        //xlo,ylo,zlo,lx,ly,lz,xy,xz,yz
         cel[0]=0;
-        cel[1]=r(0,0);
+        cel[3]=r(0,0);
+        cel[1]=0;
+        cel[4]=r(1,1);
         cel[2]=0;
-        cel[3]=r(1,1);
-        cel[4]=0;
         cel[5]=r(2,2);
         if (triclinic){
             cel[6]=r(1,0);

@@ -99,12 +99,9 @@ void Gofrt<TFLOAT,T>::calc_single_th(int t, int imedia, int atom_start, int atom
     if (ith==0) {
         th_data_ = lista;
     }
-    double l[3]={traiettoria->scatola(primo+imedia)[1]-traiettoria->scatola(primo+imedia)[0],
-                 traiettoria->scatola(primo+imedia)[3]-traiettoria->scatola(primo+imedia)[2],
-                 traiettoria->scatola(primo+imedia)[5]-traiettoria->scatola(primo+imedia)[4]};
     for (unsigned int iatom=atom_start;iatom<atom_stop;iatom++) {
         for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
-            double d=traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t,l);
+            double d=traiettoria->d2_minImage(iatom,jatom,primo+imedia,primo+imedia+t);
             if (d>rmax2 || d<rmin2) continue;
             unsigned int type1=traiettoria->get_type(iatom);
             unsigned int type2=traiettoria->get_type(jatom);

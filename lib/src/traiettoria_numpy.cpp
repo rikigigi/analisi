@@ -87,10 +87,18 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
     triclinic=false;
     std::vector<std::pair<ssize_t,TriclinicLammpsCell<double> >> cells_qr; // first step, rotation matrix
     if (matrix_box== BoxFormat::Lammps_ortho || matrix_box==BoxFormat::Lammps_triclinic){ //nothing to do; maybe here we could do a copy, but maybe not
-        buffer_scatola=static_cast<double *>(info_box.ptr);
-        box_allocated=false;
+        if (matrix_box==BoxFormat::Lammps_triclinic) {
+            buffer_scatola_stride = 9;
+        }
+        buffer_scatola = new double[info_box.shape[0]*buffer_scatola_stride];
+        box_allocated=true;
+        //copy and do a permutation of everything
+        for (ssize_t i=0;i<n_timesteps;++i) {
+            std::memcpy(buffer_scatola+i*buffer_scatola_stride,&static_cast<double*>(info_box.ptr)[i*buffer_scatola_stride],buffer_scatola_stride*sizeof (double));
+            lammps_to_internal(buffer_scatola+i*buffer_scatola_stride);
+        }
         triclinic = matrix_box==BoxFormat::Lammps_triclinic;
-        std::cerr << "Input format is triclinic "<<std::endl;
+        std::cerr << "Input format is lammps"<<std::endl;
     } else if (matrix_box==BoxFormat::Cell_vectors){
         //decide if we have to use triclinic or orthogonal cell; goes through all cells and convert/test to lammps format
         for (ssize_t i=0;i<info_box.shape[0];++i){
@@ -143,7 +151,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
     }
     //now everything is allocated/moved. Do the work of translation to the lammps (wapped) format
 
-    if (triclinic &&matrix_box==BoxFormat::Cell_vectors ) {
+    if (triclinic &&matrix_box==BoxFormat::Cell_vectors ) { // in this case we have to rotate velocities and positions to be consistent with the new cell
         if (wrap_pbc){ //do a rotation of vel and pos and apply pbc
             throw std::runtime_error("pbc for triclinic system not implemented");
         } else {
@@ -228,6 +236,7 @@ Traiettoria_numpy::dump_lammps_bin_traj(const std::string &fname, int start_ts, 
         head.natoms=natoms;
         for (unsigned int i=0;i<6;++i)
             head.scatola[i]=scatola(t)[i];
+        internal_to_lammps(head.scatola);
         head.timestep=t;
         head.triclinic=triclinic;
         if (triclinic) {
