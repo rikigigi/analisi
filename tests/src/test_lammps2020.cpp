@@ -13,16 +13,13 @@ struct TrajTest{
 
 BOOST_FIXTURE_TEST_SUITE(traj,TrajTest)
 BOOST_AUTO_TEST_CASE(min_image){
-    double * s=t.traj.scatola(0);
-    double l[3]={s[1]-s[0],
-                 s[3]-s[2],
-                 s[5]-s[4]};
+
     size_t n_atoms=t.traj.get_natoms();
     double * distances=new double[4*n_atoms*n_atoms];
 
     for (size_t i=0;i<n_atoms;++i){
         for (size_t j=0;j<n_atoms;++j) {
-            distances[i*4*n_atoms+j*4+3]=t.traj.d2_minImage(i,j,0,0,l,distances+i*4*n_atoms+j*4);
+            distances[i*4*n_atoms+j*4+3]=t.traj.d2_minImage(i,j,0,0,distances+i*4*n_atoms+j*4);
         }
     }
 
