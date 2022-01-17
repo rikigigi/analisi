@@ -64,7 +64,7 @@ public:
         wrap_pbc=p;
     }
 
-    void lammps_to_internal(double * c) const {
+    static void lammps_to_internal(double * c) {
         // xlo,  xhi,   ylo,   yhi,     zlo,     zhi
         // becomes:
         // xlo,  ylo,   zlo,   (xhi-xlo) / 2, (yhi-ylo) / 2, (zhi-zlo) / 2
@@ -76,7 +76,7 @@ public:
         c[1]=c[2];
         c[2]=t; //c[4]
     }
-    void internal_to_lammps(double * c) const {
+    static void internal_to_lammps(double * c) {
         //first low coords and then high-low coordinates
         // xlo,  ylo,   zlo,   (xhi-xlo) / 2, (yhi-ylo) / 2, (zhi-zlo) / 2
         // becomes:
