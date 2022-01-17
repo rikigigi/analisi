@@ -89,6 +89,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
     if (matrix_box== BoxFormat::Lammps_ortho || matrix_box==BoxFormat::Lammps_triclinic){ //nothing to do; maybe here we could do a copy, but maybe not
         if (matrix_box==BoxFormat::Lammps_triclinic) {
             buffer_scatola_stride = 9;
+            triclinic=true;
         }
         buffer_scatola = new double[info_box.shape[0]*buffer_scatola_stride];
         box_allocated=true;
@@ -97,7 +98,6 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
             std::memcpy(buffer_scatola+i*buffer_scatola_stride,&static_cast<double*>(info_box.ptr)[i*buffer_scatola_stride],buffer_scatola_stride*sizeof (double));
             lammps_to_internal(buffer_scatola+i*buffer_scatola_stride);
         }
-        triclinic = matrix_box==BoxFormat::Lammps_triclinic;
         std::cerr << "Input format is lammps"<<std::endl;
     } else if (matrix_box==BoxFormat::Cell_vectors){
         //decide if we have to use triclinic or orthogonal cell; goes through all cells and convert/test to lammps format
