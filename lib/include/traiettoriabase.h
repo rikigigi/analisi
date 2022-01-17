@@ -195,13 +195,13 @@ public:
         }
         while (fabs(delta[2]) > l_half[2]) {
             if (delta[2] < 0.0) {
-                delta[2] += l_half[2];
+                delta[2] += l_half[2]*2;
                 if constexpr(TRICLINIC){
                     delta[1] += yz;
                     delta[0] += xz;
                 }
             } else {
-                delta[2] -= l_half[2];
+                delta[2] -= l_half[2]*2;
                 if constexpr(TRICLINIC){
                     delta[1] -= yz;
                     delta[0] -= xz;
@@ -210,20 +210,20 @@ public:
         }
         while (fabs(delta[1]) > l_half[1]) {
             if (delta[1] < 0.0) {
-                delta[1] += l_half[1];
+                delta[1] += l_half[1]*2;
                 if constexpr(TRICLINIC){
                     delta[0] += xy;
                 }
             } else {
-                delta[1] -= l_half[1];
+                delta[1] -= l_half[1]*2;
                 if constexpr(TRICLINIC){
                     delta[0] -= xy;
                 }
             }
         }
         while (fabs(delta[0]) > l_half[0]) {
-            if (delta[0] < 0.0) delta[0] += l_half[0];
-            else delta[0] -= l_half[0];
+            if (delta[0] < 0.0) delta[0] += l_half[0]*2;
+            else delta[0] -= l_half[0]*2;
         }
     }
 
