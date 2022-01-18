@@ -20,6 +20,31 @@
 #define DECL_CALL_BASE_4(ret, fname, arg1, arg2, arg3, arg4) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4 ); }
 #define DECL_CALL_BASE_5(ret, fname, arg1, arg2, arg3, arg4, arg5) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5 ); }
 
+
+struct Cell_ {
+    const double xlo,ylo,zlo,lxhalf,lyhalf,lzhalf, xy,xz,yz;
+    void middle(double * c) const {
+        c[0]=xlo+lxhalf+(xy+xz)/2;
+        c[1]=ylo+lyhalf+yz/2;
+        c[2]=zlo+lzhalf;
+    }
+};
+template <bool TRICLINIC>
+struct Cell;
+
+template<>
+struct Cell<true> : public Cell_ {
+    Cell(double *c) :
+        Cell_{c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7],c[8]}
+    {}
+};
+template<>
+struct Cell<false> : public Cell_ {
+    Cell(double *c) :
+        Cell_{c[0],c[1],c[2],c[3],c[4],c[5],0,0,0}
+    {}
+};
+
 template <class T>
 class TraiettoriaBase {
 
@@ -138,6 +163,22 @@ public:
     void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; throw std::runtime_error("Cannot get charge for a type that does not exists!\n");}
 
+
+    template<bool TRICLINIC>
+    void pbc_wrap(ssize_t idx) {
+        double * c = buffer_scatola+buffer_scatola_stride*idx;
+        Cell<TRICLINIC> s(c);
+        double x0[3];
+        s.middle(x0);
+        for (size_t iatom=0;iatom<natoms;++iatom) {
+            double x[3];
+            double *xa=buffer_posizioni+idx*natoms*3+iatom*3;
+            minImage_triclinic<TRICLINIC>(x0,xa,c+3,x,c+6);
+            for (int icoord=0;icoord<3;++icoord){
+                xa[icoord]=x[icoord]+x0[icoord];
+            }
+        }
+    }
 
 
     double d2_minImage(size_t i,
