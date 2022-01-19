@@ -152,40 +152,21 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
     //now everything is allocated/moved. Do the work of translation to the lammps (wapped) format
 
     if (triclinic &&matrix_box==BoxFormat::Cell_vectors ) { // in this case we have to rotate velocities and positions to be consistent with the new cell
-        if (wrap_pbc){ //do a rotation of vel and pos and apply pbc
-            throw std::runtime_error("pbc for triclinic system not implemented");
-        } else {
-            //do a rotation of vel and pos
-            ssize_t cur_idx=0;
-            for (ssize_t i=0;i<n_timesteps;++i){
-                // rotate velocities and positions
-                for (ssize_t n=0;n<natoms;++n){
-                    double *pos = buffer_posizioni+i*3*natoms+n*3;
-                    double *vel = buffer_velocita+i*3*natoms+n*3;
-                    std::memcpy(pos,&static_cast<double*>(info_pos.ptr)[i*3*natoms+n*3],3*sizeof (double));
-                    std::memcpy(vel,&static_cast<double*>(info_vel.ptr)[i*3*natoms+n*3],3*sizeof (double));
-                    cells_qr[cur_idx].second.rotate_vec(pos);
-                    cells_qr[cur_idx].second.rotate_vec(vel);
-                }
-                if (cells_qr[cur_idx].first-1 == i) cur_idx++;
+        //do a rotation of vel and pos
+        ssize_t cur_idx=0;
+        for (ssize_t i=0;i<n_timesteps;++i){
+            // rotate velocities and positions
+            for (ssize_t n=0;n<natoms;++n){
+                double *pos = buffer_posizioni+i*3*natoms+n*3;
+                double *vel = buffer_velocita+i*3*natoms+n*3;
+                std::memcpy(pos,&static_cast<double*>(info_pos.ptr)[i*3*natoms+n*3],3*sizeof (double));
+                std::memcpy(vel,&static_cast<double*>(info_vel.ptr)[i*3*natoms+n*3],3*sizeof (double));
+                cells_qr[cur_idx].second.rotate_vec(pos);
+                cells_qr[cur_idx].second.rotate_vec(vel);
             }
+            if (cells_qr[cur_idx].first-1 == i) cur_idx++;
         }
-    }else if (wrap_pbc && !triclinic){ // apply pbc in orthogonal case
-        std::cerr << "Applying pbc to a orthorombic system"<<std::endl;
-        for (ssize_t i=0;i<n_timesteps;++i) {
-            for (ssize_t iatom=0;iatom<natoms;++iatom) {
-                for (int idim=0;idim<3;++idim) {
-                    double l=static_cast<double*>(info_box.ptr)[i*9+idim*3+idim];
-                    double x=static_cast<double*>(info_pos.ptr)[i*3*natoms+iatom*3+idim];
-                    buffer_posizioni[i*3*natoms+iatom*3+idim]=x-round(x/l)*l;
-                }
-            }
-        }
-    } else if (wrap_pbc && triclinic) {
-        throw std::runtime_error("pbc for triclinic system not implemented");
     }
-
-
     buffer_tipi=static_cast<int*>(info_types.ptr);
     buffer_tipi_id=new int[natoms];
     get_ntypes(); //init type ids
@@ -194,6 +175,19 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
     //calculate center of mass velocity and position (without pbc)
     calc_cm_pos_vel(static_cast<double*>(info_pos.ptr),buffer_posizioni_cm);
     calc_cm_pos_vel(static_cast<double*>(info_vel.ptr),buffer_velocita_cm);
+
+
+    if (wrap_pbc) {
+        for (ssize_t i=0;i<n_timesteps;++i){
+            if (triclinic) {
+                pbc_wrap<true>(i);
+            } else {
+                pbc_wrap<false>(i);
+            }
+        }
+    }
+
+
 
     loaded_timesteps=n_timesteps;
 }

@@ -597,7 +597,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
         }
         lammps_to_internal(buffer_scatola+t*buffer_scatola_stride);
         //TODO: REMOVE THIS!!!
-        double *l=buffer_scatola+t*buffer_scatola_stride+3;
+        //double *l=buffer_scatola+t*buffer_scatola_stride+3;
         //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
         for (size_t itype=0;itype<ntypes*3;itype++){
@@ -617,12 +617,12 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
                 size_t id=id_map.at(round(id_));
                 size_t tipo=round(tipo_);
                 read_pos=Atomo::read_pos_vel(read_pos,buffer_posizioni + t*3*natoms+id*3,buffer_velocita+t*3*natoms+id*3);
-                if (wrap_pbc){
-                    //TODO: here call pbc routine!
-                    for (size_t icoord=0;icoord<3;icoord++){
-                        buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]*2/l[icoord])*2*l[icoord];
-                    }
-                }
+//                if (wrap_pbc){
+//                    //TODO: here call pbc routine!
+//                    for (size_t icoord=0;icoord<3;icoord++){
+//                        buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]*2/l[icoord])*2*l[icoord];
+//                    }
+//                }
                 if (buffer_tipi[id]!= tipo) {
                     std::cerr << "WARNING: atomic type for atom with id "<<id<<" is changing from "<<buffer_tipi[id]<< " to "<<tipo<<" !\n";
                     buffer_tipi[id]=tipo;
@@ -643,6 +643,15 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
         }
 
         delete [] pezzi;
+
+        //apply pbc
+        if (wrap_pbc) {
+            if (triclinic) {
+                pbc_wrap<true>(t);
+            } else {
+                pbc_wrap<false>(t);
+            }
+        }
 
         if(i+1<n_timesteps) timesteps[i+1]=timesteps[i]+offset;
         if(i+1>timestep_indicizzato) timestep_indicizzato=i+1;

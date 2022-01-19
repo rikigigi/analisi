@@ -222,6 +222,7 @@ pybind11_add_module(pyanalisi
 	pyanalisi/src/pyanalisi.cpp
 	)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
+set_property(TARGET pyanalisi PROPERTY CXX_STANDARD 17)
 endif()
 endif()
 

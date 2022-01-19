@@ -171,11 +171,13 @@ public:
         double x0[3];
         s.middle(x0);
         for (size_t iatom=0;iatom<natoms;++iatom) {
-            double x[3];
             double *xa=buffer_posizioni+idx*natoms*3+iatom*3;
-            minImage_triclinic<TRICLINIC>(x0,xa,c+3,x,c+6);
             for (int icoord=0;icoord<3;++icoord){
-                xa[icoord]=x[icoord]+x0[icoord];
+                xa[icoord]=xa[icoord]-x0[icoord];
+            }
+            minImage_triclinic<TRICLINIC>(xa,c+3,c+6);
+            for (int icoord=0;icoord<3;++icoord){
+                xa[icoord]=xa[icoord]+x0[icoord];
             }
         }
     }
@@ -225,7 +227,9 @@ public:
         return d2;
     }
     template <bool TRICLINIC>
-    static void minImage_triclinic(double * __restrict delta, const double * __restrict l_half, const double * __restrict xy_xz_yz) {
+    static void minImage_triclinic(double * __restrict delta,
+                                   const double * __restrict l_half,
+                                   const double * __restrict xy_xz_yz) {
         double xy;
         double xz;
         double yz;

@@ -7,3 +7,4 @@
 #include "test_lammps2020.cpp"
 #include "test_position_histogram.cpp"
 #include "test_sh.cpp"
+#include "test_trajectory.cpp"
