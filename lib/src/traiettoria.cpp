@@ -282,14 +282,13 @@ size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire
     if (timestep.triclinic()) {
         triclinic=true;
         buffer_scatola_stride=9;
+        box_format=BoxFormat::Lammps_triclinic;
     } else {
         triclinic=false;
         buffer_scatola_stride=6;
+        box_format=BoxFormat::Lammps_ortho;
     }
 
-    if (triclinic) {
-        std::cerr << "Triclinic cell is experimental" << std::endl;
-    }
     if (set_chunk){
         chunk=new Chunk[timestep.nchunk()];
     }

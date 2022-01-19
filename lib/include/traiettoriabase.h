@@ -302,6 +302,8 @@ public:
         return triclinic;
     }
 
+    size_t get_box_stride() const {return buffer_scatola_stride;}
+
 protected:
 
     double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)

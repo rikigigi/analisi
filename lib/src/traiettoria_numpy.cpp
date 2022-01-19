@@ -9,11 +9,11 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
                                      pybind11::buffer &&buffer_types_,
                                      pybind11::buffer &&buffer_box_,
                                      TraiettoriaBase::BoxFormat matrix_box,
-                                     bool pbc_wrap) :
-    buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_}
+                                     bool wrap_pbc_, bool save_rotation_matrix) :
+    buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_},rotation_matrix{nullptr}
 {
     loaded_timesteps=0;
-    wrap_pbc=pbc_wrap;
+    wrap_pbc=wrap_pbc_;
     pybind11::buffer_info info_pos{buffer_pos.request()};
     pybind11::buffer_info info_vel{buffer_vel.request()};
 
@@ -117,6 +117,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
             std::cerr << "Detected non orthorombic simulation cell. Using triclinic format"<<std::endl;
             velocities_allocated=true;
             buffer_velocita=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
+            if (save_rotation_matrix) rotation_matrix = new double[info_pos.shape[0]*9];
             stride=9;
         } else {
             stride=6;
@@ -124,8 +125,11 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
         buffer_scatola = new double[info_box.shape[0]*stride];
         ssize_t cur_idx=0;
         for (ssize_t i=0;i<n_timesteps;++i){
-            //copy everything in the box array and rotate velocities and positions
+            //copy everything in the box array
             cells_qr[cur_idx].second.set_lammps_cell(buffer_scatola+i*stride,triclinic);
+            if(rotation_matrix) {
+                cells_qr[cur_idx].second.getQ(rotation_matrix+9*i);
+            }
             if (cells_qr[cur_idx].first-1 == i) cur_idx++;
         }
     } else {
@@ -166,6 +170,8 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
             }
             if (cells_qr[cur_idx].first-1 == i) cur_idx++;
         }
+    } else if (wrap_pbc) {
+        std::memcpy(buffer_posizioni,info_pos.ptr,sizeof(double)*3*natoms*n_timesteps);
     }
     buffer_tipi=static_cast<int*>(info_types.ptr);
     buffer_tipi_id=new int[natoms];
@@ -276,5 +282,5 @@ Traiettoria_numpy::~Traiettoria_numpy() {
     delete [] cariche;
     delete [] buffer_posizioni_cm;
     delete [] buffer_velocita_cm;
-
+    delete [] rotation_matrix;
 }

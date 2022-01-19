@@ -32,7 +32,7 @@ def numpy_traj(filepath_tests):
 
 @pytest.fixture(scope='session')
 def analisi_traj(numpy_traj):
-    return pyanalisi.Trajectory(*numpy_traj,pyanalisi.BoxFormat.CellVectors, False)
+    return pyanalisi.Trajectory(*numpy_traj,pyanalisi.BoxFormat.CellVectors, False,False)
 
 @pytest.fixture(scope='session')
 def numpy_log(filepath_tests):

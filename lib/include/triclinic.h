@@ -68,6 +68,9 @@ public:
         std::cerr << q << std::endl << r << std::endl<<cell << std::endl<<qr<<std::endl;
         return (qr-cell.transpose()).cwiseAbs2().sum();
     }
+    void getQ(T * Q) const {
+        std::memcpy(Q,q.data(),sizeof (T)*9);
+    }
     bool isDiagonal() const {return is_diagonal;}
     const T * getCell() const {return cell.data();}
 private:
