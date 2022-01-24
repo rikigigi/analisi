@@ -86,7 +86,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
     buffer_scatola_stride = 6;
     triclinic=false;
     std::vector<std::pair<ssize_t,TriclinicLammpsCell<double> >> cells_qr; // first step, rotation matrix
-    if (matrix_box== BoxFormat::Lammps_ortho || matrix_box==BoxFormat::Lammps_triclinic){ //nothing to do; maybe here we could do a copy, but maybe not
+    if (matrix_box== BoxFormat::Lammps_ortho || matrix_box==BoxFormat::Lammps_triclinic){ //convert the format in the internal one, a little more convenient for min image algorithm
         if (matrix_box==BoxFormat::Lammps_triclinic) {
             buffer_scatola_stride = 9;
             triclinic=true;

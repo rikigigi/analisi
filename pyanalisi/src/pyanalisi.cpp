@@ -193,9 +193,74 @@ void gk(py::module & m, std::string typestr){
 
 }
 
+template <class Tk,class T>
+T& trajectory_common_interfaces(T&&t) {
+    return t.def("get_positions_copy", [](Tk & t) {
+        double * foo=nullptr;
+        if (t.posizioni(0,0) == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_nloaded_timesteps();
+        long nat=t.get_natoms();
+        foo = new double[nts*nat*3];
+        std::memcpy(foo,t.posizioni(0,0),sizeof (double)*nts*nat*3);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,nat,3}}, //shape
+            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
+            foo,
+            free_when_done
+         );})
+    .def("get_velocities_copy", [](Tk & t) {
+        double * foo=t.velocita(0,0);
+        if (foo == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_nloaded_timesteps();
+        long nat=t.get_natoms();
+        foo = new double[nts*nat*3];
+        std::memcpy(foo,t.velocita(0,0),sizeof (double)*nts*nat*3);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,nat,3}}, //shape
+            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
+            foo,
+            free_when_done
+         );})
+    .def("get_box_copy", [](Tk & t) {
+        double * foo=t.scatola(0);
+        if (foo == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_nloaded_timesteps();
+        long nb=t.get_box_stride();
+        foo = new double[nts*nb];
+        std::memcpy(foo,t.scatola(0),sizeof (double)*nts*nb);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,nb}}, //shape
+            {nb*sizeof (double),sizeof(double)},
+            foo,
+            free_when_done
+         );});
+}
+
 PYBIND11_MODULE(pyanalisi,m) {
 #ifdef BUILD_MMAP
-    py::class_<Traiettoria>(m,"Traj", py::buffer_protocol())
+    trajectory_common_interfaces<Traiettoria,py::class_<Traiettoria>>(
+    py::class_<Traiettoria>(m,"Traj", py::buffer_protocol()))
             .def(py::init<std::string>(),R"begend(
                  Parameters
                  ----------
@@ -271,66 +336,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                     foo,
                     free_when_done
                  );})
-    .def("get_positions_copy", [](Traiettoria & t) {
-        double * foo=nullptr;
-        if (t.posizioni(0,0) == nullptr) {
-            return pybind11::array_t<double>();
-        }
-        long nts=t.get_nloaded_timesteps();
-        long nat=t.get_natoms();
-        foo = new double[nts*nat*3];
-        std::memcpy(foo,t.posizioni(0,0),sizeof (double)*nts*nat*3);
-        pybind11::capsule free_when_done(foo, [](void *f) {
-         double *foo = reinterpret_cast<double *>(f);
-         std::cerr << "freeing memory @ " << f << "\n";
-         delete[] foo;
-        });
-        return pybind11::array_t<double>(
-        {{nts,nat,3}}, //shape
-            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
-            foo,
-            free_when_done
-         );})
-    .def("get_velocities_copy", [](Traiettoria & t) {
-        double * foo=t.velocita(0,0);
-        if (foo == nullptr) {
-            return pybind11::array_t<double>();
-        }
-        long nts=t.get_nloaded_timesteps();
-        long nat=t.get_natoms();
-        foo = new double[nts*nat*3];
-        std::memcpy(foo,t.velocita(0,0),sizeof (double)*nts*nat*3);
-        pybind11::capsule free_when_done(foo, [](void *f) {
-         double *foo = reinterpret_cast<double *>(f);
-         std::cerr << "freeing memory @ " << f << "\n";
-         delete[] foo;
-        });
-        return pybind11::array_t<double>(
-        {{nts,nat,3}}, //shape
-            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
-            foo,
-            free_when_done
-         );})
-    .def("get_box_copy", [](Traiettoria & t) {
-        double * foo=t.scatola(0);
-        if (foo == nullptr) {
-            return pybind11::array_t<double>();
-        }
-        long nts=t.get_nloaded_timesteps();
-        long nb=t.get_box_stride();
-        foo = new double[nts*nb];
-        std::memcpy(foo,t.scatola(0),sizeof (double)*nts*nb);
-        pybind11::capsule free_when_done(foo, [](void *f) {
-         double *foo = reinterpret_cast<double *>(f);
-         std::cerr << "freeing memory @ " << f << "\n";
-         delete[] foo;
-        });
-        return pybind11::array_t<double>(
-        {{nts,nb}}, //shape
-            {nb*sizeof (double),sizeof(double)},
-            foo,
-            free_when_done
-         );})
+
                 
     ;
 
@@ -366,7 +372,8 @@ PYBIND11_MODULE(pyanalisi,m) {
                  return number of timesteps read
 )begend");
 
-    py::class_<Traiettoria_numpy>(m,"Trajectory")
+    trajectory_common_interfaces<Traiettoria_numpy,py::class_<Traiettoria_numpy>>(
+    py::class_<Traiettoria_numpy>(m,"Trajectory"))
             .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Traiettoria_numpy::BoxFormat,bool,bool>(),R"lol(
                 Parameters
                 ----------
@@ -404,66 +411,6 @@ PYBIND11_MODULE(pyanalisi,m) {
         return pybind11::array_t<double>(
         {{nts,3,3}}, //shape
             {3*3*sizeof (double),3*sizeof(double),sizeof(double)},
-            foo,
-            free_when_done
-         );})
-    .def("get_positions_copy", [](Traiettoria_numpy & t) {
-        double * foo=t.posizioni(0,0);
-        if (foo == nullptr) {
-            return pybind11::array_t<double>();
-        }
-        long nts=t.get_ntimesteps();
-        long nat=t.get_natoms();
-        foo = new double[nts*nat*3];
-        std::memcpy(foo,t.posizioni(0,0),sizeof (double)*nts*nat*3);
-        pybind11::capsule free_when_done(foo, [](void *f) {
-         double *foo = reinterpret_cast<double *>(f);
-         std::cerr << "freeing memory @ " << f << "\n";
-         delete[] foo;
-        });
-        return pybind11::array_t<double>(
-        {{nts,nat,3}}, //shape
-            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
-            foo,
-            free_when_done
-         );})
-    .def("get_velocities_copy", [](Traiettoria_numpy & t) {
-        double * foo=t.velocita(0,0);
-        if (foo == nullptr) {
-            return pybind11::array_t<double>();
-        }
-        long nts=t.get_ntimesteps();
-        long nat=t.get_natoms();
-        foo = new double[nts*nat*3];
-        std::memcpy(foo,t.velocita(0,0),sizeof (double)*nts*nat*3);
-        pybind11::capsule free_when_done(foo, [](void *f) {
-         double *foo = reinterpret_cast<double *>(f);
-         std::cerr << "freeing memory @ " << f << "\n";
-         delete[] foo;
-        });
-        return pybind11::array_t<double>(
-        {{nts,nat,3}}, //shape
-            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
-            foo,
-            free_when_done
-         );})
-    .def("get_box_copy", [](Traiettoria_numpy & t) {
-        double * foo=t.scatola(0);
-        if (foo == nullptr) {
-            return pybind11::array_t<double>();
-        }
-        long nts=t.get_ntimesteps();
-        long nb=t.get_box_stride();
-        foo = new double[nts*nb];
-        std::memcpy(foo,t.scatola(0),sizeof (double)*nts*nb);
-        pybind11::capsule free_when_done(foo, [](void *f) {
-         double *foo = reinterpret_cast<double *>(f);
-         std::cerr << "freeing memory @ " << f << "\n";
-         delete[] foo;
-        });
-        return pybind11::array_t<double>(
-        {{nts,nb}}, //shape
-            {nb*sizeof (double),sizeof(double)},
             foo,
             free_when_done
          );})

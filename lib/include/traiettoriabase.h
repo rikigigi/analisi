@@ -164,6 +164,10 @@ public:
     double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; throw std::runtime_error("Cannot get charge for a type that does not exists!\n");}
 
 
+    /**
+      * this functions wraps the positions around the center of the cell. Positions if the cell is not orthorombic may still be outside the cell,
+      * but they are more compact making the min image algorithm more efficient
+    **/
     template<bool TRICLINIC>
     void pbc_wrap(ssize_t idx) {
         double * c = buffer_scatola+buffer_scatola_stride*idx;
