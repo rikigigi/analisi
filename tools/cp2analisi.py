@@ -184,7 +184,7 @@ if __name__ == "__main__" :
 	print('Reading {}...'.format( prefix))
 	data = read_file_cp_pos_vel('{}'.format( prefix),natoms, nstep = nstep, skip=skip , every=every)
 	print('Done.')
-	analisi_traj = pyanalisi.Trajectory(data['pos'], data['vel'], types, data['cell'],pyanalisi.BoxFormat.CellVectors, args.wrap)
+	analisi_traj = pyanalisi.Trajectory(data['pos'], data['vel'], types, data['cell'],pyanalisi.BoxFormat.CellVectors, args.wrap, False)
 	print('Writing output files...')
 	analisi_traj.write_lammps_binary('{}.bin'.format( prefix), 0, -1)
 	print('Done.')
