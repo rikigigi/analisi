@@ -24,9 +24,9 @@
 struct Cell_ {
     const double xlo,ylo,zlo,lxhalf,lyhalf,lzhalf, xy,xz,yz;
     void middle(double * c) const {
-        c[0]=xlo+lxhalf+(xy+xz)/2;
-        c[1]=ylo+lyhalf+yz/2;
-        c[2]=zlo+lzhalf;
+        c[0]=lxhalf;
+        c[1]=lyhalf;
+        c[2]=lzhalf;
     }
 };
 template <bool TRICLINIC>
@@ -165,7 +165,7 @@ public:
 
 
     /**
-      * this functions wraps the positions around the center of the cell. Positions if the cell is not orthorombic may still be outside the cell,
+      * this functions wraps the positions around the center of the orthorombic cell. Positions if the cell is not orthorombic will be outside the cell,
       * but they are more compact making the min image algorithm more efficient
     **/
     template<bool TRICLINIC>

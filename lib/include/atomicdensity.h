@@ -38,11 +38,11 @@ private:
         size_t idxs[3];
         for (unsigned int icoord=0;icoord<3;++icoord){
             double b=l[3+icoord]*2;
-            double l_=pos[icoord]/b-std::floor(pos[icoord]/b);
+            double l_=pos[icoord]/b;//-std::floor(pos[icoord]/b);
             if (l_<0 || l_>=1) {
                 ok=false;
                 std::cerr << l_ << " b="<<b<<" coord="<<pos[icoord]<<std::endl;
-                throw std::runtime_error("Bug: wrong pbc wrapping");
+                throw std::runtime_error("Error: wrong pbc wrapping");
                 return 0;
             } else {
                 ok=true;
