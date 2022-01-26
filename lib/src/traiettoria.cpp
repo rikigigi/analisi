@@ -592,7 +592,7 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
         timesteps_lammps[i]=intestazione.timestep();
         memcpy(buffer_scatola+t*buffer_scatola_stride,intestazione.scatola(),6*sizeof (double));
         if (triclinic) {
-            memcpy(buffer_scatola+t*buffer_scatola_stride,intestazione.xy_xz_yz(),3*sizeof (double));
+            memcpy(buffer_scatola+t*buffer_scatola_stride+6,intestazione.xy_xz_yz(),3*sizeof (double));
         }
         lammps_to_internal(buffer_scatola+t*buffer_scatola_stride);
         //TODO: REMOVE THIS!!!
