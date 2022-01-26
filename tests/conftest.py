@@ -41,7 +41,7 @@ def triclinic_traj():
     c=uf.curved(300,1,0.1,-0.13,2*np.pi*40)
     trajc=pyanalisi.Trajectory(c.reshape([1,-1,3]),
                   np.zeros(c.shape).reshape([1,-1,3]),
-                  np.array([0 for i in range(c.shape[0])],dtype=np.int32),
+                  np.array([0 for i in range(c.shape[0])],dtype='i'),
                   uf.cell_traj(a1,a2,a3,1),
                   pyanalisi.BoxFormat.CellVectors, 
                   False,
