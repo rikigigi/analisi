@@ -114,44 +114,6 @@ public:
         c[1]=c[0]+t*2;
     }
 
-    int get_ntypes (){
-        if (ntypes==0) {
-            types.clear();
-            min_type=buffer_tipi[0];
-            max_type=buffer_tipi[0];
-            bool *duplicati = new bool[natoms];
-            for (size_t i=0;i<natoms;i++)
-                duplicati[i]=false;
-            for (size_t i=0;i<natoms;i++) {
-                if (!duplicati[i]) {
-                    if (buffer_tipi[i]>max_type)
-                        max_type=buffer_tipi[i];
-                    if (buffer_tipi[i]<min_type)
-                        min_type=buffer_tipi[i];
-                    for (size_t j=i+1;j<natoms;j++){
-                        if (buffer_tipi[j]==buffer_tipi[i]){
-                            duplicati[j]=true;
-                        }
-                    }
-                    types.push_back(buffer_tipi[i]);
-                    ntypes++;
-                }
-            }
-            std::sort(types.begin(),types.end());
-            type_map.clear();
-            for (unsigned int i=0;i<types.size(); i++){
-                type_map[types[i]]=i;
-            }
-            delete [] duplicati;
-            masse = new double [ntypes];
-            cariche = new double [ntypes];
-
-            for (size_t i=0;i<natoms;i++) {
-                buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
-            }
-        }
-        return ntypes;
-    }
     double * posizioni_inizio(){return buffer_posizioni;}
     double * velocita_inizio(){return buffer_velocita;}
     int get_type_min() {return min_type;}
@@ -307,6 +269,12 @@ public:
     }
 
     size_t get_box_stride() const {return buffer_scatola_stride;}
+
+    //functions that are compiled in cpp file
+    void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);
+    int get_ntypes ();
+
+
 
 protected:
 

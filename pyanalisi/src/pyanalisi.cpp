@@ -195,7 +195,15 @@ void gk(py::module & m, std::string typestr){
 
 template <class Tk,class T>
 T& trajectory_common_interfaces(T&&t) {
-    return t.def("get_positions_copy", [](Tk & t) {
+    return t.def("write_lammps_binary",&Tk::dump_lammps_bin_traj,
+R"lol(
+    Parameters
+    ----------
+    file name (string)
+    starting timestep (int)
+    end timestep (int)  -- if < 0 it will dump all the trajectory
+)lol")
+     .def("get_positions_copy", [](Tk & t) {
         double * foo=nullptr;
         if (t.posizioni(0,0) == nullptr) {
             return pybind11::array_t<double>();
@@ -388,13 +396,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def("getNtimesteps",&Traiettoria_numpy::get_ntimesteps,R"begend(
                  returns number of timesteps
 )begend")
-            .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj,R"lol(
-                 Parameters
-                 ----------
-                 file name (string)
-                 starting timestep (int)
-                 end timestep (int)  -- if < 0 it will dump all the trajectory
-)lol")
+
             .def("get_rotation_matrix", [](Traiettoria_numpy & t) {
         double * foo=t.get_rotation_matrix(0);
         if (foo == nullptr) {

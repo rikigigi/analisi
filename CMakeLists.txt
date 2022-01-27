@@ -147,6 +147,7 @@ set (ANALISI_LIB
     lib/src/specialfunctions.cpp
     lib/src/sphericalcorrelations.cpp
     lib/src/atomicdensity.cpp
+    lib/src/traiettoriabase.cpp
     )
 
 if (BUILD_MMAP)

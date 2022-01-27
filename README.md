@@ -377,6 +377,15 @@ analisi_traj.get_lammps_type()
 ```
 don't call them too often since every time a new numpy array of ints is created
 
+### Common functions
+
+Some functions are common to both the LAMMPS and the numpy interfaces:
+
+ - `get_positions_copy()` that returns a copy of the loaded positions
+ - `get_velocities_copy()` that returns a copy of the loaded velocities
+ - `get_box_copy()` that returns a copy of the cell data stored in the intenal format
+ - `write_lammps_binary(fname, start, stop)` that writes a dump of the selected part of the trajectory in the lammps format. This is useful also in the lammps interface for extracting a part of the full trajectory.
+
 ### Creating a time series object
 
 Before analyzing a time series, for example to calculate the integral of the autocorrelation function, it is necessary to create a time series object. This object will hold the data that a different function can analyze. It is created with the following:

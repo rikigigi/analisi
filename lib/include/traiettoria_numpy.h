@@ -26,7 +26,6 @@ public:
     template <bool SAFE=true>
     double * velocita_cm(const int & timestep, const int & tipo){return buffer_velocita_cm+timestep*ntypes*3 + tipo*3;}
     double *scatola_last(){return buffer_scatola + (n_timesteps-1)*buffer_scatola_stride; }
-    void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);
     double * get_rotation_matrix(size_t t){return rotation_matrix+9*t;}
     using TraiettoriaBase::BoxFormat;
 private:
