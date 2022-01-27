@@ -21,10 +21,7 @@ struct ShFixture{
     DataRegression<double> data;
     double  workspace[(l+1)*(l+1)], cheby[(l+1)*2];
     void calc(int timestep, double * res){
-	double l_[3]={traj.traj.scatola(timestep)[1]-traj.traj.scatola(timestep)[0],
-                     traj.traj.scatola(timestep)[3]-traj.traj.scatola(timestep)[2],
-                     traj.traj.scatola(timestep)[5]-traj.traj.scatola(timestep)[4]};
-	    sh.calc(timestep, res, workspace,cheby,l_);
+        sh.calc(timestep, res, workspace,cheby);
     }
     size_t new_res_array_size(){
 	return (l+1)*(l+1)*natoms*nbin*ntypes;

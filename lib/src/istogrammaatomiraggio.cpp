@@ -39,9 +39,6 @@ void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
         histth[i]=new std::map<unsigned int, unsigned int> [ntypes];
 
     for (unsigned int itimestep=tstart;itimestep<tstop;itimestep+=skip){
-        double l[3]={traiettoria->scatola(itimestep)[1]-traiettoria->scatola(itimestep)[0],
-                     traiettoria->scatola(itimestep)[3]-traiettoria->scatola(itimestep)[2],
-                     traiettoria->scatola(itimestep)[5]-traiettoria->scatola(itimestep)[4]};
         for (unsigned int ith=0;ith<nthreads;ith++) {
             threads.push_back(std::thread([&,ith](){
                 unsigned int primo= natomith*ith;
@@ -54,7 +51,7 @@ void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
                     for (unsigned int j=0;j<ntypes;j++)
                         cont[j]=0;
                     for (unsigned int jatom=0;jatom<natoms;jatom++) {
-                        if (   traiettoria->d2_minImage(iatom,jatom,itimestep,l)    <   r2)
+                        if (   traiettoria->d2_minImage(iatom,jatom,itimestep,itimestep)    <   r2)
                             cont[traiettoria->get_type(jatom)]++;
                     }
                     for (unsigned int j=0;j<ntypes;j++)

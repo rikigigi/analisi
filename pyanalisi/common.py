@@ -22,17 +22,20 @@ if HAS_QECPWORKCHAIN:
     from aiida_QECpWorkChain import write_cp_traj
 
 import numpy as np
-import matplotlib as mpl
-mpl.rcParams['agg.path.chunksize'] = 1000000
-import matplotlib.pyplot as plt
-import matplotlib.colors as pltc
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+try:
+   import matplotlib as mpl
+   mpl.rcParams['agg.path.chunksize'] = 1000000
+   import matplotlib.pyplot as plt
+   import matplotlib.colors as pltc
+   from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+except:
+   print('WARNING: cannot import matplotlib')
 import pickle
 
 try:
     import thermocepstrum as tc
 except:
-    print('WARINING: cannot import thermocepstrum')
+    print('WARNING: cannot import thermocepstrum')
 
 
 import pyanalisi.pyanalisi as pa
@@ -106,8 +109,8 @@ def pyanalisi_wrapper(Class,traj,*args):
         raise RuntimeError(f"Wrapper for trajectory class '{traj.__name__}' not implemented")
         
 
-def atomic_density(atraj,cell=np.array([[1,0,0],[0,1,0],[0,0,1]]),dr=0.1):
-    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(cell/dr),dtype=int).diagonal().tolist(),1,1)
+def atomic_density(atraj,dr=0.1):
+    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(atraj.get_box_copy()[0][3:6]/dr),dtype=int).tolist(),1,1)
     hist.reset(atraj.getNtimesteps())
     hist.calculate(0)
     res=np.array(hist)
@@ -303,13 +306,14 @@ def analyze(traj,traj_unw,start,stop,nthreads=4,
     print('all done',flush=True)
     return msd, gofr, sh
 
-import scipy as sp
-import scipy.optimize 
+try:
+    import scipy as sp
+    import scipy.optimize 
+except:
+    print('WARNING: cannot import scipy')
 import math
 
-np.ALLOW_THREADS=4
 
-sp.ALLOW_THREADS=4
 
 def _int_gaussian(a,b):
     return a*(np.pi/b)**0.5
@@ -727,14 +731,44 @@ def density_field(*ress):
     _w_z=0.05
     _z  =0.14
     _sphere=False
+    global _rot_a
+    global _rot_b
+    global _rot_c
+    global _rot_Q
+    _rot_a = 0.0 
+    _rot_b = 0.0
+    _rot_c = 0.0
+    _rot_Q = np.eye(4)
+ 
+    from math import cos,sin
+    def rotation(a,b,c):
+       x=np.array([[1, 0,0],
+                   [0, cos(a), -sin(a)],
+                   [0,sin(a),cos(a)]])
+       y=np.array([[cos(b),0,sin(b)],
+                  [0,1,0],
+                  [-sin(b),0,cos(b)]])
+       z=np.array([[cos(c),-sin(c),0],
+                   [sin(c),cos(c),0],
+                   [0,0,1]])
+       xyz=x.dot(y.dot(z))
+       r=np.eye(4)
+       r[:3,:3]=xyz
+       return r
+    def rotate_plane(Q,ps):
+       prs=[]
+       for p in ps:
+          p=np.array(p)
+          prs.append(Q.dot(p).tolist())
+       return prs
     def global_clipping_planes():
         if _sphere:
             return sph_tangents_cover(_w_x,7,_x,_y,_z)
         else:
-            return [[1,0,0,_w_x-_x],[-1,0,0,_w_x+_x],
+            return rotate_plane(_rot_Q,[[1,0,0,_w_x-_x],[-1,0,0,_w_x+_x],
                 [0,1,0,_w_y-_y],[0,-1,0,_w_y+_y],
                 [0,0,1,_w_z-_z],[0,0,-1,_w_z+_z]
-               ]
+               ])
     button=widgets.Button(description='Center on 1')
     @button.on_click
     def button1_on_click(b):
@@ -753,6 +787,28 @@ def density_field(*ress):
         global _sphere
         _sphere=spherical
         plot.clipping_planes=global_clipping_planes()
+    @interact(a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(a):
+        global _rot_a
+        global _rot_Q
+        _rot_a=a
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+    @interact(b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(b):
+        global _rot_b
+        global _rot_Q
+        _rot_b=b
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+    @interact(c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(c):
+        global _rot_c
+        global _rot_Q
+        _rot_c=c
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+
     @interact(x=widgets.FloatSlider(value=0.14,min=-.5,max=.5,step=0.01))
     def g(x):
         global _x

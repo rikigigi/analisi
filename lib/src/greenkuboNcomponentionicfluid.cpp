@@ -20,11 +20,7 @@
 #include "cronometro.h"
 #include "config.h"
 
-#ifdef HAVEeigen3EigenDense
-#include <eigen3/Eigen/Dense>
-#else
-#include <Eigen/Dense>
-#endif
+#include "eigen_include.h"
 
 #ifdef USE_MPI
 #include "mp.h"

@@ -66,7 +66,7 @@ struct Intestazione_timestep {
 struct Intestazione_timestep_triclinic {
     bigint timestep;
     bigint natoms;
-    int triclinic;
+    int triclinic=1;
     int condizioni_al_contorno[6];
     double scatola[6];
     double xy_xz_yz[3];
@@ -78,10 +78,25 @@ struct Intestazione_timestep_triclinic {
         file=read_and_advance(file,&triclinic);
         file=read_and_advance(file, condizioni_al_contorno,6);
         file=read_and_advance(file,scatola,6);
-        file=read_and_advance(file,xy_xz_yz,3);
+        if (triclinic) file=read_and_advance(file,xy_xz_yz,3);
         file=read_and_advance(file,&dimensioni_riga_output);
         file=read_and_advance(file,&nchunk);
         return file;
+    }
+    void write(std::ofstream & out) {
+        out.write((char*) &timestep, sizeof (bigint));
+        out.write((char*) &natoms, sizeof(bigint));
+        out.write((char*) &triclinic, sizeof(int));
+        out.write((char*) condizioni_al_contorno, sizeof(int)*6);
+        out.write((char*) scatola, sizeof(double)*6);
+        if (triclinic) out.write((char*) xy_xz_yz, sizeof(double)*3);
+        out.write((char*)&dimensioni_riga_output, sizeof(int));
+        out.write((char*)&nchunk, sizeof(int));
+    }
+    static int get_triclinic(char * file) {
+        int triclinic;
+        read_and_advance(file+sizeof (timestep)+sizeof (natoms),&triclinic);
+        return triclinic;
     }
 };
 
@@ -108,7 +123,7 @@ struct Atomo {
         return begin;
     }
 };
-//questo non potrà essere puntato direttamente ad una posizione nel file...
+
 struct Intestazione_timestep_new : public Intestazione_timestep_triclinic {
     bigint magic_string_len;
     char * magic_string;
@@ -149,7 +164,7 @@ current_ptr=read_and_advance(current_ptr,what,n);
         READ_ADV_A(condizioni_al_contorno,6);
         READ_ADV_A(scatola,6);
         if(triclinic) {
-            READ_ADV_A(xy_xz_yz,6);
+            READ_ADV_A(xy_xz_yz,3);
         }
         READ_ADV(dimensioni_riga_output);
         if (revision > 0x0001) {
@@ -230,6 +245,18 @@ public:
     select_var(timestep,bigint)
     select_var(scatola, double *)
     select_var(dimensioni_riga_output,int)
+
+    double * xy_xz_yz() {
+        switch (type) {
+        case Type::Old:
+            return nullptr;
+        case Type::Old_triclinic:
+            return intestazione_old_tri.xy_xz_yz;
+        case Type::F2020:
+            return intestazione_new.xy_xz_yz;
+        }
+        throw std::runtime_error("Undefined binary type");
+    }
 
     ~TimestepManager () {
     }

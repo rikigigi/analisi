@@ -193,9 +193,82 @@ void gk(py::module & m, std::string typestr){
 
 }
 
+template <class Tk,class T>
+T& trajectory_common_interfaces(T&&t) {
+    return t.def("write_lammps_binary",&Tk::dump_lammps_bin_traj,
+R"lol(
+    Parameters
+    ----------
+    file name (string)
+    starting timestep (int)
+    end timestep (int)  -- if < 0 it will dump all the trajectory
+)lol")
+     .def("get_positions_copy", [](Tk & t) {
+        double * foo=nullptr;
+        if (t.posizioni(0,0) == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_nloaded_timesteps();
+        long nat=t.get_natoms();
+        foo = new double[nts*nat*3];
+        std::memcpy(foo,t.posizioni(0,0),sizeof (double)*nts*nat*3);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,nat,3}}, //shape
+            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
+            foo,
+            free_when_done
+         );})
+    .def("get_velocities_copy", [](Tk & t) {
+        double * foo=t.velocita(0,0);
+        if (foo == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_nloaded_timesteps();
+        long nat=t.get_natoms();
+        foo = new double[nts*nat*3];
+        std::memcpy(foo,t.velocita(0,0),sizeof (double)*nts*nat*3);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,nat,3}}, //shape
+            {3*nat*sizeof (double),3*sizeof(double),sizeof(double)},
+            foo,
+            free_when_done
+         );})
+    .def("get_box_copy", [](Tk & t) {
+        double * foo=t.scatola(0);
+        if (foo == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_nloaded_timesteps();
+        long nb=t.get_box_stride();
+        foo = new double[nts*nb];
+        std::memcpy(foo,t.scatola(0),sizeof (double)*nts*nb);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,nb}}, //shape
+            {nb*sizeof (double),sizeof(double)},
+            foo,
+            free_when_done
+         );});
+}
+
 PYBIND11_MODULE(pyanalisi,m) {
 #ifdef BUILD_MMAP
-    py::class_<Traiettoria>(m,"Traj", py::buffer_protocol())
+    trajectory_common_interfaces<Traiettoria,py::class_<Traiettoria>>(
+    py::class_<Traiettoria>(m,"Traj", py::buffer_protocol()))
             .def(py::init<std::string>(),R"begend(
                  Parameters
                  ----------
@@ -271,6 +344,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                     foo,
                     free_when_done
                  );})
+
                 
     ;
 
@@ -306,112 +380,48 @@ PYBIND11_MODULE(pyanalisi,m) {
                  return number of timesteps read
 )begend");
 
-#ifdef BUILD_MMAP
-    py::class_<CorrelatoreSpaziale>(m,"_CurrentCalc", py::buffer_protocol())
-            .def(py::init<Traiettoria*,std::vector< std::array<double,3> >,double,unsigned int,unsigned int,bool>(),R"begend(
-                 calculates  \dot \tilde e(k) / |k|  (can be useful to define some new current)
-)begend")
-            .def("reset",&CorrelatoreSpaziale::reset,R"begend()begend")
-            .def("calculate",&CorrelatoreSpaziale::calcola,R"begend()begend")
-            .def("printRes",[](CorrelatoreSpaziale & c){
-                c.print(std::cout);
-            },R"begend()begend")
-            .def("__enter__",[](CorrelatoreSpaziale & c) -> CorrelatoreSpaziale & { return c;} )
-            .def("__exit__",[](CorrelatoreSpaziale & c, py::object * exc_type, py::object * exc_value, py::object * traceback){})
-            .def_buffer([](CorrelatoreSpaziale & c) -> py::buffer_info{
-                return py::buffer_info(
-                c.accesso_lista(),                               /* Pointer to buffer */
-                sizeof(double),                          /* Size of one scalar */
-                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
-                c.get_shape().size(),                                      /* Number of dimensions */
-                c.get_shape(),                 /* Buffer dimensions */
-                c.get_stride()
-        );
-            });
-
-
-    py::class_<HeatC>(m,"_HeatCurrentCalc", py::buffer_protocol())
-            .def(py::init<Traiettoria*,double,unsigned int,unsigned int>(),R"begend(
-                 calculates  something ill defined
-)begend")
-            .def("reset",&HeatC::reset,R"begend()begend")
-            .def("calculate",&HeatC::calcola,R"begend()begend")
-            .def("__enter__",[](HeatC & c) -> HeatC & { return c;} )
-            .def("__exit__",[](HeatC & c, py::object * exc_type, py::object * exc_value, py::object * traceback){})
-            .def_buffer([](HeatC & c) -> py::buffer_info{
-                return py::buffer_info(
-                c.accesso_lista(),                               /* Pointer to buffer */
-                sizeof(double),                          /* Size of one scalar */
-                py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
-                c.get_shape().size(),                                      /* Number of dimensions */
-                c.get_shape(),                 /* Buffer dimensions */
-                c.get_stride()
-        );
-            });
-
-
-    py::class_<CenterDiff>(m,"_CenterDiff", py::buffer_protocol())
-            .def(py::init<Traiettoria *,unsigned int,unsigned int, unsigned int,bool,bool>())
-            .def("reset",&CenterDiff::reset)
-            .def("getNumberOfExtraTimestepsNeeded", &CenterDiff::numeroTimestepsOltreFineBlocco)
-            .def("calculate", & CenterDiff::calcola)
-            .def("setStartingCenter",&CenterDiff::set_starting_center)
-            .def_buffer([](CenterDiff & c) -> py::buffer_info {
-                return py::buffer_info(
-                            c.accesso_lista(),
-                            sizeof(double),
-                            py::format_descriptor<double>::format(),
-                            c.get_shape().size(),
-                            c.get_shape(),
-                            c.get_stride()
-                );
-            })
-            .def("__enter__",[](CenterDiff & c) -> CenterDiff & { return c;} )
-            .def("__exit__",[](CenterDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
-
-
-    py::class_<CenterOfMassDiff>(m,"_CenterOfMassDiff", py::buffer_protocol())
-            .def(py::init<Traiettoria *,unsigned int,unsigned int>())
-            .def("reset",&CenterOfMassDiff::reset)
-            .def("getNumberOfExtraTimestepsNeeded", &CenterOfMassDiff::numeroTimestepsOltreFineBlocco)
-            .def("calculate", & CenterOfMassDiff::calcola)
-            .def("setStartingCenter",&CenterOfMassDiff::set_starting_center)
-            .def("setZeroThreshold",&CenterOfMassDiff::set_zero_threshold)
-            .def("getResetError",&CenterOfMassDiff::get_reset_error)
-            .def_buffer([](CenterOfMassDiff & c) -> py::buffer_info {
-                return py::buffer_info(
-                            c.accesso_lista(),
-                            sizeof(double),
-                            py::format_descriptor<double>::format(),
-                            c.get_shape().size(),
-                            c.get_shape(),
-                            c.get_stride()
-                );
-            })
-            .def("__enter__",[](CenterOfMassDiff & c) -> CenterOfMassDiff & { return c;} )
-            .def("__exit__",[](CenterOfMassDiff & c, py::object * exc_type, py::object * exc_value, py::object * traceback){});
-#endif
-
-    py::class_<Traiettoria_numpy>(m,"Trajectory")
-            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,bool,bool>(),R"lol(
+    trajectory_common_interfaces<Traiettoria_numpy,py::class_<Traiettoria_numpy>>(
+    py::class_<Traiettoria_numpy>(m,"Trajectory"))
+            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Traiettoria_numpy::BoxFormat,bool,bool>(),R"lol(
                 Parameters
                 ----------
                 positions (double) python array (ntimesteps,natoms,3)
                 velocities (double) python array (ntimesteps,natoms,3)
                 types (int) python array (natoms)
-                lattice vectors (double) (ntimestep,3,3) -- currently only diagonal matrices are supported
+                lattice vectors (double) (ntimestep,3,3)
+                wrap atoms inside the cell using pbc
+                save rotation matrix if triclinic format is used and a rotation is needed
 )lol")
 
             .def("getNtimesteps",&Traiettoria_numpy::get_ntimesteps,R"begend(
                  returns number of timesteps
 )begend")
-            .def("write_lammps_binary",&Traiettoria_numpy::dump_lammps_bin_traj,R"lol(
-                 Parameters
-                 ----------
-                 file name (string)
-                 starting timestep (int)
-                 end timestep (int)  -- if < 0 it will dump all the trajectory
-)lol");
+
+            .def("get_rotation_matrix", [](Traiettoria_numpy & t) {
+        double * foo=t.get_rotation_matrix(0);
+        if (foo == nullptr) {
+            return pybind11::array_t<double>();
+        }
+        long nts=t.get_ntimesteps();
+        foo = new double[nts*9];
+        std::memcpy(foo,t.get_rotation_matrix(0),sizeof (double)*nts*9);
+        pybind11::capsule free_when_done(foo, [](void *f) {
+         double *foo = reinterpret_cast<double *>(f);
+         std::cerr << "freeing memory @ " << f << "\n";
+         delete[] foo;
+        });
+        return pybind11::array_t<double>(
+        {{nts,3,3}}, //shape
+            {3*3*sizeof (double),3*sizeof(double),sizeof(double)},
+            foo,
+            free_when_done
+         );})
+    ;
+    py::enum_<Traiettoria_numpy::BoxFormat>(m, "BoxFormat", py::arithmetic())
+            .value("Invalid", Traiettoria_numpy::BoxFormat::Invalid)
+            .value("CellVectors", Traiettoria_numpy::BoxFormat::Cell_vectors)
+            .value("LammpsOrtho", Traiettoria_numpy::BoxFormat::Lammps_ortho)
+            .value("LammpsTriclinic", Traiettoria_numpy::BoxFormat::Lammps_triclinic);
 
 #ifdef BUILD_MMAP
     define_atomic_traj<Traiettoria>(m,"_lammps");

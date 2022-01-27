@@ -7,10 +7,19 @@ then
    exit -1
 fi
 
+CP="cp -v"
+
+if [ -z "$1" ] 
+then
+   echo "copying the files"
+else
+   CP="$1"
+fi
+
 mkdir -p "$SP_DIR/pyanalisi"
-cp -v "$BUILD_DIR"/pyanalisi*.so "$SP_DIR/pyanalisi/"
+$CP "$BUILD_DIR"/pyanalisi*.so "$SP_DIR/pyanalisi/"
 for f in common.py __init__.py
 do
-cp -v "$SOURCE_DIR/pyanalisi/$f" "$SP_DIR/pyanalisi/"
+$CP "$SOURCE_DIR/pyanalisi/$f" "$SP_DIR/pyanalisi/"
 done
 

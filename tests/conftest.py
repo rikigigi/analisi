@@ -2,6 +2,7 @@ import pytest
 import os
 import pyanalisi
 
+
 import faulthandler
 faulthandler.enable()
 
@@ -31,8 +32,25 @@ def numpy_traj(filepath_tests):
     return [pos, vel, types, box]
 
 @pytest.fixture(scope='session')
+def triclinic_traj():
+    import utilfunc as uf
+    import numpy as np
+    a1=[1,1,0]
+    a2=[0,1,1]
+    a3=[1,0,1]
+    c=uf.curved(300,1,0.1,-0.13,2*np.pi*40)
+    trajc=pyanalisi.Trajectory(c.reshape([1,-1,3]),
+                  np.zeros(c.shape).reshape([1,-1,3]),
+                  np.array([0 for i in range(c.shape[0])],dtype='i'),
+                  uf.cell_traj(a1,a2,a3,1),
+                  pyanalisi.BoxFormat.CellVectors, 
+                  False,
+                  True)
+    return trajc
+
+@pytest.fixture(scope='session')
 def analisi_traj(numpy_traj):
-    return pyanalisi.Trajectory(*numpy_traj,True, False)
+    return pyanalisi.Trajectory(*numpy_traj,pyanalisi.BoxFormat.CellVectors, False,False)
 
 @pytest.fixture(scope='session')
 def numpy_log(filepath_tests):

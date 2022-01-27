@@ -3,6 +3,8 @@
 #include "msd.h"
 #include "test_fixtures.h"
 
+
+
 template<int NTH>
 struct MsdFixture {
     MsdFixture() : traj{false,true},
@@ -44,6 +46,16 @@ struct GofrFixture {
     }
     size_t size(){auto s= gofr.get_shape(); return s[0]*s[1]*s[2];}
 };
+
+BOOST_AUTO_TEST_CASE(test_cell_permutator){
+    double d[6]={1,2,3,4,5,6};
+    double e[6]={1,2,3,4,5,6};
+    Traiettoria::lammps_to_internal(d);
+    Traiettoria::internal_to_lammps(d);
+    for (int i=0;i<6;++i){
+        BOOST_TEST(d[i]==e[i]);
+    }
+}
 
 #define TEST_MULTIT(N)\
 using MsdFixture_ ## N = MsdFixture<N>;\

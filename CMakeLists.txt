@@ -147,6 +147,7 @@ set (ANALISI_LIB
     lib/src/specialfunctions.cpp
     lib/src/sphericalcorrelations.cpp
     lib/src/atomicdensity.cpp
+    lib/src/traiettoriabase.cpp
     )
 
 if (BUILD_MMAP)
@@ -194,37 +195,19 @@ endif()
 if (BUILD_TESTS)
 add_library(test_fixtures INTERFACE)
 target_include_directories(test_fixtures INTERFACE tests/src/)
-add_executable(test_sh tests/src/test_sh.cpp)
 if (SYSTEM_BOOST)
 set(BOOST_LIB "")
 else()
 set(BOOST_LIB boost)
 endif()
-target_link_libraries(test_sh ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
-add_executable(test_2loop tests/src/test_double_loop_splitter.cpp)
-target_link_libraries(test_2loop ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
-add_executable(test_calcBuffer tests/src/test_calc_buffer.cpp)
-target_link_libraries(test_calcBuffer ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
-add_executable(test_gk tests/src/test_gk.cpp)
-target_link_libraries(test_gk ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
-add_executable(test_ph tests/src/test_position_histogram.cpp)
-target_link_libraries(test_ph ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
-add_executable(test_lammps2020 tests/src/test_lammps2020.cpp)
-target_link_libraries(test_lammps2020 ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
-set_property(TARGET test_2loop PROPERTY CXX_STANDARD 17)
-set_property(TARGET test_calcBuffer PROPERTY CXX_STANDARD 17)
-set_property(TARGET test_gk PROPERTY CXX_STANDARD 17)
-set_property(TARGET test_sh PROPERTY CXX_STANDARD 17)
-set_property(TARGET test_ph PROPERTY CXX_STANDARD 17)
-set_property(TARGET test_lammps2020 PROPERTY CXX_STANDARD 17)
+
+add_executable(all_tests tests/src/all_tests.cpp)
+target_link_libraries(all_tests ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
+
+set_property(TARGET all_tests PROPERTY CXX_STANDARD 17)
 
 enable_testing()
-add_test(NAME sh COMMAND test_sh)
-add_test(NAME double_loop_splitter COMMAND test_2loop)
-add_test(NAME calcBuffer COMMAND test_calcBuffer)
-add_test(NAME gk COMMAND test_gk)
-add_test(NAME atomic_density COMMAND test_ph)
-add_test(NAME msd_gofrt_2021 COMMAND test_lammps2020)
+add_test(NAME all_tests COMMAND all_tests)
 endif()
 
 if(PYTHON_INTERFACE)
@@ -240,6 +223,7 @@ pybind11_add_module(pyanalisi
 	pyanalisi/src/pyanalisi.cpp
 	)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
+set_property(TARGET pyanalisi PROPERTY CXX_STANDARD 17)
 endif()
 endif()
 

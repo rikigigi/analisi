@@ -281,20 +281,21 @@ size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire
 
     if (timestep.triclinic()) {
         triclinic=true;
+        buffer_scatola_stride=9;
+        box_format=BoxFormat::Lammps_triclinic;
     } else {
         triclinic=false;
+        buffer_scatola_stride=6;
+        box_format=BoxFormat::Lammps_ortho;
     }
 
-    if (triclinic) {
-        throw std::runtime_error("Triclinic cell not implemented (probabily it is an easy task)");
-    }
     if (set_chunk){
         chunk=new Chunk[timestep.nchunk()];
     }
     if (timestep.nchunk()<=0) {
         throw std::runtime_error("Error: the number of chunks of the timestep cannot be <= 0");
     }
-    for (size_t i=0;i<timestep.nchunk();i++){
+    for (ssize_t i=0;i<timestep.nchunk();i++){
         int ndouble;
         int natomi;
         read_and_advance(file+partenza+letti,&ndouble);
@@ -353,7 +354,7 @@ Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const size_
         buffer_velocita=(double*) fftw_malloc(buffer_posizioni_size);
 
         delete [] buffer_scatola;
-        buffer_scatola= new double [6*Ntimesteps];
+        buffer_scatola= new double [buffer_scatola_stride*Ntimesteps];
     }
 
     loaded_timesteps=Ntimesteps;
@@ -589,10 +590,13 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
             throw;
         }
         timesteps_lammps[i]=intestazione.timestep();
-        memcpy(buffer_scatola+t*6,intestazione.scatola(),6*sizeof (double));
-        double l[3]={buffer_scatola[t*6+1]-buffer_scatola[t*6+0],
-                     buffer_scatola[t*6+3]-buffer_scatola[t*6+2],
-                     buffer_scatola[t*6+5]-buffer_scatola[t*6+4]};
+        memcpy(buffer_scatola+t*buffer_scatola_stride,intestazione.scatola(),6*sizeof (double));
+        if (triclinic) {
+            memcpy(buffer_scatola+t*buffer_scatola_stride+6,intestazione.xy_xz_yz(),3*sizeof (double));
+        }
+        lammps_to_internal(buffer_scatola+t*buffer_scatola_stride);
+        //TODO: REMOVE THIS!!!
+        //double *l=buffer_scatola+t*buffer_scatola_stride+3;
         //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
         for (size_t itype=0;itype<ntypes*3;itype++){
@@ -612,11 +616,12 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
                 size_t id=id_map.at(round(id_));
                 size_t tipo=round(tipo_);
                 read_pos=Atomo::read_pos_vel(read_pos,buffer_posizioni + t*3*natoms+id*3,buffer_velocita+t*3*natoms+id*3);
-                if (wrap_pbc){
-                    for (size_t icoord=0;icoord<3;icoord++){
-                        buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]/l[icoord])*l[icoord];
-                    }
-                }
+//                if (wrap_pbc){
+//                    //TODO: here call pbc routine!
+//                    for (size_t icoord=0;icoord<3;icoord++){
+//                        buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]*2/l[icoord])*2*l[icoord];
+//                    }
+//                }
                 if (buffer_tipi[id]!= tipo) {
                     std::cerr << "WARNING: atomic type for atom with id "<<id<<" is changing from "<<buffer_tipi[id]<< " to "<<tipo<<" !\n";
                     buffer_tipi[id]=tipo;
@@ -637,6 +642,15 @@ Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) 
         }
 
         delete [] pezzi;
+
+        //apply pbc
+        if (wrap_pbc) {
+            if (triclinic) {
+                pbc_wrap<true>(t);
+            } else {
+                pbc_wrap<false>(t);
+            }
+        }
 
         if(i+1<n_timesteps) timesteps[i+1]=timesteps[i]+offset;
         if(i+1>timestep_indicizzato) timestep_indicizzato=i+1;

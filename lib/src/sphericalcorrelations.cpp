@@ -61,7 +61,7 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
 
 template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby, double *l) const {
+void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby) const {
     //zero result
     for (int i=0;i<(lmax+1)*(lmax+1)*natoms*nbin*ntypes;++i) {
         result[i]=0;
@@ -75,7 +75,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TF
 
             //minimum image distance
             double x[3];
-            double d=sqrt(t.d2_minImage(iatom,jatom,timestep,timestep,l,x));
+            double d=sqrt(t.d2_minImage(iatom,jatom,timestep,timestep,x));
             //bin index
             int idx=(int)floorf((d-rmin)/dr);
 
@@ -147,9 +147,6 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             for (unsigned int i=0;i<lunghezza_lista;++i) lista_th_[i]=0.0;
             for (unsigned int i=0;i<leff;++i) lista_th_counters_[i]=0;
 
-            double l[3]={t.scatola(primo)[1]-t.scatola(primo)[0],
-                         t.scatola(primo)[3]-t.scatola(primo)[2],
-                         t.scatola(primo)[5]-t.scatola(primo)[4]};
 
             //working space for spherical harmonics
             TFLOAT workspace[(lmax+1)*(lmax+1)];
@@ -190,11 +187,11 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                 }
                 t1_old=t1;
                 TFLOAT * sh1=
-                        buffer.buffer_calc(*this,t1+primo,workspace,cheby,l);
+                        buffer.buffer_calc(*this,t1+primo,workspace,cheby);
 
                 //center atom loop for the snapshot at imedia+dt
                 TFLOAT * sh2=
-                        buffer.buffer_calc(*this,t2+primo,workspace,cheby,l);
+                        buffer.buffer_calc(*this,t2+primo,workspace,cheby);
 
                 corr_sh_calc(sh1,sh2,aveTypes,aveWork1, sh_snap_size, sh_final_size, avecont);
 
