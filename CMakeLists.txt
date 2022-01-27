@@ -24,6 +24,49 @@ if (NOT BUILD_MMAP AND BUILD_TESTS)
 message(FATAL_ERROR "tests are implemented only if BUILD_MMAP is ON")
 endif()
 
+
+################################################################################
+# Linux specific configuration
+################################################################################
+include(CheckCXXSourceCompiles)
+set(LRT "")
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+  # Try to detect if it is necessary to link against librt.
+  # Note that glibc < 2.17 required librt to be linked to use clock_gettime()
+  # and friends.
+  set(CLOCK_GETTIME_REQUIRES_LIBRT_TEST_CODE
+    "
+    #include <time.h>
+    int main() {
+      timespec res;
+      int result = clock_gettime(CLOCK_REALTIME, &res);
+      return result == 0;
+    }
+    "
+  )
+  check_cxx_source_compiles(
+    "${CLOCK_GETTIME_REQUIRES_LIBRT_TEST_CODE}"
+    CLOCK_GETTIME_NO_REQUIRE_LIBRT
+  )
+  if (NOT CLOCK_GETTIME_NO_REQUIRE_LIBRT)
+    # Try again with librt
+    message(STATUS "Failed to link against clock_gettime(), trying with librt")
+    set(CMAKE_REQUIRED_LIBRARIES_OLD "${CMAKE_REQUIRED_LIBRARIES}")
+    set(CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES} rt")
+    check_cxx_source_compiles(
+      "${CLOCK_GETTIME_REQUIRES_LIBRT_TEST_CODE}"
+      CLOCK_GETTIME_REQUIRES_LIBRT
+    )
+    set(CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES_OLD}")
+    if (CLOCK_GETTIME_REQUIRES_LIBRT)
+      set(LRT "rt")
+    else()
+      message(FATAL_ERROR "Failed to link against clock_gettime()")
+    endif()
+  endif()
+endif()
+
+
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 #set(SAFE_CMAKE_REQUIRED_LINK_OPTIONS "${CMAKE_REQUIRED_LINK_OPTIONS}")
@@ -172,17 +215,13 @@ endif()
 endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
-if ( CMAKE_CXX_COMPILER_ID MATCHES "gcc"  )
-  #with Clang not use rt
-   target_link_libraries(${PROJECT_NAME}_lib PUBLIC rt)
-endif()
 target_include_directories(${PROJECT_NAME}_lib PUBLIC lib/include )
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY CXX_STANDARD 17)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME}_lib PUBLIC Threads::Threads)
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC Threads::Threads ${LRT})
 if (BUILD_MMAP)
 add_executable(${PROJECT_NAME} 
 	analisi/main.cpp
@@ -202,7 +241,7 @@ set(BOOST_LIB boost)
 endif()
 
 add_executable(all_tests tests/src/all_tests.cpp)
-target_link_libraries(all_tests ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures)
+target_link_libraries(all_tests ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures ${LRT} )
 
 set_property(TARGET all_tests PROPERTY CXX_STANDARD 17)
 
@@ -222,7 +261,7 @@ add_subdirectory( pybind11 )
 pybind11_add_module(pyanalisi 
 	pyanalisi/src/pyanalisi.cpp
 	)
-target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib)
+target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib ${LTR} )
 set_property(TARGET pyanalisi PROPERTY CXX_STANDARD 17)
 endif()
 endif()
@@ -239,7 +278,7 @@ else()
 endif()
 
 if (BUILD_MMAP)
-target_link_libraries(${PROJECT_NAME} boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
+target_link_libraries(${PROJECT_NAME} boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}" ${LTR})
 endif()
 target_link_libraries(${PROJECT_NAME}_lib PRIVATE "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)
