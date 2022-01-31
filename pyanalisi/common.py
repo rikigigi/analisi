@@ -111,7 +111,7 @@ def pyanalisi_wrapper(Class,traj,*args):
 
 def atomic_density(atraj,dr=0.1):
     hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(atraj.get_box_copy()[0][3:6]/dr),dtype=int).tolist(),1,1)
-    hist.reset(atraj.getNtimesteps())
+    hist.reset(atraj.get_nloaded_timesteps())
     hist.calculate(0)
     res=np.array(hist)
     return res

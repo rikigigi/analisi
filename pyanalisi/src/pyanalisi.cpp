@@ -262,7 +262,11 @@ R"lol(
             {nb*sizeof (double),sizeof(double)},
             foo,
             free_when_done
-         );});
+         );})
+     .def("get_nloaded_timesteps",&Tk::get_nloaded_timesteps)
+     .def("getNtimesteps",&Tk::get_ntimesteps,R"begend(
+     returns estimated number of timesteps from the file size
+)begend") ;
 }
 
 PYBIND11_MODULE(pyanalisi,m) {
@@ -280,9 +284,6 @@ PYBIND11_MODULE(pyanalisi,m) {
                  Parameters
                  ----------
                  True/False
-)begend")
-            .def("getNtimesteps",&Traiettoria::get_ntimesteps,R"begend(
-                 returns estimated number of timesteps from the file size
 )begend")
             .def("setAccessWindowSize",[](Traiettoria & t,int ts) {return (int) t.imposta_dimensione_finestra_accesso(ts);},R"begend(
                  sets the size of the read block. Must fit in memory
@@ -393,9 +394,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                 save rotation matrix if triclinic format is used and a rotation is needed
 )lol")
 
-            .def("getNtimesteps",&Traiettoria_numpy::get_ntimesteps,R"begend(
-                 returns number of timesteps
-)begend")
+
 
             .def("get_rotation_matrix", [](Traiettoria_numpy & t) {
         double * foo=t.get_rotation_matrix(0);
