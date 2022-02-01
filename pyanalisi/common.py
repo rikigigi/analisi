@@ -109,13 +109,6 @@ def pyanalisi_wrapper(Class,traj,*args):
         raise RuntimeError(f"Wrapper for trajectory class '{traj.__name__}' not implemented")
         
 
-def atomic_density(atraj,dr=0.1):
-    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(atraj.get_box_copy()[0][3:6]/dr),dtype=int).tolist(),1,1)
-    hist.reset(atraj.get_nloaded_timesteps())
-    hist.calculate(0)
-    res=np.array(hist)
-    return res
-
 def fft_density(res,coeff=None):
     if coeff is None:
         coeff=np.ones(res.shape[0])
@@ -706,16 +699,63 @@ def pickle_or_unpickle(pickle_dump_name, analisi=None):
             return None
     return analysis_results[pickle_dump_name]
 
-def density_field(*ress):
-    plot = k3d.plot(grid=(-0.5,-0.5,-0.5,0.5,0.5,0.5))
+
+def atomic_density(atraj,dr=0.1,start=0):
+    box=atraj.get_box_copy().mean(axis=0)
+    print(box)
+    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(box[3:6]/dr),dtype=int).tolist(),1,1)
+    hist.reset(atraj.get_nloaded_timesteps())
+    hist.calculate(start)
+    res=np.array(hist)
+    return res, box
+
+
+def plot_simulation_box(box,**kwargs):
+    kwargs.setdefault('shader','simple')
+    a=[2*box[3],0,0]
+    if len(box)==9:
+       b=[box[6],2*box[4],0]
+       c=[box[7],box[8],2*box[5]]
+    else:
+       b=[0,2*box[4],0]
+       c=[0,0,2*box[5]]
+    origin=np.array([box[0],box[1],box[2]])
+    a=np.array(a)
+    b=np.array(b)
+    c=np.array(c)
+    f1=[origin,origin+a,origin+a+b,origin+b,origin]
+    f2=[origin+c,origin+a+c,origin+a+b+c,origin+b+c,origin+c]
+    c1=[origin,origin+c]
+    c2=[origin+a,origin+a+c]
+    c3=[origin+a+b,origin+a+b+c]
+    c4=[origin+b,origin+b+c]
+    line = k3d.line(f1,**kwargs)
+    for l in f2,c1,c2,c3,c4:
+        line += k3d.line(l,**kwargs)
+    return line
+
+def density_field(res,box,box_kw={}):
+    bounds=[ 
+                                                        box[0],box[0]+2*box[3],
+                                                        box[1],box[1]+2*box[4],
+                                                        box[2],box[2]+2*box[5]
+                                                                           ]
+    print(bounds)
+    plot = k3d.plot()
     objs=[]
-    for res_ in ress:
-        objs.append(k3d.volume(np.array(res_,dtype='float16')))
+    if len(res.shape) >3:
+        for i in range(res.shape[0]):
+            objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
+            plot+=objs[-1]
+    else:
+        objs.append(k3d.volume(np.array(res,dtype='float16'),bounds=bounds))
         plot+=objs[-1]
+        
     #points = k3d.points(g0_sites,point_size=0.02)
     #points1 = k3d.points(g1_sites,point_size=0.005)
     #plot += points
     #plot += points1
+    plot += plot_simulation_box(box,**box_kw)
     plot.display()
     global _w_x
     global _x
@@ -809,32 +849,32 @@ def density_field(*ress):
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
 
-    @interact(x=widgets.FloatSlider(value=0.14,min=-.5,max=.5,step=0.01))
+    @interact(x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100))
     def g(x):
         global _x
         _x=x
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_x=widgets.FloatSlider(value=0.05,min=0.0,max=.5,step=0.01))
+    @interact(w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100))
     def g(w_x):
         global _w_x
         _w_x=w_x
         plot.clipping_planes=global_clipping_planes()
-    @interact(y=widgets.FloatSlider(value=0.0,min=-.5,max=.5,step=0.01))
+    @interact(y=widgets.FloatSlider(value=box[1]+box[4],min=box[1],max=box[1]+2*box[4],step=box[4]/100))
     def g(y):
         global _y
         _y=y
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_y=widgets.FloatSlider(value=0.5,min=0.0,max=.5,step=0.01))
+    @interact(w_y=widgets.FloatSlider(value=2*box[4],min=0,max=2*box[4],step=box[4]/100))
     def g(w_y):
         global _w_y
         _w_y=w_y
         plot.clipping_planes=global_clipping_planes()
-    @interact(z=widgets.FloatSlider(value=0.0,min=-.5,max=.5,step=0.01))
+    @interact(z=widgets.FloatSlider(value=box[2]+box[5],min=box[2],max=box[2]+2*box[5],step=box[5]/100))
     def g(z):
         global _z
         _z=z
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_z=widgets.FloatSlider(value=0.5,min=0.0,max=.5,step=0.01))
+    @interact(w_z=widgets.FloatSlider(value=2*box[5],min=0.0,max=2*box[5],step=box[5]/100))
     def g(w_z):
         global _w_z
         _w_z=w_z
