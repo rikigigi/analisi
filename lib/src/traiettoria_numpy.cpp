@@ -130,7 +130,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
             if(rotation_matrix) {
                 cells_qr[cur_idx].second.getQ(rotation_matrix+9*i);
             }
-            if (cells_qr[cur_idx].first-1 == i) cur_idx++;
+            if (cur_idx + 1 < cells_qr.size() && cells_qr[cur_idx+1].first-1 == i) cur_idx++;
         }
     } else {
         throw std::runtime_error("Invalid input cell format");

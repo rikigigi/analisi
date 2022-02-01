@@ -734,14 +734,15 @@ def plot_simulation_box(box,**kwargs):
         line += k3d.line(l,**kwargs)
     return line
 
-def density_field(res,box,box_kw={}):
+def density_field(res,box,box_kw={},plot=None):
     bounds=[ 
                                                         box[0],box[0]+2*box[3],
                                                         box[1],box[1]+2*box[4],
                                                         box[2],box[2]+2*box[5]
                                                                            ]
     print(bounds)
-    plot = k3d.plot()
+    if plot is None:
+       plot = k3d.plot()
     objs=[]
     if len(res.shape) >3:
         for i in range(res.shape[0]):
@@ -879,6 +880,7 @@ def density_field(res,box,box_kw={}):
         global _w_z
         _w_z=w_z
         plot.clipping_planes=global_clipping_planes()
+    return plot
         
 def force_ratio_histogram(wf,print=print,ax=[]):
     pwcalcjobs=[]
