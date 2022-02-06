@@ -123,7 +123,7 @@ private:
     int fd;
     size_t fsize,tstep_size;
     char * file;
-    size_t timestep_corrente,timestep_indicizzato;
+    size_t timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
     bool calculate_center_of_mass;
     long pagesize;

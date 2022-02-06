@@ -52,7 +52,7 @@ class TraiettoriaBase {
 public:
     enum class BoxFormat{Lammps_ortho,Lammps_triclinic,Cell_vectors, Invalid};
 
-    TraiettoriaBase() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},
+    TraiettoriaBase() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},timestep_corrente{0},
     wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
     buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
     buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
@@ -120,6 +120,7 @@ public:
     int get_type_max() {return max_type;}
     size_t get_natoms()const {return natoms;}
     size_t get_ntimesteps() const{return n_timesteps;}
+    ssize_t get_current_timestep() const {return timestep_corrente;}
     double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; throw std::runtime_error("Cannot get mass for a type that does not exists!\n");}
     void set_mass(unsigned int i,double m) {if (i<get_ntypes()) masse[i]=m;}
     void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
@@ -290,7 +291,7 @@ protected:
     size_t buffer_posizioni_size, buffer_cm_size; //sizes of allocated buffers
 
     int * buffer_tipi,*buffer_tipi_id;
-    ssize_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps;
+    ssize_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps,timestep_corrente;
     bool wrap_pbc, triclinic;
 
 

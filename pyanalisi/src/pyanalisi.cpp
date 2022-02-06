@@ -211,7 +211,7 @@ R"lol(
         long nts=t.get_nloaded_timesteps();
         long nat=t.get_natoms();
         foo = new double[nts*nat*3];
-        std::memcpy(foo,t.posizioni(0,0),sizeof (double)*nts*nat*3);
+        std::memcpy(foo,t.posizioni(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -231,7 +231,7 @@ R"lol(
         long nts=t.get_nloaded_timesteps();
         long nat=t.get_natoms();
         foo = new double[nts*nat*3];
-        std::memcpy(foo,t.velocita(0,0),sizeof (double)*nts*nat*3);
+        std::memcpy(foo,t.velocita(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -251,7 +251,7 @@ R"lol(
         long nts=t.get_nloaded_timesteps();
         long nb=t.get_box_stride();
         foo = new double[nts*nb];
-        std::memcpy(foo,t.scatola(0),sizeof (double)*nts*nb);
+        std::memcpy(foo,t.scatola(t.get_current_timestep()),sizeof (double)*nts*nb);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -266,7 +266,8 @@ R"lol(
      .def("get_nloaded_timesteps",&Tk::get_nloaded_timesteps)
      .def("getNtimesteps",&Tk::get_ntimesteps,R"begend(
      returns estimated number of timesteps from the file size
-)begend") ;
+)begend")
+     .def("get_current_timestep",&Tk::get_current_timestep,"return the first timestep currently loaded in this object (meaningful for the lammps binary trajectory interface)");
 }
 
 PYBIND11_MODULE(pyanalisi,m) {
