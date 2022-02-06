@@ -390,6 +390,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                 velocities (double) python array (ntimesteps,natoms,3)
                 types (int) python array (natoms)
                 lattice vectors (double) (ntimestep,3,3)
+                format of lattice vectors (BoxFormat)
                 wrap atoms inside the cell using pbc
                 save rotation matrix if triclinic format is used and a rotation is needed
 )lol")

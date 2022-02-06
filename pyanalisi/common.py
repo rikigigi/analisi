@@ -83,8 +83,8 @@ def get_analisi_traj_from_aiida(traj):
     cel=traj.get_array('cells')
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
-    atraj=pa.Trajectory(*params,True, True)
-    atraj_unw=pa.Trajectory(*params,True, False)
+    atraj=pa.Trajectory(*params,pa.BoxFormat.CellVectors, True,True)
+    atraj_unw=pa.Trajectory(*params,pa.BoxFormat.CellVectors, False,True)
     return atraj, atraj_unw
 
 try:
@@ -956,12 +956,23 @@ def plot_force_ratio(res,fig=None,ax=None,hheight=10):
     ax.set_ylabel('CP/PW force ratio')
     return fig,ax,axins
 
-def print_cp_with_traj(wf,print=print):
-    def length_traj(traj):
-        t=traj.get_array('times')
-        return t[-1]-t[0]
+def length_traj(traj):
+    t=traj.get_array('times')
+    return t[-1]-t[0]
+def get_cp_with_traj(wf,min_t=0.0):
+    l=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>"]:
+        if 'output_trajectory' in c.outputs:
+            t = length_traj(c.outputs.output_trajectory)
+            if t >= min_t:
+               l.append(c)
+    return sorted(l,key=lambda x: x.pk)
+
+def print_cp_with_traj(wf,print=print,min_t=0.0):
+    l = get_cp_with_traj(wf,min_t=min_t)
+    for c in l:
         print ("===========")
         print(c.pk,'traj pk={}: {:.3}ps'.format(c.outputs.output_trajectory.pk,length_traj(c.outputs.output_trajectory)) if 'output_trajectory' in c.outputs else 'No output_trajectory')
         print(c.inputs.parameters.get_dict()['IONS'])
         print(c.inputs.parameters.get_dict()['CELL'] if 'CELL' in c.inputs.parameters.get_dict() else '')
+    return l
