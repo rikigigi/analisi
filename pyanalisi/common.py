@@ -700,7 +700,9 @@ def pickle_or_unpickle(pickle_dump_name, analisi=None):
     return analysis_results[pickle_dump_name]
 
 
-def atomic_density(atraj,dr=0.1,start=0):
+def atomic_density(atraj,dr=0.1,start=-1):
+    if start < 0:
+        start = atraj.get_current_timestep()
     box=atraj.get_box_copy().mean(axis=0)
     print(box)
     hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(2*np.rint(box[3:6]/(2*dr)),dtype=int).tolist(),1,1)

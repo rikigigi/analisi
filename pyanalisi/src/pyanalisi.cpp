@@ -205,7 +205,7 @@ R"lol(
 )lol")
      .def("get_positions_copy", [](Tk & t) {
         double * foo=nullptr;
-        if (t.posizioni(0,0) == nullptr) {
+        if (t.posizioni(t.get_current_timestep(),0) == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
@@ -224,7 +224,7 @@ R"lol(
             free_when_done
          );})
     .def("get_velocities_copy", [](Tk & t) {
-        double * foo=t.velocita(0,0);
+        double * foo=t.velocita(t.get_current_timestep(),0);
         if (foo == nullptr) {
             return pybind11::array_t<double>();
         }
@@ -244,7 +244,7 @@ R"lol(
             free_when_done
          );})
     .def("get_box_copy", [](Tk & t) {
-        double * foo=t.scatola(0);
+        double * foo=t.scatola(t.get_current_timestep());
         if (foo == nullptr) {
             return pybind11::array_t<double>();
         }
