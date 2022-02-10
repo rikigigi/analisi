@@ -234,7 +234,7 @@ if __name__ == "__main__" :
 	print('Reading {}...'.format( prefix))
 	data = readlammpsdump(infile='{}'.format( prefix),nstep=nstep,iskip=skip,every=every,natoms=natoms,pos=True,vel=True, box=True , force = False)
 	print('Done.')
-	analisi_traj = pyanalisi.Trajectory(data['p'], data['v'], data['types'], data['box'],False, args.wrap, False)
+	analisi_traj = pyanalisi.Trajectory(data['p'], data['v'], data['types'], data['box'],pyanalisi.BoxFormat.LammpsOrtho, args.wrap, False)
 	print('Writing output files...')
 	analisi_traj.write_lammps_binary('{}.bin'.format(  prefix), 0, -1)
 	print('Done.')
