@@ -108,6 +108,12 @@ def pyanalisi_wrapper(Class,traj,*args):
     else:
         raise RuntimeError(f"Wrapper for trajectory class '{traj.__name__}' not implemented")
         
+def analisi_to_cell_vectors(b):
+    boxes=[]
+    for i in range(b.shape[0]):
+        bb=b[i]
+        boxes.append([[bb[3]*2,bb[6],bb[7]],[0,bb[4]*2,bb[8]],[0,0,bb[5]*2]])
+    return np.array(boxes)
 
 def fft_density(res,coeff=None):
     if coeff is None:
@@ -736,6 +742,28 @@ def plot_simulation_box(box,**kwargs):
         line += k3d.line(l,**kwargs)
     return line
 
+def rotation(a,b,c,order='zxy'):
+   from math import cos,sin
+   mats={}
+   mats['x']=np.array([[1, 0,0],
+               [0, cos(a), -sin(a)],
+               [0,sin(a),cos(a)]])
+   mats['y']=np.array([[cos(b),0,sin(b)],
+              [0,1,0],
+              [-sin(b),0,cos(b)]])
+   mats['z']=np.array([[cos(c),-sin(c),0],
+               [sin(c),cos(c),0],
+               [0,0,1]])
+   
+   print(order[0])
+   xyz=np.copy(mats[order[0]])
+   for ax in order[1:]:
+      print (ax)
+      xyz=mats[ax].dot(xyz)
+   r=np.eye(4)
+   r[:3,:3]=xyz
+   return r
+
 def density_field(res,box,box_kw={},plot=None):
     bounds=[ 
                                                         box[0],box[0]+2*box[3],
@@ -783,21 +811,6 @@ def density_field(res,box,box_kw={},plot=None):
     _rot_c = 0.0
     _rot_Q = np.eye(4)
  
-    from math import cos,sin
-    def rotation(a,b,c):
-       x=np.array([[1, 0,0],
-                   [0, cos(a), -sin(a)],
-                   [0,sin(a),cos(a)]])
-       y=np.array([[cos(b),0,sin(b)],
-                  [0,1,0],
-                  [-sin(b),0,cos(b)]])
-       z=np.array([[cos(c),-sin(c),0],
-                   [sin(c),cos(c),0],
-                   [0,0,1]])
-       xyz=x.dot(y.dot(z))
-       r=np.eye(4)
-       r[:3,:3]=xyz
-       return r
     def rotate_plane(Q,ps):
        prs=[]
        for p in ps:

@@ -79,7 +79,7 @@ void Gofrt<TFLOAT,T>::calc_init(int primo) {
     }
 
 
-    if (leff+ntimesteps+primo > traiettoria->get_ntimesteps()){
+    if (leff+ntimesteps+primo > traiettoria->get_ntimesteps() + 1){
         throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the time lag");
     }
 
