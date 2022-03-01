@@ -267,7 +267,8 @@ R"lol(
      .def("getNtimesteps",&Tk::get_ntimesteps,R"begend(
      returns estimated number of timesteps from the file size
 )begend")
-     .def("get_current_timestep",&Tk::get_current_timestep,"return the first timestep currently loaded in this object (meaningful for the lammps binary trajectory interface)");
+     .def("get_current_timestep",&Tk::get_current_timestep,"return the first timestep currently loaded in this object (meaningful for the lammps binary trajectory interface)")
+     .def("getWrapPbc",&Tk::get_pbc_wrap,"return the pbc wrapping of the trajectory around the center of the cell flag");
 }
 
 PYBIND11_MODULE(pyanalisi,m) {

@@ -84,9 +84,13 @@ public:
     Errori imposta_inizio_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
     //void index_all();
 
-    //this can produce multiple bugs: what happens if I call it in the wrong moment?
+    //I have to set this before loading the trajectory
     void set_pbc_wrap(bool p){
         wrap_pbc=p;
+    }
+
+    bool get_pbc_wrap() const {
+        return wrap_pbc;
     }
 
     static void lammps_to_internal(double * c) {
