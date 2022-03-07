@@ -6,6 +6,7 @@ import pyanalisi
 import faulthandler
 faulthandler.enable()
 
+pytest_plugins = 'pytester'
 
 @pytest.fixture(scope='session')
 def filepath_tests():
