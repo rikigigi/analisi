@@ -43,7 +43,7 @@ def test_write_binary_header_triclinic(triclinic_traj, tmpdir_factory):
 @pytest.fixture
 def run_cli(testdir, filepath_tests):
    def do_run(ex,*args):
-       args = [filepath_tests + '/../tools/'+ex] + list(args)
+       args = ['python', filepath_tests + '/../tools/'+ex] + list(args)
        return testdir.run(*args)
    return do_run
 
