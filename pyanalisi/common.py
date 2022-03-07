@@ -83,8 +83,8 @@ def get_analisi_traj_from_aiida(traj):
     cel=traj.get_array('cells')
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
-    atraj=pa.Trajectory(*params,True, True)
-    atraj_unw=pa.Trajectory(*params,True, False)
+    atraj=pa.Trajectory(*params,pa.BoxFormat.CellVectors, True,True)
+    atraj_unw=pa.Trajectory(*params,pa.BoxFormat.CellVectors, False,True)
     return atraj, atraj_unw
 
 try:
@@ -108,13 +108,12 @@ def pyanalisi_wrapper(Class,traj,*args):
     else:
         raise RuntimeError(f"Wrapper for trajectory class '{traj.__name__}' not implemented")
         
-
-def atomic_density(atraj,dr=0.1):
-    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(np.rint(atraj.get_box_copy()[0][3:6]/dr),dtype=int).tolist(),1,1)
-    hist.reset(atraj.getNtimesteps())
-    hist.calculate(0)
-    res=np.array(hist)
-    return res
+def analisi_to_cell_vectors(b):
+    boxes=[]
+    for i in range(b.shape[0]):
+        bb=b[i]
+        boxes.append([[bb[3]*2,bb[6],bb[7]],[0,bb[4]*2,bb[8]],[0,0,bb[5]*2]])
+    return np.array(boxes)
 
 def fft_density(res,coeff=None):
     if coeff is None:
@@ -706,16 +705,88 @@ def pickle_or_unpickle(pickle_dump_name, analisi=None):
             return None
     return analysis_results[pickle_dump_name]
 
-def density_field(*ress):
-    plot = k3d.plot(grid=(-0.5,-0.5,-0.5,0.5,0.5,0.5))
+
+def atomic_density(atraj,dr=0.1,start=-1):
+    if start < 0:
+        start = atraj.get_current_timestep()
+    box=atraj.get_box_copy().mean(axis=0)
+    print(box)
+    hist=pyanalisi_wrapper('PositionHistogram',atraj,np.array(2*np.rint(box[3:6]/(2*dr)),dtype=int).tolist(),1,1)
+    hist.reset(atraj.get_nloaded_timesteps())
+    hist.calculate(start)
+    res=np.array(hist)
+    return res, box
+
+
+def plot_simulation_box(box,**kwargs):
+    kwargs.setdefault('shader','simple')
+    a=[2*box[3],0,0]
+    if len(box)==9:
+       b=[box[6],2*box[4],0]
+       c=[box[7],box[8],2*box[5]]
+    else:
+       b=[0,2*box[4],0]
+       c=[0,0,2*box[5]]
+    origin=np.array([box[0],box[1],box[2]])
+    a=np.array(a)
+    b=np.array(b)
+    c=np.array(c)
+    f1=[origin,origin+a,origin+a+b,origin+b,origin]
+    f2=[origin+c,origin+a+c,origin+a+b+c,origin+b+c,origin+c]
+    c1=[origin,origin+c]
+    c2=[origin+a,origin+a+c]
+    c3=[origin+a+b,origin+a+b+c]
+    c4=[origin+b,origin+b+c]
+    line = k3d.line(f1,**kwargs)
+    for l in f2,c1,c2,c3,c4:
+        line += k3d.line(l,**kwargs)
+    return line
+
+def rotation(a,b,c,order='zxy'):
+   from math import cos,sin
+   mats={}
+   mats['x']=np.array([[1, 0,0],
+               [0, cos(a), -sin(a)],
+               [0,sin(a),cos(a)]])
+   mats['y']=np.array([[cos(b),0,sin(b)],
+              [0,1,0],
+              [-sin(b),0,cos(b)]])
+   mats['z']=np.array([[cos(c),-sin(c),0],
+               [sin(c),cos(c),0],
+               [0,0,1]])
+   
+   print(order[0])
+   xyz=np.copy(mats[order[0]])
+   for ax in order[1:]:
+      print (ax)
+      xyz=mats[ax].dot(xyz)
+   r=np.eye(4)
+   r[:3,:3]=xyz
+   return r
+
+def density_field(res,box,box_kw={},plot=None):
+    bounds=[ 
+                                                        box[0],box[0]+2*box[3],
+                                                        box[1],box[1]+2*box[4],
+                                                        box[2],box[2]+2*box[5]
+                                                                           ]
+    print(bounds)
+    if plot is None:
+       plot = k3d.plot()
     objs=[]
-    for res_ in ress:
-        objs.append(k3d.volume(np.array(res_,dtype='float16')))
+    if len(res.shape) >3:
+        for i in range(res.shape[0]):
+            objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
+            plot+=objs[-1]
+    else:
+        objs.append(k3d.volume(np.array(res,dtype='float16'),bounds=bounds))
         plot+=objs[-1]
+        
     #points = k3d.points(g0_sites,point_size=0.02)
     #points1 = k3d.points(g1_sites,point_size=0.005)
     #plot += points
     #plot += points1
+    plot += plot_simulation_box(box,**box_kw)
     plot.display()
     global _w_x
     global _x
@@ -740,21 +811,6 @@ def density_field(*ress):
     _rot_c = 0.0
     _rot_Q = np.eye(4)
  
-    from math import cos,sin
-    def rotation(a,b,c):
-       x=np.array([[1, 0,0],
-                   [0, cos(a), -sin(a)],
-                   [0,sin(a),cos(a)]])
-       y=np.array([[cos(b),0,sin(b)],
-                  [0,1,0],
-                  [-sin(b),0,cos(b)]])
-       z=np.array([[cos(c),-sin(c),0],
-                   [sin(c),cos(c),0],
-                   [0,0,1]])
-       xyz=x.dot(y.dot(z))
-       r=np.eye(4)
-       r[:3,:3]=xyz
-       return r
     def rotate_plane(Q,ps):
        prs=[]
        for p in ps:
@@ -809,36 +865,37 @@ def density_field(*ress):
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
 
-    @interact(x=widgets.FloatSlider(value=0.14,min=-.5,max=.5,step=0.01))
+    @interact(x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100))
     def g(x):
         global _x
         _x=x
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_x=widgets.FloatSlider(value=0.05,min=0.0,max=.5,step=0.01))
+    @interact(w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100))
     def g(w_x):
         global _w_x
         _w_x=w_x
         plot.clipping_planes=global_clipping_planes()
-    @interact(y=widgets.FloatSlider(value=0.0,min=-.5,max=.5,step=0.01))
+    @interact(y=widgets.FloatSlider(value=box[1]+box[4],min=box[1],max=box[1]+2*box[4],step=box[4]/100))
     def g(y):
         global _y
         _y=y
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_y=widgets.FloatSlider(value=0.5,min=0.0,max=.5,step=0.01))
+    @interact(w_y=widgets.FloatSlider(value=2*box[4],min=0,max=2*box[4],step=box[4]/100))
     def g(w_y):
         global _w_y
         _w_y=w_y
         plot.clipping_planes=global_clipping_planes()
-    @interact(z=widgets.FloatSlider(value=0.0,min=-.5,max=.5,step=0.01))
+    @interact(z=widgets.FloatSlider(value=box[2]+box[5],min=box[2],max=box[2]+2*box[5],step=box[5]/100))
     def g(z):
         global _z
         _z=z
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_z=widgets.FloatSlider(value=0.5,min=0.0,max=.5,step=0.01))
+    @interact(w_z=widgets.FloatSlider(value=2*box[5],min=0.0,max=2*box[5],step=box[5]/100))
     def g(w_z):
         global _w_z
         _w_z=w_z
         plot.clipping_planes=global_clipping_planes()
+    return plot
         
 def force_ratio_histogram(wf,print=print,ax=[]):
     pwcalcjobs=[]
@@ -914,12 +971,23 @@ def plot_force_ratio(res,fig=None,ax=None,hheight=10):
     ax.set_ylabel('CP/PW force ratio')
     return fig,ax,axins
 
-def print_cp_with_traj(wf,print=print):
-    def length_traj(traj):
-        t=traj.get_array('times')
-        return t[-1]-t[0]
+def length_traj(traj):
+    t=traj.get_array('times')
+    return t[-1]-t[0]
+def get_cp_with_traj(wf,min_t=0.0):
+    l=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>"]:
+        if 'output_trajectory' in c.outputs:
+            t = length_traj(c.outputs.output_trajectory)
+            if t >= min_t:
+               l.append(c)
+    return sorted(l,key=lambda x: x.pk)
+
+def print_cp_with_traj(wf,print=print,min_t=0.0):
+    l = get_cp_with_traj(wf,min_t=min_t)
+    for c in l:
         print ("===========")
         print(c.pk,'traj pk={}: {:.3}ps'.format(c.outputs.output_trajectory.pk,length_traj(c.outputs.output_trajectory)) if 'output_trajectory' in c.outputs else 'No output_trajectory')
         print(c.inputs.parameters.get_dict()['IONS'])
         print(c.inputs.parameters.get_dict()['CELL'] if 'CELL' in c.inputs.parameters.get_dict() else '')
+    return l

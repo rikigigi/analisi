@@ -130,7 +130,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
             if(rotation_matrix) {
                 cells_qr[cur_idx].second.getQ(rotation_matrix+9*i);
             }
-            if (cells_qr[cur_idx].first-1 == i) cur_idx++;
+            if (cur_idx + 1 < cells_qr.size() && cells_qr[cur_idx+1].first-1 == i) cur_idx++;
         }
     } else {
         throw std::runtime_error("Invalid input cell format");
@@ -168,7 +168,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
                 cells_qr[cur_idx].second.rotate_vec(pos);
                 cells_qr[cur_idx].second.rotate_vec(vel);
             }
-            if (cells_qr[cur_idx].first-1 == i) cur_idx++;
+            if (cur_idx + 1 < cells_qr.size() && cells_qr[cur_idx+1].first-1 == i) cur_idx++;
         }
     } else if (wrap_pbc) {
         std::memcpy(buffer_posizioni,info_pos.ptr,sizeof(double)*3*natoms*n_timesteps);

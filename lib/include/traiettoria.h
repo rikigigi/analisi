@@ -57,7 +57,7 @@ public:
                 return base+t*stride1+atomo*stride2;
             } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
 #ifdef DEBUG
-                std::cerr << "Warning: loading timesteps not requested with the loading routines!\n";
+                std::cerr << "Warning: loading timesteps starting from "<<timestep<<" not requested with the loading routines!\n";
 #endif
                 if(imposta_inizio_accesso(timestep)) {
                     t=timestep-timestep_corrente;
@@ -123,7 +123,7 @@ private:
     int fd;
     size_t fsize,tstep_size;
     char * file;
-    size_t timestep_corrente,timestep_indicizzato;
+    size_t timestep_indicizzato;
     bool ok,dati_caricati,indexed_all;
     bool calculate_center_of_mass;
     long pagesize;

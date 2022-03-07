@@ -205,13 +205,13 @@ R"lol(
 )lol")
      .def("get_positions_copy", [](Tk & t) {
         double * foo=nullptr;
-        if (t.posizioni(0,0) == nullptr) {
+        if (t.posizioni(t.get_current_timestep(),0) == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
         long nat=t.get_natoms();
         foo = new double[nts*nat*3];
-        std::memcpy(foo,t.posizioni(0,0),sizeof (double)*nts*nat*3);
+        std::memcpy(foo,t.posizioni(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -224,14 +224,14 @@ R"lol(
             free_when_done
          );})
     .def("get_velocities_copy", [](Tk & t) {
-        double * foo=t.velocita(0,0);
+        double * foo=t.velocita(t.get_current_timestep(),0);
         if (foo == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
         long nat=t.get_natoms();
         foo = new double[nts*nat*3];
-        std::memcpy(foo,t.velocita(0,0),sizeof (double)*nts*nat*3);
+        std::memcpy(foo,t.velocita(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -244,14 +244,14 @@ R"lol(
             free_when_done
          );})
     .def("get_box_copy", [](Tk & t) {
-        double * foo=t.scatola(0);
+        double * foo=t.scatola(t.get_current_timestep());
         if (foo == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
         long nb=t.get_box_stride();
         foo = new double[nts*nb];
-        std::memcpy(foo,t.scatola(0),sizeof (double)*nts*nb);
+        std::memcpy(foo,t.scatola(t.get_current_timestep()),sizeof (double)*nts*nb);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -262,7 +262,13 @@ R"lol(
             {nb*sizeof (double),sizeof(double)},
             foo,
             free_when_done
-         );});
+         );})
+     .def("get_nloaded_timesteps",&Tk::get_nloaded_timesteps)
+     .def("getNtimesteps",&Tk::get_ntimesteps,R"begend(
+     returns estimated number of timesteps from the file size
+)begend")
+     .def("get_current_timestep",&Tk::get_current_timestep,"return the first timestep currently loaded in this object (meaningful for the lammps binary trajectory interface)")
+     .def("getWrapPbc",&Tk::get_pbc_wrap,"return the pbc wrapping of the trajectory around the center of the cell flag");
 }
 
 PYBIND11_MODULE(pyanalisi,m) {
@@ -280,9 +286,6 @@ PYBIND11_MODULE(pyanalisi,m) {
                  Parameters
                  ----------
                  True/False
-)begend")
-            .def("getNtimesteps",&Traiettoria::get_ntimesteps,R"begend(
-                 returns estimated number of timesteps from the file size
 )begend")
             .def("setAccessWindowSize",[](Traiettoria & t,int ts) {return (int) t.imposta_dimensione_finestra_accesso(ts);},R"begend(
                  sets the size of the read block. Must fit in memory
@@ -389,13 +392,12 @@ PYBIND11_MODULE(pyanalisi,m) {
                 velocities (double) python array (ntimesteps,natoms,3)
                 types (int) python array (natoms)
                 lattice vectors (double) (ntimestep,3,3)
+                format of lattice vectors (BoxFormat)
                 wrap atoms inside the cell using pbc
                 save rotation matrix if triclinic format is used and a rotation is needed
 )lol")
 
-            .def("getNtimesteps",&Traiettoria_numpy::get_ntimesteps,R"begend(
-                 returns number of timesteps
-)begend")
+
 
             .def("get_rotation_matrix", [](Traiettoria_numpy & t) {
         double * foo=t.get_rotation_matrix(0);
