@@ -1,7 +1,7 @@
 project(analisi)
 include(CheckIncludeFileCXX)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
     message(STATUS "No build type specified: assuming RELEASE build.")
@@ -24,6 +24,13 @@ if (NOT BUILD_MMAP AND BUILD_TESTS)
 message(FATAL_ERROR "tests are implemented only if BUILD_MMAP is ON")
 endif()
 
+if ( USE_MPI ) 
+
+find_package(MPI REQUIRED)
+message(STATUS "MPI FOUND:")
+message(STATUS "  Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
+
+endif()
 
 ################################################################################
 # Linux specific configuration
@@ -216,6 +223,9 @@ endif()
 
 add_library(${PROJECT_NAME}_lib STATIC ${ANALISI_LIB})
 target_include_directories(${PROJECT_NAME}_lib PUBLIC lib/include )
+if ( USE_MPI ) 
+   target_link_libraries(${PROJECT_NAME}_lib PUBLIC MPI::MPI_CXX)
+endif()
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY CXX_STANDARD 17)
 
@@ -223,11 +233,14 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC Threads::Threads ${LRT})
 if (BUILD_MMAP)
-add_executable(${PROJECT_NAME} 
-	analisi/main.cpp
-	)
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+   add_executable(${PROJECT_NAME} 
+   	analisi/main.cpp
+   	)
+   target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_lib)
+   set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+   if ( USE_MPI ) 
+      target_link_libraries(${PROJECT_NAME} PUBLIC MPI::MPI_CXX)
+   endif()
 endif()
 
 ## test suite
@@ -278,7 +291,7 @@ else()
 endif()
 
 if (BUILD_MMAP)
-target_link_libraries(${PROJECT_NAME} boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}" ${LTR})
+target_link_libraries(${PROJECT_NAME} PUBLIC boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}" ${LTR})
 endif()
 target_link_libraries(${PROJECT_NAME}_lib PRIVATE "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)

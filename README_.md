@@ -179,7 +179,7 @@ Documentation build:
 ```
 mkdir build
 cd build
-cmake ../ -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DUSE_MPI=ON
+cmake ../ -DUSE_MPI=ON
 make
 ```
 ## non-MPI build (shame on you!)
