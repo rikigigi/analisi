@@ -29,10 +29,11 @@ template <class T, int FLAGS_T = CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAG
 class CalcolaMultiThread
 {
 public:
-    CalcolaMultiThread(ssize_t nthreads=0, ssize_t skip=0, size_t natoms=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms}
+    CalcolaMultiThread(ssize_t nthreads=0, ssize_t skip=0, size_t natoms=0, ssize_t every=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms},every{every}
 {
     if (nthreads==0) nthreads=1;
     if (skip==0) skip=1;
+    if (every==0) every=1 ; 
 
 }
     static constexpr int FLAGS=FLAGS_T;
@@ -80,7 +81,7 @@ public:
             static_cast<T*>(this)->calc_init(primo);
         }
         std::vector<std::thread> threads;
-        for (ssize_t t=t0;t<t1;t++){ // loop over time lags. Can be a loop over a single value if disabled
+        for (ssize_t t=t0;t<t1;t+=every){ // loop over time lags. Can be a loop over a single value if disabled
             for (ssize_t i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
                 for (unsigned int ith=0;ith<nthreads;++ith){
                     threads.push_back(std::thread([&,ith,t,i](){
@@ -142,7 +143,7 @@ public:
     // void reset(const unsigned int numeroTimestepsPerBlocco)=0;
 
 protected:
-    ssize_t nthreads,skip,ntimesteps, leff;
+    ssize_t nthreads,skip,ntimesteps, every , leff;
 
 private:
     size_t npassith,end, natoms;

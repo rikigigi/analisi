@@ -41,6 +41,7 @@ public:
           unsigned int tmax=0,
           unsigned int nthreads=0,
           unsigned int skip=1,
+	  unsigned int every=1,
           bool debug=false);
     ~Gofrt();
     void reset(const unsigned int numeroTimestepsPerBlocco);
