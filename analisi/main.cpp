@@ -157,7 +157,7 @@ int main(int argc, char ** argv)
 
     boost::program_options::options_description options("Program to analyze of molecular dynamics trajectories, with multithread and MPI block averages.\n\nAllowed options:");
     std::string input,log_input,corr_out,ris_append_out,ifcfile,fononefile,output_conversion;
-    int sub_mean_start=0,numero_frame=0,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
+    int sub_mean_start=0,numero_frame=0,every=1,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0,buffer_size=10;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false,fpe=false;
     double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
@@ -185,6 +185,7 @@ int main(int argc, char ** argv)
             ("headers,a",boost::program_options::value<std::vector<std::string> > (&headers)->multitoken(),"specify the name of the columns to use in the calculation of the multicomponent green-kubo integrals")
             ("dt,D",boost::program_options::value<double>(&dt)->default_value(5e-3),"timestep (used only in a particular case)")
             ("skip,s",boost::program_options::value<int>(&skip)->default_value(1),"when an average over the trajectory is performed, consecutive steps have a distance specified with this option")
+            ("every,e",boost::program_options::value<int>(&every)->default_value(1),"For sums over time lags every steps have a difference multiple of every. So far implemented only for g(r,t) and give the number of steps between two consecutive t.")
 #ifdef EXPERIMENTAL
             ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"charge of type 1 (used in a particular case)")
             ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"charge of type 2 (used in a particular case)")
@@ -554,15 +555,15 @@ int main(int argc, char ** argv)
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,bool>
+                MediaBlocchi<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
                         gofr(&tr,blocknumber);
-                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,dumpGK);
+                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
 
                 unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
                 unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
 
                 std::cout << gofr.puntatoreCalcolo()->get_columns_description();
-                for (unsigned int t=0;t<tmax;t++) {
+                for (unsigned int t=0;t<tmax;t+=every) {
                     for (unsigned int r=0;r<gofrt;r++) {
                         std::cout << t << " " << r;
                         for (unsigned int itype=0;itype<ntyp;itype++) {

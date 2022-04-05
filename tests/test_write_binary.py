@@ -60,7 +60,7 @@ def test_cp2analisi(tmpdir_factory, run_cli,filepath_tests, num_regression):
    import pyanalisi as pa
    inputf=filepath_tests+ '/../tools/cp/water125_testanalisi'
    outf=inputf+'.bin'
-   output = run_cli('cp2analisi.py', '-p', inputf, '-s', filepath_tests+ '/../tools/cp/water125_testanalisi.species', '--natoms', '375')
+   output = run_cli('cp2analisi.py', '-p', inputf, '-s', filepath_tests+ '/../tools/cp/water125_testanalisi.species', '--natoms', '375', '--nstep', '4')
    if pa.has_mmap():
       box,pos,vel = get_atraj_data(outf)
       num_regression.check({'pos':pos.flatten(), 'box':box.flatten(), 'vel':vel.flatten()})
