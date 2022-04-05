@@ -29,11 +29,11 @@ template <class T, int FLAGS_T = CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAG
 class CalcolaMultiThread
 {
 public:
-    CalcolaMultiThread(ssize_t nthreads=0, ssize_t skip=0, size_t natoms=0, ssize_t every=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms},every{every}
+    CalcolaMultiThread(const ssize_t nthreads=0, const ssize_t skip=0, const size_t natoms=0, const ssize_t every=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms},every{every}
 {
-    if (nthreads==0) nthreads=1;
-    if (skip==0) skip=1;
-    if (every==0) every=1 ; 
+    if (nthreads==0) CalcolaMultiThread::nthreads=1;
+    if (skip==0) CalcolaMultiThread::skip=1;
+    if (every==0) CalcolaMultiThread::every=1 ; 
 
 }
     static constexpr int FLAGS=FLAGS_T;
