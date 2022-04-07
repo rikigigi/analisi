@@ -149,7 +149,7 @@ def analyze_msd(traj_unw,start,stop,tmax=0,nthreads=4,tskip_msd=10,print=print):
 
 def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print):
     tmax,n_ave = max_l(start,stop,tmax)
-    gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False)
+    gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False,1)
     gofr.reset(n_ave)
     print('calculating g(r)...',flush=True)
     gofr.calculate(start)
