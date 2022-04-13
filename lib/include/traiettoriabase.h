@@ -14,11 +14,8 @@
 #define DECL_ARG(a,b) a b
 #define NAME_ARG(a,b) b
 #define DECL_CALL_BASE_0(ret, fname) ret fname () { return static_cast<T*>(this)-> fname ( ); }
-#define DECL_CALL_BASE_1(ret, fname, arg1) ret fname ( DECL_ARG arg1) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1 ); }
-#define DECL_CALL_BASE_2(ret, fname, arg1, arg2) ret fname ( DECL_ARG arg1, DECL_ARG arg2) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2 ); }
-#define DECL_CALL_BASE_3(ret, fname, arg1, arg2, arg3) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3 ); }
-#define DECL_CALL_BASE_4(ret, fname, arg1, arg2, arg3, arg4) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4 ); }
-#define DECL_CALL_BASE_5(ret, fname, arg1, arg2, arg3, arg4, arg5) ret fname ( DECL_ARG arg1, DECL_ARG arg2, DECL_ARG arg3, DECL_ARG arg4, DECL_ARG arg5) { return static_cast<T*>(this)-> fname ( NAME_ARG arg1, NAME_ARG arg2, NAME_ARG arg3, NAME_ARG arg4, NAME_ARG arg5 ); }
+#define DECL_CALL_BASE_1(ret, fname, arg1) template<bool SAFE=true> ret fname ( DECL_ARG arg1) { return static_cast<T*>(this)->template fname<SAFE> ( NAME_ARG arg1 ); }
+#define DECL_CALL_BASE_2(ret, fname, arg1, arg2) template<bool SAFE=true> ret fname ( DECL_ARG arg1, DECL_ARG arg2) { return static_cast<T*>(this)->template fname<SAFE> ( NAME_ARG arg1, NAME_ARG arg2 ); }
 
 
 struct Cell_ {
@@ -170,10 +167,10 @@ public:
                        double *x
                        ) {
         double d2=0.0;
-        double *xi=posizioni(itimestep,i);
-        double *xj=posizioni(jtimestep,j);
-        const double *l=scatola(itimestep)+3;
-        const double *xy_xz_yz = scatola(itimestep)+6;
+        double *xi=posizioni<false>(itimestep,i);
+        double *xj=posizioni<false>(jtimestep,j);
+        const double *l=scatola<false>(itimestep)+3;
+        const double *xy_xz_yz = scatola<false>(itimestep)+6;
         d2=d2_minImage_triclinic(xi,xj,l,x,xy_xz_yz);
         return d2;
     }
