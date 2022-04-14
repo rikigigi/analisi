@@ -1,10 +1,12 @@
-# every column is followed by the variance. Then you have the following: 
-#g(0, 0), different atom index: 4
-#g(0, 0), same atom index: 10
-#g(0, 1), different atom index: 0
-#g(0, 1), same atom index: 6
-#g(1, 1), different atom index: 2
-#g(1, 1), same atom index: 8
+# The first column is the time difference in timesteps, then you have the bin index. Every column after is followed by the variance. Then you have the following: 
+#g(0, 0), different atom index: 7
+#g(0, 0), same atom index: 13
+#g(0, 1), different atom index: 3
+#g(0, 1), same atom index: 9
+#g(1, 1), different atom index: 5
+#g(1, 1), same atom index: 11
+# same atom index means that the atom is tracked around and the average self-spread is shown with larger time differences.
+# different atom index is something that for t=0 is the traditional g(r) 
 0 0 0 0 0 0 0 0 0 0 4000 0 4000 0
 0 1 0 0 0 0 0 0 0 0 0 0 0 0
 0 2 0 0 0 0 0 0 0 0 0 0 0 0
