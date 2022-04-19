@@ -526,11 +526,13 @@ def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None):
        fig, ax = fig_ax
     else:
        fig,ax =plt.subplots(figsize=(10,8),dpi=300)
-    r=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
+    rm=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
+    rp=(np.arange(res.shape[-1])+1)*(endr-startr)/res.shape[-1]+startr
+    vols=4*np.pi/3*(rp**3-rm**3)
     for i in range(0,res.shape[1]//2):
-        plt_err(ax,r,res[0,i,:]/(r**2),(res_var[0,i,:]/(r**4)) if res_var is not None else res_var)
+        plt_err(ax,(rm+rp)/2,res[0,i,:]/vols,(res_var[0,i,:]/(vols**4)) if res_var is not None else res_var)
     ax.set_xlabel('$\AA$')
-    ax.set_ylabel('number of atoms in the shell / $r^2$')
+    ax.set_ylabel('number of atoms in the shell / volume of the shell')
     ax.set_title('{}$g(r)$'.format(title))
     return fig, ax
 
