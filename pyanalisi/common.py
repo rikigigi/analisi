@@ -80,7 +80,7 @@ def get_types_id_array(types_array):
 def get_analisi_traj_from_aiida(traj):
     pos=traj.get_array('positions')
     vel=traj.get_array('velocities')
-    cel=traj.get_array('cells')
+    cel=traj.get_array('cells').transpose((0,2,1)).copy(order='C') 
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
     atraj=pa.Trajectory(*params,pa.BoxFormat.CellVectors, True,True)
