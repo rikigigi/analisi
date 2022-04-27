@@ -8,9 +8,9 @@ template <int l,class TFLOAT, class T>
 class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>
 {
 public:
+    using rminmax_t = std::vector<std::pair<TFLOAT,TFLOAT> >;
     SphericalCorrelations(T *t,
-                          TFLOAT rmin,
-                          TFLOAT rmax,
+                          const rminmax_t rminmax,
                           unsigned int nbin,
                           unsigned int tmax=0,
                           unsigned int nthreads=0,
@@ -68,7 +68,8 @@ private:
 
 
 
-    TFLOAT rmin, rmax,dr;
+    std::vector<TFLOAT> dr;
+    const rminmax_t rminmax;
     unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms,buffer_size;
     bool debug;
     std::string c_descr;

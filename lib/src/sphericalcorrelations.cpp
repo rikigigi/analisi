@@ -9,15 +9,19 @@
 
 template <int l, class TFLOAT, class T>
 SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
-                                                         TFLOAT rmin,
-                                                         TFLOAT rmax,
+                                                         const rminmax_t rminmax,
                                                          unsigned int nbin,
                                                          unsigned int tmax,
                                                          unsigned int nthreads,
                                                          unsigned int skip,
                                                          unsigned int buffer_size,
                                                          bool debug) :
-t{*t},rmin{rmin},rmax{rmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}{
+t{*t},rminmax{rminmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}{
+
+   dr.reserve(rminmax.size());
+   for (auto & range : rminmax) {
+     dr.push_back((range.second-range.first)/nbin);
+   }
 
 }
 
@@ -52,7 +56,12 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
     ntypes=t.get_ntypes();
     lunghezza_lista=leff*ntypes*ntypes*nbin*(l+1);
 
-    dr=(rmax-rmin)/nbin;
+    if (ntypes*ntypes != rminmax.size()) {
+        std::stringstream ss;
+        ss << "you must provide a radial range for each pair of atomic types, in total ntypes*ntypes pair of numbers. You provided "<<
+              rminmax.size() << " elements while ntypes is " << ntypes <<" .";
+        throw std::runtime_error(ss.str());
+    }
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
@@ -68,8 +77,10 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TF
     }
     for (unsigned int iatom=0;iatom<natoms;iatom++) {
         //other atom loop
+        const unsigned int itype=t.get_type(iatom);
         for (unsigned int jatom=0;jatom<natoms;jatom++) {
-            unsigned int jtype=t.get_type(jatom);
+            const unsigned int jtype=t.get_type(jatom);
+            const unsigned int pairidx=ntypes*itype+jtype;
             if (iatom==jatom)
                 continue;
 
@@ -77,7 +88,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TF
             double x[3];
             double d=sqrt(t.d2_minImage(iatom,jatom,timestep,timestep,x));
             //bin index
-            int idx=(int)floorf((d-rmin)/dr);
+            int idx=(int)floorf((d-rminmax[pairidx].first)/dr[pairidx]);
 
             if (idx<nbin && idx >= 0){
                 //calculate sin and cos

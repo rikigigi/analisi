@@ -583,16 +583,23 @@ int main(int argc, char ** argv)
 
 
             }else if (sph>0) {
-                if (factors_input.size()!=2){
+                if (factors_input.size()%2 != 0 || factors_input.size()==0){
                     throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
                 std::cerr << "Calculation of spherical harmonic density correlation function is beginning (this can take a lot of time)...\n";
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<SphericalCorrelations<10,double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int,bool>
+                using SHC=SphericalCorrelations<10,double,Traiettoria>;
+                SHC::rminmax_t rminmax;
+                for (unsigned int i=0; i<factors_input.size()/2;++i){
+                   rminmax.push_back({factors_input[i*2],factors_input[i*2+1]});
+                }
+
+                MediaBlocchi<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int,bool>
                         sh(&tr,blocknumber);
-                sh.calcola(factors_input[0],factors_input[1],sph,stop_acf,numero_thread,skip,buffer_size,dumpGK);
+
+                sh.calcola(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK);
 
                 auto shape= sh.media()->get_shape();
 

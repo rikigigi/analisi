@@ -43,12 +43,11 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     using SHC = SphericalCorrelations<10,double,T>;
     py::class_< SHC >(m,(std::string("SphericalCorrelations")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,double,double,unsigned int, unsigned int, unsigned int,unsigned int,unsigned int, bool>(),R"lol(
+            .def(py::init<T*,typename SHC::rminmax_t,unsigned int, unsigned int, unsigned int,unsigned int,unsigned int, bool>(),R"lol(
                  Parameters
                  ----------
                  Trajectory instance
-                 rmin
-                 rmax
+                 rminmax list
                  nbin
                  maximum time lag
                  number of threads

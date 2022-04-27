@@ -1,5 +1,12 @@
 #!/bin/bash
 set -e
+
+if [ -z "$BUILD_DIR" ] || [ -z "$SOURCE_DIR" ]
+then
+    echo ERROR: must set BUILD_DIR and SOURCE_DIR variables
+    exit -1
+fi
+
 ANALISI="$BUILD_DIR/analisi"
 RES_DIR="$SOURCE_DIR/tests/data/cli"
 INPUT="$SOURCE_DIR/tests/data/lammps2020.bin"
@@ -26,12 +33,13 @@ TESTS=( "MSD_normal_full"   "-i $INPUT -Q"
         "pair_corr_no_t"    "-i $INPUT -g 100 -F 0.0 4.0 -S 1 -s 8"
         "pair_corr_t"       "-i $INPUT -g 100 -F 0.0 4.0 -S 10 -s 8"
         "neighbours"        "-i $INPUT --neighbour 10"
-        "spherical_harm"    "-i $INPUT -Y 1 -S 2 -s 14 -F 0.0 2.0"
+        "spherical_harm"    "-i $INPUT -Y 1 -S 2 -s 14 -F 0.0 2.0 0.0 2.0 0.0 2.0 0.0 2.0"
 )
 N_arr=${#TESTS[@]}
 N=$(( N_arr - 1 ))
 RETURN=0
 FLIST=""
+trap 'echo "ERROR on $NAME :command $ANALISI $ARGS failed with output \n $OUTPUT"' ERR
 for i in $(seq 0 2 $N )
 do
     ip=$(( i + 1 ))
