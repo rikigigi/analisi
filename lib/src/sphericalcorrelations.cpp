@@ -322,9 +322,11 @@ void SphericalCorrelations<lmax,TFLOAT,T>::corr_sh_calc(const TFLOAT * sh1, cons
 
 #ifdef BUILD_MMAP
 template class SphericalCorrelations<10,double,Traiettoria>;
+template class SphericalCorrelations<6,double,Traiettoria>;
 #endif
 
 #ifdef PYTHON_SUPPORT
 #include "traiettoria_numpy.h"
 template class SphericalCorrelations<10,double,Traiettoria_numpy>;
+template class SphericalCorrelations<6,double,Traiettoria_numpy>;
 #endif

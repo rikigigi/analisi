@@ -1,6 +1,8 @@
 #include "steinhardt.h"
 #include "specialfunctions.h"
 
+#include "config.h"
+
 template <int l, class TFLOAT, class T>
 Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    const rminmax_t rminmax,
@@ -133,3 +135,11 @@ void Steinhardt<l,TFLOAT,T>::calc_end() {
     delete [] threadResults;
     threadResults=nullptr;
 }
+
+#ifdef BUILD_MMAP
+template class Steinhardt<6,double,Traiettoria>;
+#endif
+#ifdef PYTHON_SUPPORT
+#include "traiettoria_numpy.h"
+template class Steinhardt<6,double,Traiettoria_numpy>;
+#endif

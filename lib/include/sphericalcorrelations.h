@@ -84,7 +84,6 @@ protected:
         return (nbin*(ntypes*iatom+jtype)+ibin);
     }
 
-private:
     inline int index_wrk(const int iatom,const int jtype,const int ibin=0) const noexcept {
         return (l+1)*(l+1)*index_wrk_counter(iatom,jtype,ibin);
     }

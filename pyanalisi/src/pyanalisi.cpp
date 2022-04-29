@@ -18,6 +18,7 @@
 #include "sphericalcorrelations.h"
 #include "config.h"
 #include "atomicdensity.h"
+#include "steinhardt.h"
 
 namespace py = pybind11;
 
@@ -58,6 +59,35 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def("reset",&SHC::reset)
             .def("calculate", &SHC::calcola)
             .def_buffer([](SHC & m) -> py::buffer_info {
+        return py::buffer_info(
+                    m.accesso_lista(),
+                    sizeof(double),
+                    py::format_descriptor<double>::format(),
+                    m.get_shape().size(),
+                    m.get_shape(),
+                    m.get_stride()
+                    );
+
+    });
+
+    using SOP = Steinhardt<6,double,T>;
+    py::class_< SOP >(m,(std::string("SteinhardtOrderParameterHistogram")+typestr).c_str(),py::buffer_protocol())
+            .def(py::init<T*,typename SOP::rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,unsigned int,unsigned int, bool>(),
+R"lol(
+Parameters
+----------
+Trajectory instance
+rminmax list
+number of radial bins
+size of each dimension of big histogram
+list of l values to use for building the histogram
+number of threads
+time skip
+debug flag
+)lol")
+            .def("reset",&SOP::reset)
+            .def("calculate", &SOP::calcola)
+            .def_buffer([](SOP & m) -> py::buffer_info {
         /*
         std::cerr <<"shape ("<< m.get_shape().size() << "): ";
         for (auto & n: m.get_shape()) std::cerr << n << " ";

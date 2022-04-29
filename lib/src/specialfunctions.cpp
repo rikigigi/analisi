@@ -4,6 +4,15 @@ using namespace SpecialFunctions;
 
 
 
+
+void print_realSpericalHarmonics_coeff(int l,std::ostream & out) {
+    for (int j=0;j<=l;++j) {
+        for (int i=-j;i<=j;++i){
+            out << "(l,m) = ("<<j<<","<<i <<"): "<<realSpericalHarmonics_coeff<double>(j,i,j-abs(i)) <<std::endl;
+        }
+    }
+}
+
 void test() {
 
     //init data

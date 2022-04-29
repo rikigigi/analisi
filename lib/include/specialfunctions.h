@@ -45,13 +45,6 @@ constexpr T realSpericalHarmonics_coeff(long int l, long int m, long int cur_v, 
         return sqrt(T(2*l+1)/(4*PI)*2 / value)*pow(-1,m);
     }
 }
-void print_realSpericalHarmonics_coeff(int l,std::ostream & out) {
-    for (int j=0;j<=l;++j) {
-        for (int i=-j;i<=j;++i){
-            out << "(l,m) = ("<<j<<","<<i <<"): "<<realSpericalHarmonics_coeff<double>(j,i,j-abs(i)) <<std::endl;
-        }
-    }
-}
 
 
 namespace MultiValStatic {

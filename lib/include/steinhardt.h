@@ -14,11 +14,12 @@ constexpr int FLAGS =
 }
 
 template <int l, class TFLOAT, class T>
-class Steinhardt : public SphericalCorrelations<l,TFLOAT,T>, public CalcolaMultiThread<Steinhardt<l,TFLOAT,T>> {
+class Steinhardt : public SphericalCorrelations<l,TFLOAT,T>, public CalcolaMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS > {
+public:
     using SPHC = SphericalCorrelations<l,TFLOAT,T>;
-    using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>>;
+    using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
     using rminmax_t = typename SPHC::rminmax_t;
-
+    using CMT::calcola;
     Steinhardt(T *t,
                const rminmax_t rminmax,
                unsigned int nbin,
@@ -49,12 +50,21 @@ class Steinhardt : public SphericalCorrelations<l,TFLOAT,T>, public CalcolaMulti
         return stride;
     }
 
+    //for the python interface
     std::vector<ssize_t> get_stride() const {
         std::vector<ssize_t> nstride;
         for (const auto & s : stride){
             nstride.push_back(s*sizeof(TFLOAT));
         }
         return nstride;
+    }
+
+    std::vector<ssize_t> get_shape(){
+        std::vector<ssize_t> res {nbin,ntypes,ntypes};
+        for (int i=0;i<steinhardt_l_histogram.size();++i){
+            res.push_back(steinhardt_histogram_size);
+        }
+        return res;
     }
 
     size_t get_index(const int ibin, const int type1, const int type2) const {
