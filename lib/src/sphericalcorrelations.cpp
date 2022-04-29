@@ -16,7 +16,7 @@ SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
                                                          unsigned int skip,
                                                          unsigned int buffer_size,
                                                          bool debug) :
-t{*t},rminmax{rminmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}{
+t{*t},rminmax{rminmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size} {
 
    dr.reserve(rminmax.size());
    for (auto & range : rminmax) {
@@ -47,21 +47,15 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
     descr << "#TODO"<<std::endl;
     c_descr=descr.str();
 
+    ntimesteps=numeroTimestepsPerBlocco;
+
+    check_rminmax_size();
 
     //quanti timestep è lunga la funzione di correlazione
     leff =(numeroTimestepsPerBlocco<tmax || tmax==0)? numeroTimestepsPerBlocco : tmax;
     //numero di timestep su cui fare la media
-    ntimesteps=numeroTimestepsPerBlocco;
-    natoms=t.get_natoms();
-    ntypes=t.get_ntypes();
     lunghezza_lista=leff*ntypes*ntypes*nbin*(l+1);
 
-    if (ntypes*ntypes != rminmax.size()) {
-        std::stringstream ss;
-        ss << "you must provide a radial range for each pair of atomic types, in total ntypes*ntypes pair of numbers. You provided "<<
-              rminmax.size() << " elements while ntypes is " << ntypes <<" .";
-        throw std::runtime_error(ss.str());
-    }
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
@@ -70,10 +64,20 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
 
 template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby) const {
+void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep,
+                                                TFLOAT *result,
+                                                TFLOAT *workspace,//workspace array
+                                                TFLOAT * cheby,//workspace array,
+                                                int * counter // counter of #of atoms in the bin, for every atom
+                                                ) const {
     //zero result
     for (int i=0;i<(lmax+1)*(lmax+1)*natoms*nbin*ntypes;++i) {
         result[i]=0;
+    }
+    if (counter){
+        for (int i=0;i<natoms*ntypes*nbin;++i){
+            counter[i]=0;
+        }
     }
     for (unsigned int iatom=0;iatom<natoms;iatom++) {
         //other atom loop
@@ -99,6 +103,9 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TF
                 //add to the sh density of the current iatom of the current bin of the type jtype
                 for (int ll=0;ll<(lmax+1)*(lmax+1);++ll) {
                     result[index_wrk(iatom,jtype,idx)+ll]+=workspace[ll];
+                }
+                if (counter){
+                    counter[index_wrk_counter(iatom,jtype,idx)]++;
                 }
             }
         }

@@ -196,6 +196,7 @@ set (ANALISI_LIB
     lib/src/centerofmassdiff.cpp
     lib/src/specialfunctions.cpp
     lib/src/sphericalcorrelations.cpp
+    lib/src/steinhardt.cpp
     lib/src/atomicdensity.cpp
     lib/src/traiettoriabase.cpp
     )

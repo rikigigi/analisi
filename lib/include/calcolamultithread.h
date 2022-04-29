@@ -14,11 +14,18 @@
 #include <thread>
 
 namespace CalcolaMultiThread_Flags {
+//mutually exclusive SPLITS:
 constexpr int PARALLEL_SPLIT_AVERAGE =  0b00000001; // assign to the single thread worker different averages range
 constexpr int PARALLEL_SPLIT_TIME =     0b00000010; // assigne to the single thread worker different time differences ranges
 constexpr int PARALLEL_SPLIT_ATOM =     0b00000100; // assign to the single thread worker different atom ranges
-constexpr int PARALLEL_LOOP_AVERAGE =   0b00010000; // do the loop for computing the average outside the parallelized region
-constexpr int PARALLEL_LOOP_TIME =      0b00100000; // do the loop over the times outside the parallelized region
+//loop to perform in serial: this will use different signatures of the single thread worker
+constexpr int SERIAL_LOOP_AVERAGE =   0b00010000; // do the loop for computing the average outside the parallelized region; pass time average index in first position
+constexpr int SERIAL_LOOP_TIME =      0b00100000; // do the loop over the times outside the parallelized region; pass time index in first position
+//if both AVERAGE and TIME are performed in serial the code will pass first the time and then the average index
+//if no SERIAL_LOOP_* flag is present the code will call the worker with the argument:
+// rangeA, rangeB, first index of the block, thread id, where rangeA and rangeB are computed to split the work across the thread according to the PARALLEL_SPLIT_* option choosen
+
+//options to call additional routines in some part of the computation
 constexpr int CALL_INNER_JOIN_DATA =    0b01000000;
 constexpr int CALL_DEBUG_ROUTINE =      0b10000000;
 constexpr int CALL_CALC_INIT    =      0b100000000;
@@ -65,11 +72,11 @@ public:
         }
         t0=0;t1=1;
         i0=0;i1=1;
-        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE)) {
+        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE)) {
             i0=0;
             i1=ntimesteps;
         }
-        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME)) {
+        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME)) {
             t0=0;
             t1=leff;
         }
@@ -83,21 +90,21 @@ public:
         std::vector<std::thread> threads;
         for (ssize_t t=t0;t<t1;t+=every){ // loop over time lags. Can be a loop over a single value if disabled
             for (ssize_t i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
-                for (unsigned int ith=0;ith<nthreads;++ith){
+                for (unsigned int ith=0;ith<nthreads;++ith){ //this is a loop on TIME/AVERAGE INDEX/ATOM INDEX depending on what PARALLEL_SPLIT_* you choose
                     threads.push_back(std::thread([&,ith,t,i](){
                         auto range=splitter(ith,primo);
                         // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
                         // select a different signature of the calculation function depending on where the loops (if present) are parallelized
-                        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME)) {
-                            static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith);
-                        } else if constexpr(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE) {
-                            static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith);
-                        } else if constexpr(FLAGS & CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME) {
-                            static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith);
+                        // rangeA and rangeB are passed to each thread and their meaning depends on what PARALLEL_SPLIT_* option you choose
+                        if constexpr (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME)) {
+                            static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith); // time, average, rangeA, rangeB, primo, thread id
+                        } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE) {
+                            static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith); // average, rangeA, rangeB, primo, thread id
+                        } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME) {
+                            static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith); // time, rangeA, rangeB, primo, thread id
                         } else {
-                            static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith);
+                            static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith); // rangeA, rangeB, primo, thread id
                         }
-
                     }));
                 }
                 for (auto & t : threads){

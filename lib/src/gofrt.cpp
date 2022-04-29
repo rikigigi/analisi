@@ -119,8 +119,6 @@ void Gofrt<TFLOAT,T>::calc_single_th(int t, int imedia, int atom_start, int atom
 
             if (idx<nbin && idx >= 0)
                 th_data_[gofr_idx(t,itype,idx)]+=incr;
-
-
         }
     }
 
