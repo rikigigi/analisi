@@ -25,7 +25,7 @@ public:
                unsigned int nbin,
                unsigned int steinhardt_histogram_size,
                std::vector<unsigned int> steinhardt_l_histogram, /// list of l to use to make an histogram. If the list is not emplty, use the tmax argument as the size of each dimension of the histogram
-               unsigned int nthreads=0,
+               unsigned int nthreads=2,
                unsigned int skip=1,
                bool debug=false
             );
@@ -62,7 +62,7 @@ public:
     std::vector<ssize_t> get_shape(){
         std::vector<ssize_t> res {nbin,ntypes,ntypes};
         for (int i=0;i<steinhardt_l_histogram.size();++i){
-            res.push_back(steinhardt_histogram_size);
+            res.push_back(nbin_steinhardt);
         }
         return res;
     }
@@ -89,7 +89,6 @@ private:
     using SPHC::lunghezza_lista;
     using SPHC::nbin;
     using SPHC::lista;
-    using CMT::nthreads;
     const std::vector<unsigned int> steinhardt_l_histogram;
     size_t nbin_steinhardt,steinhardt_histogram_size;
     TFLOAT * threadResults;

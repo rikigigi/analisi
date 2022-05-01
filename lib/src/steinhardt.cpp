@@ -67,7 +67,7 @@ void Steinhardt<l,TFLOAT,T>::calc_init(int primo) {
 
     //allocate the space for the threads work
 
-    threadResults = new TFLOAT [lunghezza_lista*(nthreads-1)];
+    threadResults = new TFLOAT [lunghezza_lista*(CMT::nthreads-1)];
 
     if (ntimesteps/CMT::skip>0) incr=1.0/int(ntimesteps/CMT::skip);
     else                   incr=1;
@@ -84,7 +84,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
     TFLOAT *result = new TFLOAT [(l+1)*(l+1)*natoms*nbin*ntypes];
     TFLOAT * threadResult = threadResults + lunghezza_lista*ith;
     int * counter = new int[natoms*ntypes*nbin];
-    if (ith==nthreads-1) { // last thread writes directly on the final result memory
+    if (ith==CMT::nthreads-1) { // last thread writes directly on the final result memory
         threadResult = lista;
     }
 
@@ -134,7 +134,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
 template <int l, class TFLOAT, class T>
 void Steinhardt<l,TFLOAT,T>::calc_end() {
     //sum all the threads result
-    for (int ith=0;ith<nthreads-1;ith++) {
+    for (int ith=0;ith<CMT::nthreads-1;ith++) {
         for (int i=0;i<lunghezza_lista;++i) {
             lista[i]+=threadResults[ith*lunghezza_lista+i];
         }
