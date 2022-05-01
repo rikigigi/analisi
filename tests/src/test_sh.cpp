@@ -1,6 +1,7 @@
 #define BOOST_TEST_MODULE sh_tests
 #include <boost/test/included/unit_test.hpp>
 #include "sphericalcorrelations.h"
+#include "steinhardt.h"
 #include <vector>
 #include <algorithm>
 
@@ -9,8 +10,8 @@
 template <int l,int NTH>
 struct ShFixture{
     ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), {{0.5, 3.0},{0.5, 3.0},{0.5, 3.0},{0.5, 3.0}}, nbin, 17, NTH, 13, 10,false} {
-	    sh.reset(100);
-            data.path=data.path+"sh/";
+        sh.reset(100);
+        data.path=data.path+"sh/";
     }
     ~ShFixture(){}
     TrajSetup traj;
@@ -31,9 +32,28 @@ struct ShFixture{
     }
 };
 
+template<int l,int NTH>
+struct SteinhardtFixture{
+    SteinhardtFixture(): nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()},
+        sh{&(traj.traj),{{0.5, 3.0},{0.5, 3.0},{0.5, 3.0},{0.5, 3.0}},nbin,100,{4,6},NTH} {
+        sh.reset(100);
+        data.path=data.path+"sh_stein/";
+    }
+    TrajSetup traj;
+    const unsigned int nbin;
+    const size_t natoms;
+    const int ntypes;
+    Steinhardt<l,double,Traiettoria> sh;
+    DataRegression<double> data;
+};
+
 typedef ShFixture<10,1> ShFix10_1 ;
 typedef ShFixture<10,2> ShFix10_2 ;
 typedef ShFixture<10,3> ShFix10_3 ;
+
+typedef SteinhardtFixture<6,1> StFix6_1;
+typedef SteinhardtFixture<6,2> StFix6_2;
+typedef SteinhardtFixture<6,3> StFix6_3;
 
 #define TESTS(T)\
 BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
@@ -44,9 +64,13 @@ BOOST_AUTO_TEST_CASE(test_calcola)\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 
-TESTS(ShFix10_1)
 TESTS(ShFix10_2)
+TESTS(ShFix10_1)
 TESTS(ShFix10_3)
+
+TESTS(StFix6_2)
+TESTS(StFix6_1)
+TESTS(StFix6_3)
 
 BOOST_FIXTURE_TEST_SUITE(sh_snapshots, ShFix10_1)
 BOOST_AUTO_TEST_CASE(test_single_snapshot)
@@ -98,6 +122,5 @@ BOOST_AUTO_TEST_CASE(test_corr_consistency){
 
 }
 BOOST_AUTO_TEST_SUITE_END()
-
 
 

@@ -7,15 +7,16 @@ template <int l, class TFLOAT, class T>
 Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    const rminmax_t rminmax,
                                    unsigned int nbin,
-                                   unsigned int steinhardt_histogram_size,
+                                   unsigned int nbin_steinhardt,
                                    std::vector<unsigned int> steinhardt_l_histogram,
                                    unsigned int nthreads,
                                    unsigned int skip,
                                    bool debug) :
     SPHC::SphericalCorrelations(t,rminmax,nbin,1,nthreads,skip,2),
     CMT::CalcolaMultiThread(nthreads,skip),
-    steinhardt_histogram_size{steinhardt_histogram_size},
-    steinhardt_l_histogram{steinhardt_l_histogram}
+    steinhardt_histogram_size{0},
+    steinhardt_l_histogram{steinhardt_l_histogram},
+    nbin_steinhardt{nbin_steinhardt}
 {
 
     steinhardt_histogram_size=1;
@@ -106,21 +107,27 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
 
                     //calculate order parameter and histogram index
                     size_t hist_idx=0;
-                    for (int jidx=0;jidx<steinhardt_l_histogram.size();++jidx) {
-                        int j=steinhardt_l_histogram[jidx];
-                        TFLOAT n_atoms=counter[SPHC::index_wrk_counter(iatom,jtype,ibin)];
-                        TFLOAT m_steinhardt = sqrt(v_atomic.get_l_m0(j)/n_atoms/n_atoms*4*PI/(2*j+1));
-                        size_t jhidx=floorf(m_steinhardt*steinhardt_histogram_size);
-                        hist_idx+=jhidx*stride[3+jidx];
+                    TFLOAT n_atoms=counter[SPHC::index_wrk_counter(iatom,jtype,ibin)];
+                    if (n_atoms>0) {
+                        for (int jidx=0;jidx<steinhardt_l_histogram.size();++jidx) {
+                            int j=steinhardt_l_histogram[jidx];
+                            TFLOAT pre_sqrt=v_atomic.get_l_m0(j)/n_atoms/n_atoms*4*PI/(2*j+1);
+                            TFLOAT m_steinhardt = sqrt(pre_sqrt);
+                            size_t jhidx=floorf(m_steinhardt*nbin_steinhardt);
+                            if (jhidx>=nbin_steinhardt) {
+                                jhidx=nbin_steinhardt-1;
+                            }
+                            hist_idx+=jhidx*stride[3+jidx];
+                        }
+                        //update histogram (threadResult) of this radial bin...
+                        size_t idx_all=get_index(ibin,itype,jtype)+hist_idx;
+                        threadResult[idx_all]+=incr;
                     }
-                    //update histogram (threadResult) of this radial bin...
-                    size_t idx_all=get_index(ibin,itype,jtype)+hist_idx;
-                    threadResult[idx_all]+=incr;
                 }
             }
         }
     }
-
+    delete [] counter;
     delete [] result;
 }
 
