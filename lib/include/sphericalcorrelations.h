@@ -52,7 +52,7 @@ public:
     int get_final_snap_size() const {
         return get_single_type_size()*ntypes/(l+1);
     }
-    inline void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby, int * counter=nullptr) const;
+    void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby, int * counter=nullptr) const;
     void corr_sh_calc(const TFLOAT * sh1, const TFLOAT *sh2, TFLOAT * aveTypes, TFLOAT * aveWork1, int sh_snap_size , int sh_final_size, int *avecont) const noexcept;
 
     bool check_rminmax_size() {

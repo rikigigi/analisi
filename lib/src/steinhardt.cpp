@@ -12,7 +12,7 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    unsigned int nthreads,
                                    unsigned int skip,
                                    bool debug) :
-    SPHC::SphericalCorrelations(t,rminmax,nbin,1,nthreads,skip,2),
+    SPHC::SphericalCorrelations(t,rminmax,nbin,1,nthreads,skip,2,debug),
     CMT::CalcolaMultiThread(nthreads,skip),
     steinhardt_histogram_size{0},
     steinhardt_l_histogram{steinhardt_l_histogram},
@@ -86,6 +86,10 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
     int * counter = new int[natoms*ntypes*nbin];
     if (ith==CMT::nthreads-1) { // last thread writes directly on the final result memory
         threadResult = lista;
+    }
+
+    for (size_t i=0;i<lunghezza_lista;++i) {
+        threadResult[i]=0;
     }
 
     for (int i = istart; i<istop;++i) {
