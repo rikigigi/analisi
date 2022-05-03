@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include "compiler_types.h"
 
+#include <iostream>
+
 /**
   * CRTP class that makes easy to implement a multithreaded calculation. The calculation is divided in blocks of contiguous timesteps, and then a function that calculates the quantity for every block is called.
   * The user must be careful about multithreading safety of the calc_single_th function (that should write on different memory address for different threads)
@@ -58,7 +60,7 @@ public:
 
     void init_split() {
         if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE){
-            npassith=ntimesteps/skip/nthreads;
+            npassith=ntimesteps/nthreads;
             end=ntimesteps;
         } else if (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME) {
             npassith=leff/nthreads;
@@ -106,9 +108,11 @@ public:
                             static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith); // rangeA, rangeB, primo, thread id
                         }
                     }));
+//                    std::cerr << "thread " << & threads.back() << " started" <<std::endl;
                 }
                 for (auto & t : threads){
                     t.join();
+//                    std::cerr << "thread " << &t << " joined" <<std::endl;
                 }
                 threads.clear();
                 if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA))

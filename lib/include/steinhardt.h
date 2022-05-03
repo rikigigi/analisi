@@ -8,7 +8,7 @@ namespace Steinhardt_Flags {
 
 constexpr int FLAGS =
         CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE |
-        CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE |
+        CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA |
         CalcolaMultiThread_Flags::CALL_CALC_INIT;
 
 }
@@ -38,7 +38,7 @@ public:
                         int,//first index of the block
                         int//thread index
                         );
-    void calc_end();
+    void join_data();
 
     std::vector<size_t> compute_stride() {
         stride = {steinhardt_histogram_size*ntypes*ntypes,steinhardt_histogram_size*ntypes,steinhardt_histogram_size};
@@ -81,7 +81,7 @@ public:
 
 
 private:
-    using SPHC::ntimesteps; //note that due to mess, also CMT has a variable with the same name
+    using CMT::ntimesteps; //note that due to mess, also SPHC has a variable with the same name
     using SPHC::natoms;
     using SPHC::ntypes;
     using SPHC::c_descr;

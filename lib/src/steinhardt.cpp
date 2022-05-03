@@ -51,7 +51,7 @@ void Steinhardt<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) 
     c_descr=descr.str();
 
     ntimesteps=numeroTimestepsPerBlocco;
-    CMT::ntimesteps=ntimesteps; //TODO: mess here
+    //CMT::ntimesteps=ntimesteps; //TODO: mess here
 
     size_t new_lungh_lista=steinhardt_histogram_size*nbin*ntypes*ntypes;
     if (new_lungh_lista != lunghezza_lista) {
@@ -92,7 +92,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
         threadResult[i]=0;
     }
 
-    for (int i = istart; i<istop;++i) {
+    for (int i = istart; i<istop;i+=CMT::skip) {
         SPHC::calc(i,result,workspace,cheby,counter);
         //calculate square, sum all m
         const int sh_size=SPHC::get_snap_size();
@@ -133,10 +133,11 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
     }
     delete [] counter;
     delete [] result;
+    std::cerr << "Thread " << ith << "istart,istop="<<istart<<","<<istop<< " finished" <<std::endl;
 }
 
 template <int l, class TFLOAT, class T>
-void Steinhardt<l,TFLOAT,T>::calc_end() {
+void Steinhardt<l,TFLOAT,T>::join_data() {
     //sum all the threads result
     for (int ith=0;ith<CMT::nthreads-1;ith++) {
         for (int i=0;i<lunghezza_lista;++i) {
