@@ -160,6 +160,7 @@ public:
         return d2_minImage(i,j,itimestep,jtimestep,x);
     }
 
+    /// x  <-- x(i)-x(j)
     double d2_minImage(size_t i,
                        size_t j,
                        size_t itimestep,
