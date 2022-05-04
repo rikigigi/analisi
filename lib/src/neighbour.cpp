@@ -3,10 +3,11 @@
 #include <cstring>
 #include <cmath>
 #include "config.h"
+#include <sstream>
 
 template <class T, class TType>
 void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
-    for (size_t i=0;i<natoms*(max_neigh+1);i+=max_neigh+1){
+    for (size_t i=0;i<natoms*(info.nneigh+ntypes);++i){
        list[i]=0;
     }
     for (size_t iatom=0;iatom<natoms;++iatom) {
@@ -15,28 +16,32 @@ void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
           size_t jtype = t.get_type(jatom);
           TType x[3];
           TType min_img_dist2=t.d2_minImage(iatom,jatom,timestep,timestep,x); // xi - xj
-          if (min_img_dist2 <= cutoff2(jtype)) {
+          if (min_img_dist2 <= cutoff2(jtype) || min_img_dist2 <= cutoff2(itype)) {
               // update neigh list of iatom and jatom
               size_t idx=info.list_offset[jtype] + iatom*(nneigh(jtype)+1); //i atom in the center, j of type jtype around
               size_t jdx=info.list_offset[itype] + jatom*(nneigh(itype)+1); // the j atom in the center, i of type itype around
               size_t ni=list[idx], nj=list[jdx];
               if (ni < nneigh(jtype) && nj < nneigh(itype)) {
                   TType min_img_dist = sqrt(min_img_dist2);
-                  list[idx+ni] = jatom;
-                  list[jdx+nj] = iatom;
+                  list[idx+1+ni] = jatom;
+                  list[jdx+1+nj] = iatom;
                   //save distance
-                  size_t pidx=info.rpos_offset[jtype] + (iatom*nneigh(jtype)+list[idx])*4;
-                  size_t pjdx=info.rpos_offset[itype] + (jatom*nneigh(itype)+list[jdx])*4;
+                  size_t pidx=info.rpos_offset[jtype] + (iatom*nneigh(jtype)+ni)*4;
+                  size_t pjdx=info.rpos_offset[itype] + (jatom*nneigh(itype)+nj)*4;
                   rpos[pidx]=min_img_dist;
                   rpos[pjdx]=min_img_dist;
                   for (int i=0;i<3;++i){
                       rpos[pidx+1+i]=x[i];
                       rpos[pjdx+1+i]=-x[i];
                   }
-                  list[idx]++;
-                  list[jdx]++;
+                  if (min_img_dist2 <= cutoff2(jtype))
+                    list[idx]++;
+                  if( min_img_dist2 <= cutoff2(itype))
+                    list[jdx]++;
               } else {
-                  throw std::runtime_error("Too many neighbours in shell!");
+                  std::stringstream ss;
+                  ss <<"Too many neighbours in shell! (iatom="<< iatom << " jatom=" << jatom << " ni="<<ni << " nj="<<nj <<" )";
+                  throw std::runtime_error(ss.str());
               }
           }
        }
@@ -47,19 +52,20 @@ void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
             for (size_t iatom=0;iatom<natoms;++iatom){
                 auto iter = get_neigh(iatom,jtype);
                 size_t nneigh_i=iter.size();
+                if (nneigh_i==0) continue;
                 for (size_t i=0;i<nneigh_i;++i){
                     tmp_idxs[i]=i;
                 }
-                const size_t offset=info.rpos_offset[jtype]+iatom*4;
+                const size_t offset=info.rpos_offset[jtype]+iatom*nneigh(jtype)*4;
                 std::sort(tmp_idxs,tmp_idxs+nneigh_i,
                           [&](const size_t &a, const size_t &b){
-                    return rpos[offset+a] < rpos[offset+b];
+                    return rpos[offset+a*4] < rpos[offset+b*4];
                 }
                 );
                 //apply the permutation
                 for (size_t i=0;i<nneigh_i;++i){
                     for (size_t j=0;j<4;++j){
-                        tmp_rpos[i*4+j]=rpos[offset+tmp_idxs[i]];
+                        tmp_rpos[i*4+j]=rpos[offset+tmp_idxs[i]*4+j];
                     }
                 }
                 std::memcpy(rpos+offset,tmp_rpos,nneigh_i*4*sizeof(TType));

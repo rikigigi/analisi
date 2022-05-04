@@ -1,12 +1,20 @@
 #define BOOST_TEST_MODULE lammps2020_msd_tests
 #include <boost/test/included/unit_test.hpp>
 #include "test_fixtures.h"
+#include "neighbour.h"
 
 
 struct TrajTest{
     TrajTest(bool pbc=false,bool l2020=false):t{pbc,l2020}{};
     TrajSetup t;
     DataRegression<double> data;
+};
+
+struct NeighTest{
+    NeighTest(bool l2020=true):t{true,l2020},n{&t.traj,{{100,1.0,1.0},{100,1.0,1.0}}} {};
+        TrajSetup t;
+        DataRegression<double> data;
+        Neighbours<Traiettoria,double> n;
 };
 
 
@@ -49,3 +57,11 @@ BOOST_AUTO_TEST_CASE(pbc){
 
 
 }
+
+BOOST_FIXTURE_TEST_SUITE(traj_neigh,NeighTest)
+BOOST_AUTO_TEST_CASE(neigh_test) {
+    n.update_neigh(0,true);
+    n.get_sann(0,0);
+}
+
+BOOST_AUTO_TEST_SUITE_END()

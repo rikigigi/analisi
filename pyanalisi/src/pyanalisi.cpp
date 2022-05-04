@@ -182,7 +182,7 @@ debug flag
             ;
 
     using NEIGH = Neighbours<T,double>;
-    py::class_<NEIGH>(m,(std::string("VibrationSpectrum")+typestr).c_str(),py::buffer_protocol())
+    py::class_<NEIGH>(m,(std::string("Neighbours")+typestr).c_str(),py::buffer_protocol())
             .def(py::init<T*,typename NEIGH::ListSpec>())
             .def("calculate_neigh", &NEIGH::update_neigh)
             .def("get_sann", [](NEIGH & n, size_t iatom, size_t jtype) {
@@ -190,7 +190,7 @@ debug flag
         const double * foo=sannit.begin();
 
         return pybind11::array_t<double>(
-        {{(long)sannit.size(),4}}, //shape
+        {{(long)sannit.size()/4,4}}, //shape
             {4*sizeof(double),sizeof(double)},
             foo
          );})
