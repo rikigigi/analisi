@@ -68,11 +68,14 @@ public:
         return true;
     }
 
+    //void set_sann(bool enabled);
+
 protected:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
     T & t;
 
+    bool use_sann;
 
     std::vector<TFLOAT> dr;
     const rminmax_t rminmax;

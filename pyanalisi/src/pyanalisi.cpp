@@ -19,6 +19,7 @@
 #include "config.h"
 #include "atomicdensity.h"
 #include "steinhardt.h"
+#include "neighbour.h"
 
 namespace py = pybind11;
 
@@ -179,6 +180,31 @@ debug flag
             .def("__enter__",[](VDOS & m) -> VDOS & {return m;})
             .def("__exit__",[](VDOS & m, py::object * exc_type, py::object * exc_value, py::object * traceback){})
             ;
+
+    using NEIGH = Neighbours<T,double>;
+    py::class_<NEIGH>(m,(std::string("VibrationSpectrum")+typestr).c_str(),py::buffer_protocol())
+            .def(py::init<T*,typename NEIGH::ListSpec>())
+            .def("calculate_neigh", &NEIGH::update_neigh)
+            .def("get_sann", [](NEIGH & n, size_t iatom, size_t jtype) {
+        auto sannit = n.get_sann(iatom,jtype);
+        const double * foo=sannit.begin();
+
+        return pybind11::array_t<double>(
+        {{(long)sannit.size(),4}}, //shape
+            {4*sizeof(double),sizeof(double)},
+            foo
+         );})
+            .def("get_neigh", [](NEIGH & n, size_t iatom, size_t jtype) {
+        auto it = n.get_neigh(iatom,jtype);
+        const size_t * foo=it.begin();
+
+        return pybind11::array_t<size_t>(
+        {{(long)it.size()}}, //shape
+            {sizeof(size_t)},
+            foo
+         );})
+                ;
+
 }
 
 
