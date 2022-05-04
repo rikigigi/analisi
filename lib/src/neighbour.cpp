@@ -1,5 +1,6 @@
 #include "neighbour.h"
 #include <algorithm>
+#include <cstring>
 
 template <class T, class TType>
 void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
@@ -43,10 +44,10 @@ void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
            auto iter = get_neigh(iatom);
            size_t nneigh=iter.size();
            for (size_t i=0;i<nneigh;++i){
-               tmp_idxs=i;
+               tmp_idxs[i]=i;
            }
            const size_t offset=iatom*4;
-           std::sort(tmp_idxs,tmp_idx+nneigh,
+           std::sort(tmp_idxs,tmp_idxs+nneigh,
                        [&](const size_t &a, const size_t &b){
                           return rpos[offset+a] < rpos[offset+b];
                        }
@@ -68,7 +69,7 @@ void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
 }
 
 template <class T, class TType>
-Neighbours<T,TType>::NeighIterator<TType> Neighbours<T,TType>::get_sann(const size_t iatom) {
+typename Neighbours<T,TType>::template NeighIterator<TType> Neighbours<T,TType>::get_sann(const size_t iatom) {
     size_t nneigh=get_neigh(iatom).size();
     if (nneigh <3) return NeighIterator<TType>{rpos,0};
     size_t sann_n=3;

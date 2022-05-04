@@ -199,6 +199,7 @@ set (ANALISI_LIB
     lib/src/steinhardt.cpp
     lib/src/atomicdensity.cpp
     lib/src/traiettoriabase.cpp
+    lib/src/neighbour.cpp
     )
 
 if (BUILD_MMAP)
