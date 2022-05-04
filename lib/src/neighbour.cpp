@@ -79,10 +79,11 @@ void Neighbours<T,TType>::update_neigh(const size_t timestep, bool sort) {
     sorted=true;
 }
 
+
 template <class T, class TType>
-typename Neighbours<T,TType>::template NeighIterator<TType> Neighbours<T,TType>::get_sann(const size_t iatom, const size_t jtype) const  {
+size_t Neighbours<T,TType>::get_sann_n(const size_t iatom, const size_t jtype) const  {
     size_t nneigh_i=get_neigh(iatom,jtype).size();
-    if (nneigh_i <3) return NeighIterator<TType>{rpos,0};
+    if (nneigh_i <3) return 0;
     size_t sann_n=3;
     TType s = 0.0;
     for (size_t i=0;i<3;++i){
@@ -91,9 +92,8 @@ typename Neighbours<T,TType>::template NeighIterator<TType> Neighbours<T,TType>:
     while (sann_n < nneigh_i) {
        if (s <= rpos[info.rpos_offset[jtype]+(iatom*nneigh(jtype)+sann_n)*4]*(sann_n-2)) break;
     }
-    return NeighIterator<TType>{rpos+info.rpos_offset[jtype]+iatom*nneigh(jtype)*4,sann_n*4};
+    return sann_n;
 }
-
 
 #ifdef BUILD_MMAP
 #include "traiettoria.h"

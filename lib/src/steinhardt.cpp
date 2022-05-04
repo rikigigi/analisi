@@ -11,8 +11,8 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    std::vector<unsigned int> steinhardt_l_histogram,
                                    unsigned int nthreads,
                                    unsigned int skip,
-                                   bool debug) :
-    SPHC::SphericalCorrelations(t,rminmax,nbin,1,nthreads,skip,2,debug),
+                                   bool debug, const NeighListSpec nls) :
+    SPHC::SphericalCorrelations(t,rminmax,nbin,1,nthreads,skip,2,debug,nls),
     CMT::CalcolaMultiThread(nthreads,skip),
     steinhardt_histogram_size{0},
     steinhardt_l_histogram{steinhardt_l_histogram},

@@ -596,10 +596,11 @@ int main(int argc, char ** argv)
                    rminmax.push_back({factors_input[i*2],factors_input[i*2+1]});
                 }
 
-                MediaBlocchi<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int,bool>
+                MediaBlocchi<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int,
+                        unsigned int,unsigned int,bool,typename SHC::NeighListSpec>
                         sh(&tr,blocknumber);
 
-                sh.calcola(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK);
+                sh.calcola(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK,{});
 
                 auto shape= sh.media()->get_shape();
 

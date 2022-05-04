@@ -2,12 +2,14 @@
 #define SPHERICALCORRELATIONS_H
 
 #include "operazionisulista.h"
+#include "neighbour.h"
 
 template <int l,class TFLOAT, class T>
 class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>
 {
 public:
     using rminmax_t = std::vector<std::pair<TFLOAT,TFLOAT> >;
+    using NeighListSpec = typename Neighbours<T,double>::ListSpec;
     SphericalCorrelations(T *t,
                           const rminmax_t rminmax,
                           unsigned int nbin,
@@ -15,7 +17,8 @@ public:
                           unsigned int nthreads=0,
                           unsigned int skip=1,
                           unsigned int buffer_size=10,
-                          bool debug=false
+                          bool debug=false,
+                          const NeighListSpec neighList={}
                          );
     ~SphericalCorrelations();
     void reset(const unsigned int numeroTimestepsPerBlocco);
@@ -75,7 +78,6 @@ protected:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
     T & t;
 
-    bool use_sann;
 
     std::vector<TFLOAT> dr;
     const rminmax_t rminmax;
@@ -90,6 +92,8 @@ protected:
     inline int index_wrk(const int iatom,const int jtype,const int ibin=0) const noexcept {
         return (l+1)*(l+1)*index_wrk_counter(iatom,jtype,ibin);
     }
+private:
+    const NeighListSpec neighList;
 };
 
 #endif // SPHERICALCORRELATIONS_H

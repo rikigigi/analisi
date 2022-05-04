@@ -45,7 +45,8 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     using SHC = SphericalCorrelations<10,double,T>;
     py::class_< SHC >(m,(std::string("SphericalCorrelations")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,typename SHC::rminmax_t,unsigned int, unsigned int, unsigned int,unsigned int,unsigned int, bool>(),R"lol(
+            .def(py::init<T*,typename SHC::rminmax_t,unsigned int, unsigned int, unsigned int,unsigned int,
+                 unsigned int, bool,typename SHC::NeighListSpec>(),R"lol(
                  Parameters
                  ----------
                  Trajectory instance
@@ -56,6 +57,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                  time skip
                  buffer size
                  debug flag
+                 provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always
 )lol")
             .def("reset",&SHC::reset)
             .def("calculate", &SHC::calcola)
@@ -73,18 +75,20 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     using SOP = Steinhardt<6,double,T>;
     py::class_< SOP >(m,(std::string("SteinhardtOrderParameterHistogram")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,typename SOP::rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,unsigned int,unsigned int, bool>(),
+            .def(py::init<T*,typename SOP::rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,
+                 unsigned int,unsigned int, bool,typename SOP::NeighListSpec>(),
 R"lol(
 Parameters
 ----------
 Trajectory instance
 rminmax list
-number of radial bins
-size of each dimension of big histogram
+number of histograms (cut rmax - rmin in this number of part a fill a different istogram for each part)
+size of each dimension of the histogram (you want a big number here)
 list of l values to use for building the histogram
 number of threads
 time skip
 debug flag
+provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always. rminmax list is ignored
 )lol")
             .def("reset",&SOP::reset)
             .def("calculate", &SOP::calcola)
@@ -186,15 +190,33 @@ debug flag
             .def(py::init<T*,typename NEIGH::ListSpec>())
             .def("calculate_neigh", &NEIGH::update_neigh)
             .def("get_sann", [](NEIGH & n, size_t iatom, size_t jtype) {
-        auto sannit = n.get_sann(iatom,jtype);
-        const double * foo=sannit.begin();
+        auto sannit = n.get_sann_r(iatom,jtype);
+        const typename NEIGH::TType4 * foo=sannit.begin();
 
         return pybind11::array_t<double>(
-        {{(long)sannit.size()/4,4}}, //shape
+        {{(long)sannit.size(),4}}, //shape
             {4*sizeof(double),sizeof(double)},
+            (double*) foo
+         );})
+            .def("get_sann_idx", [](NEIGH & n, size_t iatom, size_t jtype) {
+        auto sannit = n.get_sann(iatom,jtype);
+        const size_t * foo=sannit.begin();
+
+        return pybind11::array_t<size_t>(
+        {{(long)sannit.size()}}, //shape
+            {sizeof (size_t)},
             foo
          );})
             .def("get_neigh", [](NEIGH & n, size_t iatom, size_t jtype) {
+        auto sannit = n.get_neigh_r(iatom,jtype);
+        const typename NEIGH::TType4 * foo=sannit.begin();
+
+        return pybind11::array_t<double>(
+        {{(long)sannit.size(),4}}, //shape
+            {4*sizeof(double),sizeof(double)},
+            (double*) foo
+         );})
+            .def("get_neigh_idx", [](NEIGH & n, size_t iatom, size_t jtype) {
         auto it = n.get_neigh(iatom,jtype);
         const size_t * foo=it.begin();
 

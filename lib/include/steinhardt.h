@@ -20,6 +20,7 @@ public:
     using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
     using rminmax_t = typename SPHC::rminmax_t;
     using CMT::calcola;
+    using typename SPHC::NeighListSpec;
     Steinhardt(T *t,
                const rminmax_t rminmax,
                unsigned int nbin,
@@ -27,7 +28,8 @@ public:
                std::vector<unsigned int> steinhardt_l_histogram, /// list of l to use to make an histogram. If the list is not emplty, use the tmax argument as the size of each dimension of the histogram
                unsigned int nthreads=2,
                unsigned int skip=1,
-               bool debug=false
+               bool debug=false,
+               const NeighListSpec nls={}
             );
 
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int nb) {return 0;}

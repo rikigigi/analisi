@@ -11,7 +11,7 @@ template <class T, class TType = double>
 class Neighbours {
 public:
     using ListSpec = std::vector<std::tuple<size_t, TType, TType> >;
-
+    using TType4 = TType[4];
     template<class TN>
     class NeighIterator {
     public:
@@ -53,7 +53,17 @@ public:
     NeighIterator<size_t> get_neigh(const size_t iatom, const size_t jtype) const{
         return NeighIterator{list+ info.list_offset[jtype]+ iatom*(nneigh(jtype)+1)+1, list[info.list_offset[jtype]+ iatom*(nneigh(jtype)+1)]};
     }
-    NeighIterator<TType> get_sann(const size_t iatom, const size_t jtype) const;
+    NeighIterator<TType4> get_neigh_r(const size_t iatom, const size_t jtype) const{
+        return NeighIterator{ (TType4 *) (rpos+ info.rpos_offset[jtype]+ iatom*nneigh(jtype)*4), list[info.list_offset[jtype]+ iatom*(nneigh(jtype)+1)]};
+    }
+    size_t get_sann_n(const size_t iatom, const size_t jtype) const;
+
+    NeighIterator<size_t> get_sann(const size_t iatom, const size_t jtype) const{
+        return NeighIterator<size_t>{list+ info.list_offset[jtype]+ iatom*(nneigh(jtype)+1)+1,get_sann_n(iatom,jtype)};
+    }
+    NeighIterator<TType4> get_sann_r(const size_t iatom, const size_t jtype) const{
+    return NeighIterator<TType4>{(TType4*)(rpos+info.rpos_offset[jtype]+iatom*nneigh(jtype)*4),get_sann_n(iatom,jtype)};
+}
 
 private:
 
