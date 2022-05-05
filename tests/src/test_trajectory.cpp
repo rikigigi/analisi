@@ -11,7 +11,7 @@ struct TrajTest{
 };
 
 struct NeighTest{
-    NeighTest(bool l2020=true):t{true,l2020},n{&t.traj,{{100,1.0,1.0},{100,1.0,1.0}}} {};
+    NeighTest(bool l2020=true):t{true,l2020},n{&t.traj,{{99,1.0,1.0},{67,1.0,1.0}}} {};
         TrajSetup t;
         DataRegression<double> data;
         Neighbours<Traiettoria,double> n;

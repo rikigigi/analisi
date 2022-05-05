@@ -254,17 +254,17 @@ def analyze_vdos_numpy(pos, vel, types, box,
        
     return vdos #,copy=True)
 
-def analyze_sh(traj,start,stop,startr,endr, nbin, tmax=0, nthreads=4,tskip=10,print=print):
+def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,tskip=10,print=print):
     tmax,n_ave = max_l(start,stop,tmax)
     sh=pyanalisi_wrapper('SphericalCorrelations',traj
-                                     ,startr #minimum of radial distance
-                                     ,endr #maximum of radial distance
+                                     ,[(startr #minimum of radial distance
+                                     ,endr)]*ntypes**2 #maximum of radial distance
                                      ,nbin # number of distance bins
                                      ,tmax # maximum length of correlation functions in timesteps
                                      ,nthreads # number of threads
                                      ,tskip # time skip to average over the trajectory
                                      ,20 # buffer for sh
-                                     ,False)
+                                     ,False,[]) #no sann for the moment
     sh.reset(n_ave) # number of timesteps to average
     print('calculating spherical harmonics correlation functions... (go away and have a coffee)',flush=True)
     sh.calculate(start) #calculate starting at this timestep    
@@ -765,6 +765,106 @@ def rotation(a,b,c,order='zxy'):
    r=np.eye(4)
    r[:3,:3]=xyz
    return r
+
+def density_field2(res,box,box_kw={},plot=None,ns=[[1,1,1]]):
+    bounds=[ 
+                                                        box[0],box[0]+2*box[3],
+                                                        box[1],box[1]+2*box[4],
+                                                        box[2],box[2]+2*box[5]
+                                                                           ]
+    print(bounds)
+    r0=np.array((box[0]+box[3],box[1]+box[4],box[2]+box[5]))
+    if plot is None:
+       plot = k3d.plot()
+    objs=[]
+    if len(res.shape) >3:
+        for i in range(res.shape[0]):
+            objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
+            plot+=objs[-1]
+    else:
+        objs.append(k3d.volume(np.array(res,dtype='float16'),bounds=bounds))
+        plot+=objs[-1]
+        
+    #points = k3d.points(g0_sites,point_size=0.02)
+    #points1 = k3d.points(g1_sites,point_size=0.005)
+    #plot += points
+    #plot += points1
+    plot += plot_simulation_box(box,**box_kw)
+    plot.display()
+    global _w_x
+    global _x
+    global _n_idx
+    _w_x=0.05
+    _x  =0.14
+    _n_idx = 0
+    global _rot_a
+    global _rot_b
+    global _rot_c
+    global _rot_Q
+    _rot_a = 0.0 
+    _rot_b = 0.0
+    _rot_c = 0.0
+    _rot_Q = np.eye(4)
+
+    nsn=np.array(ns)
+    nsn=np.einsum('ij,i->ij',nsn,((nsn**2).sum(axis=1))**-.5) 
+    nlabel=widgets.Label(value=f'n={nsn[_n_idx]}')
+    display(nlabel)
+    def rotate_plane(Q,ps):
+       prs=[]
+       for p in ps:
+          p=np.array(p)
+          prs.append(Q.dot(p).tolist())
+       return prs
+    def get_planes():
+        n=nsn[_n_idx]
+        c1=-(r0).dot(n) + _w_x +_x
+        c2=-(r0).dot(n) - _w_x +_x
+        return [
+                  [ n[0], n[1], n[2], c1],
+                  [-n[0],-n[1],-n[2],-c2]
+               ]
+    def global_clipping_planes():
+            return rotate_plane(_rot_Q, get_planes())
+    @interact(idx=widgets.IntSlider(value=0,min=0,max=nsn.shape[0]-1,step=1,description='select index of plane'))
+    def g(idx):
+        global _n_idx
+        _n_idx=idx
+        plot.clipping_planes=global_clipping_planes()
+        nlabel.value=f'n={nsn[_n_idx]}'
+    @interact(x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100))
+    def g(x):
+        global _x
+        _x=x
+        plot.clipping_planes=global_clipping_planes()
+    @interact(w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100))
+    def g(w_x):
+        global _w_x
+        _w_x=w_x
+        plot.clipping_planes=global_clipping_planes()
+    @interact(a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(a):
+        global _rot_a
+        global _rot_Q
+        _rot_a=a
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+    @interact(b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(b):
+        global _rot_b
+        global _rot_Q
+        _rot_b=b
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+    @interact(c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(c):
+        global _rot_c
+        global _rot_Q
+        _rot_c=c
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+
+    return plot
 
 def density_field(res,box,box_kw={},plot=None):
     bounds=[ 
