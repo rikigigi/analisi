@@ -200,6 +200,7 @@ set (ANALISI_LIB
     lib/src/atomicdensity.cpp
     lib/src/traiettoriabase.cpp
     lib/src/neighbour.cpp
+    lib/src/sphericalbase.cpp
     )
 
 if (BUILD_MMAP)

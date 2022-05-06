@@ -75,7 +75,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     using SOP = Steinhardt<6,double,T>;
     py::class_< SOP >(m,(std::string("SteinhardtOrderParameterHistogram")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,typename SOP::rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,
+            .def(py::init<T*,typename SOP::Rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,
                  unsigned int,unsigned int, bool,typename SOP::NeighListSpec>(),
 R"lol(
 Parameters

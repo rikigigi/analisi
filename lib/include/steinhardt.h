@@ -1,8 +1,9 @@
 #ifndef STEINHARDT_H
 #define STEINHARDT_H
 
-#include "sphericalcorrelations.h"
+#include "sphericalbase.h"
 #include "calcolamultithread.h"
+#include "operazionisulista.h"
 
 namespace Steinhardt_Flags {
 
@@ -14,15 +15,21 @@ constexpr int FLAGS =
 }
 
 template <int l, class TFLOAT, class T>
-class Steinhardt : public SphericalCorrelations<l,TFLOAT,T>, public CalcolaMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS > {
+class Steinhardt : public SphericalBase<l,TFLOAT,T>,
+        public CalcolaMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >,
+        public OperazioniSuLista<Steinhardt<l,TFLOAT,T>,TFLOAT>
+{
 public:
-    using SPHC = SphericalCorrelations<l,TFLOAT,T>;
+    using LISTA = OperazioniSuLista<Steinhardt<l,TFLOAT,T>,TFLOAT>;
+    using SPB = SphericalBase<l,TFLOAT,T>;
     using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
-    using rminmax_t = typename SPHC::rminmax_t;
     using CMT::calcola;
-    using typename SPHC::NeighListSpec;
+    using SPB::calc;
+    using typename SPB::Rminmax_t;
+    using typename SPB::Neighbours_T;
+    using NeighListSpec = typename Neighbours_T::ListSpec;
     Steinhardt(T *t,
-               const rminmax_t rminmax,
+               const Rminmax_t rminmax,
                unsigned int nbin,
                unsigned int steinhardt_histogram_size,
                std::vector<unsigned int> steinhardt_l_histogram, /// list of l to use to make an histogram. If the list is not emplty, use the tmax argument as the size of each dimension of the histogram
@@ -83,19 +90,20 @@ public:
 
 
 private:
-    using CMT::ntimesteps; //note that due to mess, also SPHC has a variable with the same name
-    using SPHC::natoms;
-    using SPHC::ntypes;
-    using SPHC::c_descr;
-    using SPHC::t;
-    using SPHC::lunghezza_lista;
-    using SPHC::nbin;
-    using SPHC::lista;
+    using CMT::ntimesteps;
+    const size_t natoms;
+    const size_t ntypes;
+    const size_t nbin;
+    std::string c_descr;
+    T & t;
+    using LISTA::lunghezza_lista;
+    using LISTA::lista;
     const std::vector<unsigned int> steinhardt_l_histogram;
     size_t nbin_steinhardt,steinhardt_histogram_size;
     TFLOAT * threadResults;
     TFLOAT incr;
     std::vector<size_t> stride;
+    const NeighListSpec neighListSpec;
 };
 
 #endif // STEINHARDT_H

@@ -16,12 +16,9 @@ SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
                                                          unsigned int skip,
                                                          unsigned int buffer_size,
                                                          bool debug, const NeighListSpec neighList) :
-t{*t},rminmax{rminmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}, neighList{neighList} {
-
-   dr.reserve(rminmax.size());
-   for (auto & range : rminmax) {
-     dr.push_back((range.second-range.first)/nbin);
-   }
+t{*t},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}, neighList{neighList},
+SPB{t,nbin,rminmax},
+ntypes{static_cast<size_t>(t->get_ntypes())},natoms{t->get_natoms()}{
 
 }
 
@@ -49,8 +46,6 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
     ntimesteps=numeroTimestepsPerBlocco;
 
-    check_rminmax_size();
-
     //quanti timestep è lunga la funzione di correlazione
     leff =(numeroTimestepsPerBlocco<tmax || tmax==0)? numeroTimestepsPerBlocco : tmax;
     //numero di timestep su cui fare la media
@@ -63,87 +58,6 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
 
 
-template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep,
-                                                TFLOAT *result,
-                                                TFLOAT *workspace,//workspace array
-                                                TFLOAT * cheby,//workspace array,
-                                                int * counter // counter of #of atoms in the bin, for every atom
-                                                ) const {
-    //zero result
-    for (int i=0;i<(lmax+1)*(lmax+1)*natoms*nbin*ntypes;++i) {
-        result[i]=0;
-    }
-    if (counter){
-        for (int i=0;i<natoms*ntypes*nbin;++i){
-            counter[i]=0;
-        }
-    }
-
-    if (neighList.size()==0){
-        for (unsigned int iatom=0;iatom<natoms;iatom++) {
-            //other atom loop
-            const unsigned int itype=t.get_type(iatom);
-            for (unsigned int jatom=0;jatom<natoms;jatom++) {
-                const unsigned int jtype=t.get_type(jatom);
-                const unsigned int pairidx=ntypes*itype+jtype;
-                if (iatom==jatom)
-                    continue;
-
-                //minimum image distance
-                double x[3];
-                double d=sqrt(t.d2_minImage(iatom,jatom,timestep,timestep,x));
-                //bin index
-                int idx=(int)floorf((d-rminmax[pairidx].first)/dr[pairidx]);
-
-                if (idx<nbin && idx >= 0){
-                    //calculate sin and cos
-                    //calculate spherical harmonics and add to the correct average
-                    SpecialFunctions::SphericalHarmonics<lmax,TFLOAT,true,true> sh(x[0],x[1],x[2],cheby,workspace);
-                    sh.calc();
-                    //now in workspace you have all the spherical harmonics components of the density of the current jatom around iatom
-                    //add to the sh density of the current iatom of the current bin of the type jtype
-                    for (int ll=0;ll<(lmax+1)*(lmax+1);++ll) {
-                        result[index_wrk(iatom,jtype,idx)+ll]+=workspace[ll];
-                    }
-                    if (counter){
-                        counter[index_wrk_counter(iatom,jtype,idx)]++;
-                    }
-                }
-            }
-        }
-    } else {
-        auto nnl = Neighbours<T,double>{&t,neighList};
-        nnl.update_neigh(timestep,true); //sorted list of neighbours, to use sann algorithm
-        for (unsigned int iatom=0;iatom<natoms;iatom++) {
-            for (unsigned int jtype=0;jtype<ntypes;jtype++) {
-                //other atom loop
-                auto position_iterator = nnl.get_sann_r(iatom,jtype);
-                const unsigned int itype=t.get_type(iatom);
-                const unsigned int pairidx=ntypes*itype+jtype;
-                for (const auto & x : position_iterator){
-
-                    //minimum image distance is already present in the neighbour list:
-                    // x is: {r, r_x, r_y, r_z}
-
-                    //calculate sin and cos
-                    //calculate spherical harmonics and add to the correct average
-                    SpecialFunctions::SphericalHarmonics<lmax,TFLOAT,true,true> sh(x[1],x[2],x[3],cheby,workspace);
-                    sh.calc();
-                    //now in workspace you have all the spherical harmonics components of the density of the current jatom around iatom
-                    //add to the sh density of the current iatom of the current bin of the type jtype
-                    for (int ll=0;ll<(lmax+1)*(lmax+1);++ll) {
-                        result[index_wrk(iatom,jtype,0)+ll]+=workspace[ll];
-                    }
-                    if (counter){
-                        counter[index_wrk_counter(iatom,jtype,0)]++;
-                    }
-
-                }
-            }
-        }
-    }
-}
 
 template <int lmax, class TFLOAT, class T>
 void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
@@ -181,7 +95,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
         buffer_size=3;
         std::cerr << "Warning: setting buffer_size to 3 (not optimal, because there are too few timesteps) " AT;
     }
-    TwoLoopSplit<unsigned int> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
+    TwoLoopSplit<size_t> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
 
     //allocate space for per thread averages
     TFLOAT * lista_th = new TFLOAT[lunghezza_lista*(nthreads-1)];
@@ -192,6 +106,10 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
     for (unsigned int  ith=0;ith<nthreads;ith++) {
         threads.push_back(std::thread([&,ith](){
+            Neighbours_T * nns=nullptr;
+            if (neighList.size()>0) {
+                nns = new Neighbours_T{&t,neighList};
+            }
             TFLOAT * lista_th_= ith >0 ? lista_th+lunghezza_lista*(ith-1) : lista;
             unsigned int * lista_th_counters_ = lista_th_counters+leff*ith;
 
@@ -227,7 +145,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     */
             //center atom loop for the snapshot at imedia
             bool finished=false;
-            unsigned int t1,t2,dt,t1_old=0;
+            size_t t1,t2,dt,t1_old=0;
             task_distributer.get_withoud_advancing(ith,t1_old,t2);
             while(!finished){
                 task_distributer.get_next_idx_pair(ith,t1,t2,finished);
@@ -238,11 +156,11 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                 }
                 t1_old=t1;
                 TFLOAT * sh1=
-                        buffer.buffer_calc(*this,t1+primo,workspace,cheby);
+                        buffer.buffer_calc(* static_cast<SPB*>(this),t1+primo,workspace,cheby,nullptr,nns);
 
                 //center atom loop for the snapshot at imedia+dt
                 TFLOAT * sh2=
-                        buffer.buffer_calc(*this,t2+primo,workspace,cheby);
+                        buffer.buffer_calc(* static_cast<SPB*>(this),t2+primo,workspace,cheby,nullptr,nns);
 
                 corr_sh_calc(sh1,sh2,aveTypes,aveWork1, sh_snap_size, sh_final_size, avecont);
 
@@ -260,6 +178,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             delete [] aveWork1;
             delete [] aveTypes;
             delete [] avecont;
+            delete nns;
             hit[ith]=buffer.get_hit();
             miss[ith]=buffer.get_miss();
 

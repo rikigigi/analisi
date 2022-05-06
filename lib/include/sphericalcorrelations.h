@@ -3,13 +3,17 @@
 
 #include "operazionisulista.h"
 #include "neighbour.h"
+#include "sphericalbase.h"
 
 template <int l,class TFLOAT, class T>
-class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>
+class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>,
+        public SphericalBase<l,TFLOAT,T>
 {
 public:
     using rminmax_t = std::vector<std::pair<TFLOAT,TFLOAT> >;
     using NeighListSpec = typename Neighbours<T,double>::ListSpec;
+    using SPB = SphericalBase<l,TFLOAT,T>;
+    using Neighbours_T = typename SPB::Neighbours_T;
     SphericalCorrelations(T *t,
                           const rminmax_t rminmax,
                           unsigned int nbin,
@@ -46,54 +50,32 @@ public:
         return (l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);
     }
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
-    int get_single_type_size() const {
-        return (l+1)*(l+1)*nbin*ntypes;
+    size_t get_single_type_size() const {
+        return SPB::get_single_atom_size();
     }
-    int get_snap_size()const{
-        return get_single_type_size()*natoms;
+    size_t get_snap_size()const{
+        return SPB::get_result_size();
     }
-    int get_final_snap_size() const {
+    size_t get_final_snap_size() const {
         return get_single_type_size()*ntypes/(l+1);
     }
-    void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby, int * counter=nullptr) const;
     void corr_sh_calc(const TFLOAT * sh1, const TFLOAT *sh2, TFLOAT * aveTypes, TFLOAT * aveWork1, int sh_snap_size , int sh_final_size, int *avecont) const noexcept;
 
-    bool check_rminmax_size() {
-        natoms=t.get_natoms();
-        ntypes=t.get_ntypes();
-        if (ntypes*ntypes != rminmax.size()) {
-            std::stringstream ss;
-            ss << "you must provide a radial range for each pair of atomic types, in total ntypes*ntypes pair of numbers. You provided "<<
-                  rminmax.size() << " elements while ntypes is " << ntypes <<" .";
-            throw std::runtime_error(ss.str());
-            return false;
-        }
-        return true;
-    }
-
-    //void set_sann(bool enabled);
-
+    using SPB::calc;
 protected:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
     T & t;
 
-
-    std::vector<TFLOAT> dr;
-    const rminmax_t rminmax;
-    unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms,buffer_size;
+    size_t nbin, tmax,nthreads,skip,leff,ntimesteps,buffer_size;
+    const size_t ntypes,natoms;
     bool debug;
     std::string c_descr;
 
-    inline int index_wrk_counter(const int iatom,const int jtype,const int ibin=0) const noexcept {
-        return (nbin*(ntypes*iatom+jtype)+ibin);
-    }
-
-    inline int index_wrk(const int iatom,const int jtype,const int ibin=0) const noexcept {
-        return (l+1)*(l+1)*index_wrk_counter(iatom,jtype,ibin);
-    }
 private:
     const NeighListSpec neighList;
+    using SPB::index_wrk;
+    using SPB::index_wrk_counter;
 };
 
 #endif // SPHERICALCORRELATIONS_H

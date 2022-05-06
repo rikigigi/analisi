@@ -5,18 +5,23 @@
 
 template <int l, class TFLOAT, class T>
 Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
-                                   const rminmax_t rminmax,
+                                   const Rminmax_t rminmax,
                                    unsigned int nbin,
                                    unsigned int nbin_steinhardt,
                                    std::vector<unsigned int> steinhardt_l_histogram,
                                    unsigned int nthreads,
                                    unsigned int skip,
                                    bool debug, const NeighListSpec nls) :
-    SPHC::SphericalCorrelations(t,rminmax,nbin,1,nthreads,skip,2,debug,nls),
-    CMT::CalcolaMultiThread(nthreads,skip),
+    SPB::SphericalBase{t,nbin,rminmax},
+    CMT::CalcolaMultiThread{nthreads,skip},
     steinhardt_histogram_size{0},
     steinhardt_l_histogram{steinhardt_l_histogram},
-    nbin_steinhardt{nbin_steinhardt}
+    nbin_steinhardt{nbin_steinhardt},
+    natoms{t->get_natoms()},
+    ntypes{static_cast<size_t>(t->get_ntypes())},
+    nbin{nbin},
+    neighListSpec{nls},
+    t{*t}
 {
 
     steinhardt_histogram_size=1;
@@ -30,8 +35,6 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
 template <int l, class TFLOAT, class T>
 void Steinhardt<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
-
-    SPHC::check_rminmax_size();
     compute_stride();
     //description of output
     std::stringstream descr;
@@ -51,7 +54,6 @@ void Steinhardt<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) 
     c_descr=descr.str();
 
     ntimesteps=numeroTimestepsPerBlocco;
-    //CMT::ntimesteps=ntimesteps; //TODO: mess here
 
     size_t new_lungh_lista=steinhardt_histogram_size*nbin*ntypes*ntypes;
     if (new_lungh_lista != lunghezza_lista) {
@@ -92,10 +94,15 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
         threadResult[i]=0;
     }
 
+    Neighbours_T * nns = nullptr;
+    if (neighListSpec.size()>0) {
+        nns = new Neighbours_T{&t,neighListSpec};
+    }
+
     for (int i = istart; i<istop;i+=CMT::skip) {
-        SPHC::calc(i,result,workspace,cheby,counter);
+        calc(i,result,workspace,cheby,counter,nns);
         //calculate square, sum all m
-        const int sh_size=SPHC::get_snap_size();
+        const int sh_size=SPB::get_result_size();
         for (int is=0;is<sh_size;++is) {
             result[is]=result[is]*result[is]; //square everything (SH are real here)
         }
@@ -106,12 +113,12 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
             int itype=t.get_type(iatom);
             for (int jtype=0;jtype<ntypes;++jtype){
                 for (int ibin=0;ibin<nbin;++ibin){
-                    v_atomic.init(result+SPHC::index_wrk(iatom,jtype,ibin));
+                    v_atomic.init(result+SPB::index_wrk(iatom,jtype,ibin));
                     v_atomic.sum_in_m_zero();
 
                     //calculate order parameter and histogram index
                     size_t hist_idx=0;
-                    TFLOAT n_atoms=counter[SPHC::index_wrk_counter(iatom,jtype,ibin)];
+                    TFLOAT n_atoms=counter[SPB::index_wrk_counter(iatom,jtype,ibin)];
                     if (n_atoms>0) {
                         for (int jidx=0;jidx<steinhardt_l_histogram.size();++jidx) {
                             int j=steinhardt_l_histogram[jidx];
