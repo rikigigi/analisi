@@ -87,7 +87,7 @@ size of each dimension of the histogram (you want a big number here)
 list of l values to use for building the histogram
 number of threads
 time skip
-debug flag
+if true do the histogram, otherwise calculate a trajectory-like object
 provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always. rminmax list is ignored
 )lol")
             .def("reset",&SOP::reset)

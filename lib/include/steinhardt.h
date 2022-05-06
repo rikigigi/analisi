@@ -32,10 +32,10 @@ public:
                const Rminmax_t rminmax,
                unsigned int nbin,
                unsigned int steinhardt_histogram_size,
-               std::vector<unsigned int> steinhardt_l_histogram, /// list of l to use to make an histogram. If the list is not emplty, use the tmax argument as the size of each dimension of the histogram
+               std::vector<unsigned int> steinhardt_l_histogram, /// list of l to use to make an histogram.
                unsigned int nthreads=2,
                unsigned int skip=1,
-               bool debug=false,
+               bool do_histogram=true,
                const NeighListSpec nls={}
             );
 
@@ -50,11 +50,15 @@ public:
     void join_data();
 
     std::vector<size_t> compute_stride() {
-        stride = {steinhardt_histogram_size*ntypes*ntypes,steinhardt_histogram_size*ntypes,steinhardt_histogram_size};
-        size_t strideh=steinhardt_histogram_size;
-        for (const auto & i : steinhardt_l_histogram) {
-            strideh/=nbin_steinhardt;
-            stride.push_back(strideh);
+        if (do_histogram){
+            stride = {steinhardt_histogram_size*ntypes*ntypes,steinhardt_histogram_size*ntypes,steinhardt_histogram_size};
+            size_t strideh=steinhardt_histogram_size;
+            for (const auto & i : steinhardt_l_histogram) {
+                strideh/=nbin_steinhardt;
+                stride.push_back(strideh);
+            }
+        } else {
+            stride = {ntimesteps*natoms*ntypes*l,natoms*ntypes*l, ntypes*l,l,1};
         }
         return stride;
     }
@@ -69,18 +73,26 @@ public:
     }
 
     std::vector<ssize_t> get_shape(){
-        std::vector<ssize_t> res {nbin,ntypes,ntypes};
-        for (int i=0;i<steinhardt_l_histogram.size();++i){
-            res.push_back(nbin_steinhardt);
+        if (do_histogram){
+            std::vector<ssize_t> res {nbin,ntypes,ntypes};
+            for (int i=0;i<steinhardt_l_histogram.size();++i){
+                res.push_back(nbin_steinhardt);
+            }
+            return res;
+        } else {
+            return std::vector<ssize_t> {nbin,ntimesteps,natoms,ntypes,l};
         }
-        return res;
     }
 
-    size_t get_index(const int ibin, const int type1, const int type2) const {
+    size_t get_index(const size_t ibin, const size_t itimestep, const size_t iatom, const size_t itype, const size_t il) const {
+        return stride[0]*ibin + stride[1]*itimestep + stride[2]*iatom + stride[3]*itype + stride[4]*il;
+    }
+
+    size_t get_index(const size_t ibin, const size_t type1, const size_t type2) const {
         return stride[0]*ibin+stride[1]*type1+stride[2]*type2;
     }
 
-    size_t get_index(const int ibin, const int type1, const int type2, const int * hists ) const {
+    size_t get_index(const size_t ibin, const size_t type1, const size_t type2, const size_t * hists ) const {
         size_t idx = stride[0]*ibin+stride[1]*type1+stride[2]*type2;
         for (unsigned i=0;i<steinhardt_l_histogram.size();++i) {
             idx+=stride[3+i]*hists[i];
@@ -91,6 +103,7 @@ public:
 
 private:
     using CMT::ntimesteps;
+    const bool do_histogram;
     const size_t natoms;
     const size_t ntypes;
     const size_t nbin;

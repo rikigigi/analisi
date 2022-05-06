@@ -11,7 +11,7 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    std::vector<unsigned int> steinhardt_l_histogram,
                                    unsigned int nthreads,
                                    unsigned int skip,
-                                   bool debug, const NeighListSpec nls) :
+                                   bool do_histogram, const NeighListSpec nls) :
     SPB::SphericalBase{t,nbin,rminmax},
     CMT::CalcolaMultiThread{nthreads,skip},
     steinhardt_histogram_size{0},
@@ -21,7 +21,8 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
     ntypes{static_cast<size_t>(t->get_ntypes())},
     nbin{nbin},
     neighListSpec{nls},
-    t{*t}
+    t{*t},
+    do_histogram{do_histogram}
 {
 
     steinhardt_histogram_size=1;
@@ -35,27 +36,31 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
 template <int l, class TFLOAT, class T>
 void Steinhardt<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
+    ntimesteps=numeroTimestepsPerBlocco;
     compute_stride();
     //description of output
     std::stringstream descr;
-
-    descr << "# first columns are indexes of the histogram; then:"<<std::endl;
-    int cur_col=steinhardt_l_histogram.size();
-    for (int ih=0;ih<nbin;++ih){
-        descr << "#RADIAL BIN "<<ih<<std::endl;
-        for (int i1=0;i1<ntypes;++i1){
-            for (int i2=0;i2<ntypes;++i2){
-                cur_col +=1;
-                descr << "# types("<<i1<<","<<i2<<"): " << cur_col<<std::endl;
-                cur_col +=1; //variance
+    size_t new_lungh_lista;
+    if (do_histogram){
+        descr << "# first columns are indexes of the histogram; then:"<<std::endl;
+        int cur_col=steinhardt_l_histogram.size();
+        for (int ih=0;ih<nbin;++ih){
+            descr << "#RADIAL BIN "<<ih<<std::endl;
+            for (int i1=0;i1<ntypes;++i1){
+                for (int i2=0;i2<ntypes;++i2){
+                    cur_col +=1;
+                    descr << "# types("<<i1<<","<<i2<<"): " << cur_col<<std::endl;
+                    cur_col +=1; //variance
+                }
             }
         }
+        new_lungh_lista=steinhardt_histogram_size*nbin*ntypes*ntypes;
+    } else {
+        new_lungh_lista = stride[0]*nbin;
     }
+
+
     c_descr=descr.str();
-
-    ntimesteps=numeroTimestepsPerBlocco;
-
-    size_t new_lungh_lista=steinhardt_histogram_size*nbin*ntypes*ntypes;
     if (new_lungh_lista != lunghezza_lista) {
         delete [] lista;
         lunghezza_lista=new_lungh_lista;
@@ -68,15 +73,18 @@ void Steinhardt<l,TFLOAT,T>::calc_init(int primo) {
     //check that everything is ok
 
     //allocate the space for the threads work
-
-    threadResults = new TFLOAT [lunghezza_lista*(CMT::nthreads-1)];
+    if (do_histogram){
+        threadResults = new TFLOAT [lunghezza_lista*(CMT::nthreads-1)];
+    } else {
+        threadResults = nullptr;
+    }
 
     if (ntimesteps/CMT::skip>0) incr=1.0/int(ntimesteps/CMT::skip);
     else                   incr=1;
 }
 template <int l, class TFLOAT, class T>
-void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
-                                            int istop,//average index, end
+void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
+                                            int istop,//timestep index, end
                                             int primo,//first index of the block
                                             int ith//thread index
                                             ) {
@@ -86,12 +94,15 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
     TFLOAT *result = new TFLOAT [(l+1)*(l+1)*natoms*nbin*ntypes];
     TFLOAT * threadResult = threadResults + lunghezza_lista*ith;
     int * counter = new int[natoms*ntypes*nbin];
-    if (ith==CMT::nthreads-1) { // last thread writes directly on the final result memory
-        threadResult = lista;
-    }
-
-    for (size_t i=0;i<lunghezza_lista;++i) {
-        threadResult[i]=0;
+    if (do_histogram){
+        if (ith==CMT::nthreads-1) { // last thread writes directly on the final result memory
+            threadResult = lista;
+        }
+        for (size_t i=0;i<lunghezza_lista;++i) {
+            threadResult[i]=0;
+        }
+    } else {
+        threadResult = lista; //every thread will write its own timesteps
     }
 
     Neighbours_T * nns = nullptr;
@@ -116,23 +127,39 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
                     v_atomic.init(result+SPB::index_wrk(iatom,jtype,ibin));
                     v_atomic.sum_in_m_zero();
 
-                    //calculate order parameter and histogram index
-                    size_t hist_idx=0;
-                    TFLOAT n_atoms=counter[SPB::index_wrk_counter(iatom,jtype,ibin)];
-                    if (n_atoms>0) {
-                        for (int jidx=0;jidx<steinhardt_l_histogram.size();++jidx) {
-                            int j=steinhardt_l_histogram[jidx];
-                            TFLOAT pre_sqrt=v_atomic.get_l_m0(j)/n_atoms/n_atoms*4*PI/(2*j+1);
-                            TFLOAT m_steinhardt = sqrt(pre_sqrt);
-                            size_t jhidx=floorf(m_steinhardt*nbin_steinhardt);
-                            if (jhidx>=nbin_steinhardt) {
-                                jhidx=nbin_steinhardt-1;
+                    if (do_histogram){
+                        //calculate order parameter and histogram index
+                        size_t hist_idx=0;
+                        TFLOAT n_atoms=counter[SPB::index_wrk_counter(iatom,jtype,ibin)];
+                        if (n_atoms>0) {
+                            for (int jidx=0;jidx<steinhardt_l_histogram.size();++jidx) {
+                                int j=steinhardt_l_histogram[jidx];
+                                TFLOAT pre_sqrt=v_atomic.get_l_m0(j)/n_atoms/n_atoms*4*PI/(2*j+1);
+                                TFLOAT m_steinhardt = sqrt(pre_sqrt);
+                                size_t jhidx=floorf(m_steinhardt*nbin_steinhardt);
+                                if (jhidx>=nbin_steinhardt) {
+                                    jhidx=nbin_steinhardt-1;
+                                }
+                                hist_idx+=jhidx*stride[3+jidx];
                             }
-                            hist_idx+=jhidx*stride[3+jidx];
+                            //update histogram (threadResult) of this radial bin...
+                            size_t idx_all=get_index(ibin,itype,jtype)+hist_idx;
+                            threadResult[idx_all]+=incr;
                         }
-                        //update histogram (threadResult) of this radial bin...
-                        size_t idx_all=get_index(ibin,itype,jtype)+hist_idx;
-                        threadResult[idx_all]+=incr;
+                    }else{
+                        //output all steinhardt order parameters in a trajectory-like object
+                        TFLOAT n_atoms=counter[SPB::index_wrk_counter(iatom,jtype,ibin)];
+                        if (n_atoms>0){
+                            for (size_t lidx=0;lidx<l;++lidx){
+                                TFLOAT pre_sqrt=v_atomic.get_l_m0(lidx)/n_atoms/n_atoms*4*PI/(2*lidx+1);
+                                TFLOAT m_steinhardt = sqrt(pre_sqrt);
+                                threadResult[get_index(ibin,i,iatom,jtype,lidx)]=m_steinhardt;
+                            }
+                        }else {
+                            for (size_t lidx=0;lidx<l;++lidx){
+                                threadResult[get_index(ibin,i,iatom,jtype,lidx)]=0;
+                            }
+                        }
                     }
                 }
             }
@@ -145,10 +172,12 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//average index, begin
 
 template <int l, class TFLOAT, class T>
 void Steinhardt<l,TFLOAT,T>::join_data() {
-    //sum all the threads result
-    for (int ith=0;ith<CMT::nthreads-1;ith++) {
-        for (int i=0;i<lunghezza_lista;++i) {
-            lista[i]+=threadResults[ith*lunghezza_lista+i];
+    if (do_histogram){
+        //sum all the threads result
+        for (int ith=0;ith<CMT::nthreads-1;ith++) {
+            for (int i=0;i<lunghezza_lista;++i) {
+                lista[i]+=threadResults[ith*lunghezza_lista+i];
+            }
         }
     }
     delete [] threadResults;
