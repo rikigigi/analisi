@@ -264,7 +264,7 @@ def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,ts
                                      ,nthreads # number of threads
                                      ,tskip # time skip to average over the trajectory
                                      ,20 # buffer for sh
-                                     ,False,[]) #no sann for the moment
+                                     ,True,[]) #no sann for the moment
     sh.reset(n_ave) # number of timesteps to average
     print('calculating spherical harmonics correlation functions... (go away and have a coffee)',flush=True)
     sh.calculate(start) #calculate starting at this timestep    

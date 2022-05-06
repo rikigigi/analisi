@@ -14,7 +14,7 @@ def test_sh(analisi_traj,num_regression):
                                          ,4 # number of threads
                                          ,90 # time skip to average over the trajectory
                                          ,10 #buffer size
-                                         ,False,[])
+                                         ,True,[])
     test.reset(700) # number of timesteps to analyze
     test.calculate(0) #calculate starting at this timestep
     res=np.array(test,copy=True) # get result
