@@ -74,13 +74,13 @@ public:
 
     std::vector<ssize_t> get_shape(){
         if (do_histogram){
-            std::vector<ssize_t> res {nbin,ntypes,ntypes};
+            std::vector<ssize_t> res {(ssize_t)nbin,(ssize_t)ntypes,(ssize_t)ntypes};
             for (int i=0;i<steinhardt_l_histogram.size();++i){
                 res.push_back(nbin_steinhardt);
             }
             return res;
         } else {
-            return std::vector<ssize_t> {nbin,ntimesteps,natoms,ntypes,l};
+            return std::vector<ssize_t> {(ssize_t)nbin,(ssize_t)ntimesteps,(ssize_t)natoms,(ssize_t)ntypes,(ssize_t)l};
         }
     }
 

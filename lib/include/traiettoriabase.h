@@ -275,7 +275,7 @@ public:
 
     //functions that are compiled in cpp file
     void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);
-    ssize_t get_ntypes();
+    size_t get_ntypes();
 
 
 

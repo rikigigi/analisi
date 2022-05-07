@@ -45,8 +45,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     using SHC = SphericalCorrelations<10,double,T>;
     py::class_< SHC >(m,(std::string("SphericalCorrelations")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,typename SHC::rminmax_t,unsigned int, unsigned int, unsigned int,unsigned int,
-                 unsigned int, bool,typename SHC::NeighListSpec>(),R"lol(
+            .def(py::init<T*,typename SHC::rminmax_t,size_t,size_t,size_t,size_t,size_t, bool,typename SHC::NeighListSpec>(),R"lol(
                  Parameters
                  ----------
                  Trajectory instance

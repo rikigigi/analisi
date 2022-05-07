@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE twoloopsplit_tests
+//#define BOOST_TEST_MODULE twoloopsplit_tests
 #include <boost/test/included/unit_test.hpp>
 
 //double loop splitter test

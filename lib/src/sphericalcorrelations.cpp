@@ -10,11 +10,11 @@
 template <int l, class TFLOAT, class T>
 SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
                                                          const rminmax_t rminmax,
-                                                         unsigned int nbin,
-                                                         unsigned int tmax,
-                                                         unsigned int nthreads,
-                                                         unsigned int skip,
-                                                         unsigned int buffer_size,
+                                                         size_t nbin,
+                                                         size_t tmax,
+                                                         size_t nthreads,
+                                                         size_t skip,
+                                                         size_t buffer_size,
                                                          bool debug, const NeighListSpec neighList) :
 t{*t},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}, neighList{neighList},
 SPB{t,nbin,rminmax},

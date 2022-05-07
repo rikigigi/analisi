@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE calc_buffer_tests
+//#define BOOST_TEST_MODULE calc_buffer_tests
 #include <boost/test/included/unit_test.hpp>
 
 

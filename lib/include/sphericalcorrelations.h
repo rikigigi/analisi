@@ -16,11 +16,11 @@ public:
     using Neighbours_T = typename SPB::Neighbours_T;
     SphericalCorrelations(T *t,
                           const rminmax_t rminmax,
-                          unsigned int nbin,
-                          unsigned int tmax=0,
-                          unsigned int nthreads=0,
-                          unsigned int skip=1,
-                          unsigned int buffer_size=10,
+                          size_t nbin,
+                          size_t tmax=0,
+                          size_t nthreads=0,
+                          size_t skip=1,
+                          size_t buffer_size=10,
                           bool debug=false,
                           const NeighListSpec neighList={}
                          );
@@ -32,7 +32,7 @@ public:
         OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);
         return *this;
     }
-    const std::vector<ssize_t> get_shape()const { return {leff,ntypes,ntypes,nbin,(l+1)};}
+    const std::vector<ssize_t> get_shape()const { return {(ssize_t)leff,(ssize_t)ntypes,(ssize_t)ntypes,(ssize_t)nbin,(ssize_t)(l+1)};}
     const std::vector<ssize_t> get_stride()const {
         auto s=get_shape();
         auto s_old=s[s.size()-1];

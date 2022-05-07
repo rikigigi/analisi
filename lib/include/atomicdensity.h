@@ -30,7 +30,7 @@ private:
     std::array<ssize_t,3> nbin;
     Hist * hist;
     T * t;
-    int ntypes;
+    size_t ntypes;
     size_t idx(const size_t x, const size_t y, const size_t z, const size_t itype) const {
         return x + nbin[2]*(y + nbin[1]*(z + itype*nbin[0]));
     }

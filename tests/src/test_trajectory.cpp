@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE lammps2020_msd_tests
+//#define BOOST_TEST_MODULE lammps2020_msd_tests
 #include <boost/test/included/unit_test.hpp>
 #include "test_fixtures.h"
 #include "neighbour.h"

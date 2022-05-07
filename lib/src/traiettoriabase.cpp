@@ -51,7 +51,7 @@ void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int star
 }
 
 template <class T>
-ssize_t TraiettoriaBase<T>::get_ntypes (){
+size_t TraiettoriaBase<T>::get_ntypes (){
     if (ntypes==0) {
         types.clear();
         min_type=buffer_tipi[0];

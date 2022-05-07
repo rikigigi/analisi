@@ -151,7 +151,8 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
                         TFLOAT n_atoms=counter[SPB::index_wrk_counter(iatom,jtype,ibin)];
                         if (n_atoms>0){
                             for (size_t lidx=0;lidx<l;++lidx){
-                                TFLOAT pre_sqrt=v_atomic.get_l_m0(lidx)/n_atoms/n_atoms*4*PI/(2*lidx+1);
+                                //avoid l=0 that is always 1
+                                TFLOAT pre_sqrt=v_atomic.get_l_m0(lidx+1)/n_atoms/n_atoms*4*PI/(2*lidx+1);
                                 TFLOAT m_steinhardt = sqrt(pre_sqrt);
                                 threadResult[get_index(ibin,i,iatom,jtype,lidx)]=m_steinhardt;
                             }

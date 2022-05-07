@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE sh_tests
+//#define BOOST_TEST_MODULE sh_tests
 #include <boost/test/included/unit_test.hpp>
 #include "sphericalcorrelations.h"
 #include "steinhardt.h"
@@ -15,9 +15,9 @@ struct ShFixture{
     }
     ~ShFixture(){}
     TrajSetup traj;
-    unsigned int nbin;
-    size_t natoms;
-    int ntypes;
+    const unsigned int nbin;
+    const size_t natoms;
+    const size_t ntypes;
     SphericalCorrelations<l,double,Traiettoria> sh;
     DataRegression<double> data;
     double  workspace[(l+1)*(l+1)], cheby[(l+1)*2];
@@ -42,7 +42,7 @@ struct SteinhardtFixture{
     TrajSetup traj;
     const unsigned int nbin;
     const size_t natoms;
-    const int ntypes;
+    const size_t ntypes;
     Steinhardt<l,double,Traiettoria> sh;
     DataRegression<double> data;
 };
