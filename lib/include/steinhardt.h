@@ -58,7 +58,7 @@ public:
                 stride.push_back(strideh);
             }
         } else {
-            stride = {ntimesteps*natoms*ntypes*l,natoms*ntypes*l, ntypes*l,l,1};
+            stride = {ntimesteps/CMT::skip*natoms*ntypes*l,natoms*ntypes*l, ntypes*l,l,1};
         }
         return stride;
     }
@@ -80,7 +80,7 @@ public:
             }
             return res;
         } else {
-            return std::vector<ssize_t> {(ssize_t)nbin,(ssize_t)ntimesteps,(ssize_t)natoms,(ssize_t)ntypes,(ssize_t)l};
+            return std::vector<ssize_t> {(ssize_t)nbin,(ssize_t)ntimesteps/CMT::skip,(ssize_t)natoms,(ssize_t)ntypes,(ssize_t)l};
         }
     }
 

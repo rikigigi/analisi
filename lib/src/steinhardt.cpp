@@ -111,7 +111,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
     }
 
     for (int i = istart; i<istop;i+=CMT::skip) {
-        calc(i,result,workspace,cheby,counter,nns);
+        calc(primo+i,result,workspace,cheby,counter,nns);
         //calculate square, sum all m
         const int sh_size=SPB::get_result_size();
         for (int is=0;is<sh_size;++is) {
@@ -152,13 +152,13 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
                         if (n_atoms>0){
                             for (size_t lidx=0;lidx<l;++lidx){
                                 //avoid l=0 that is always 1
-                                TFLOAT pre_sqrt=v_atomic.get_l_m0(lidx+1)/n_atoms/n_atoms*4*PI/(2*lidx+1);
+                                TFLOAT pre_sqrt=v_atomic.get_l_m0(lidx+1)/n_atoms/n_atoms*4*PI/(2*(lidx+1)+1);
                                 TFLOAT m_steinhardt = sqrt(pre_sqrt);
-                                threadResult[get_index(ibin,i,iatom,jtype,lidx)]=m_steinhardt;
+                                threadResult[get_index(ibin,i/CMT::skip,iatom,jtype,lidx)]=m_steinhardt;
                             }
                         }else {
                             for (size_t lidx=0;lidx<l;++lidx){
-                                threadResult[get_index(ibin,i,iatom,jtype,lidx)]=0;
+                                threadResult[get_index(ibin,i/CMT::skip,iatom,jtype,lidx)]=0;
                             }
                         }
                     }
@@ -168,6 +168,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
     }
     delete [] counter;
     delete [] result;
+    delete  nns;
     std::cerr << "Thread " << ith << "istart,istop="<<istart<<","<<istop<< " finished" <<std::endl;
 }
 
@@ -187,8 +188,12 @@ void Steinhardt<l,TFLOAT,T>::join_data() {
 
 #ifdef BUILD_MMAP
 template class Steinhardt<6,double,Traiettoria>;
+template class Steinhardt<8,double,Traiettoria>;
+template class Steinhardt<10,double,Traiettoria>;
 #endif
 #ifdef PYTHON_SUPPORT
 #include "traiettoria_numpy.h"
 template class Steinhardt<6,double,Traiettoria_numpy>;
+template class Steinhardt<8,double,Traiettoria_numpy>;
+template class Steinhardt<10,double,Traiettoria_numpy>;
 #endif

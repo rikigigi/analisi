@@ -23,6 +23,47 @@
 
 namespace py = pybind11;
 
+template <class SOP, class T>
+void steinDef(py::module & m, std::string suffix){
+    py::class_< SOP >(m,(std::string("SteinhardtOrderParameterHistogram")+suffix).c_str(),py::buffer_protocol())
+            .def(py::init<T*,typename SOP::Rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,
+                 unsigned int,unsigned int, bool,typename SOP::NeighListSpec>(),
+R"lol(
+Parameters
+----------
+Trajectory instance
+rminmax list
+number of histograms (cut rmax - rmin in this number of part a fill a different istogram for each part)
+size of each dimension of the histogram (you want a big number here)
+list of l values to use for building the histogram
+number of threads
+time skip
+if true do the histogram, otherwise calculate a trajectory-like object
+provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always. rminmax list is ignored
+)lol")
+            .def("reset",&SOP::reset)
+            .def("calculate", &SOP::calcola)
+            .def_buffer([](SOP & m) -> py::buffer_info {
+        /*
+        std::cerr <<"shape ("<< m.get_shape().size() << "): ";
+        for (auto & n: m.get_shape()) std::cerr << n << " ";
+        std::cerr <<std::endl<< m.lunghezza()<<std::endl;
+        std::cerr << "allocated memory from"<<m.accesso_lista() << " to " <<m.accesso_lista() + m.lunghezza()<<std::endl;
+        std::cerr <<"strides ("<<  m.get_stride().size() << "): ";
+        for (auto & n: m.get_stride()) std::cerr << n << " ";
+        std::cerr << std::endl;*/
+        return py::buffer_info(
+                    m.accesso_lista(),
+                    sizeof(double),
+                    py::format_descriptor<double>::format(),
+                    m.get_shape().size(),
+                    m.get_shape(),
+                    m.get_stride()
+                    );
+
+    });
+}
+
 template <class T>
 void define_atomic_traj(py::module & m, std::string typestr){
     py::class_<Gofrt<double,T> >(m,(std::string("Gofrt")+typestr).c_str(), py::buffer_protocol())
@@ -72,45 +113,9 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     });
 
-    using SOP = Steinhardt<6,double,T>;
-    py::class_< SOP >(m,(std::string("SteinhardtOrderParameterHistogram")+typestr).c_str(),py::buffer_protocol())
-            .def(py::init<T*,typename SOP::Rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,
-                 unsigned int,unsigned int, bool,typename SOP::NeighListSpec>(),
-R"lol(
-Parameters
-----------
-Trajectory instance
-rminmax list
-number of histograms (cut rmax - rmin in this number of part a fill a different istogram for each part)
-size of each dimension of the histogram (you want a big number here)
-list of l values to use for building the histogram
-number of threads
-time skip
-if true do the histogram, otherwise calculate a trajectory-like object
-provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always. rminmax list is ignored
-)lol")
-            .def("reset",&SOP::reset)
-            .def("calculate", &SOP::calcola)
-            .def_buffer([](SOP & m) -> py::buffer_info {
-        /*
-        std::cerr <<"shape ("<< m.get_shape().size() << "): ";
-        for (auto & n: m.get_shape()) std::cerr << n << " ";
-        std::cerr <<std::endl<< m.lunghezza()<<std::endl;
-        std::cerr << "allocated memory from"<<m.accesso_lista() << " to " <<m.accesso_lista() + m.lunghezza()<<std::endl;
-        std::cerr <<"strides ("<<  m.get_stride().size() << "): ";
-        for (auto & n: m.get_stride()) std::cerr << n << " ";
-        std::cerr << std::endl;*/
-        return py::buffer_info(
-                    m.accesso_lista(),
-                    sizeof(double),
-                    py::format_descriptor<double>::format(),
-                    m.get_shape().size(),
-                    m.get_shape(),
-                    m.get_stride()
-                    );
-
-    });
-
+    steinDef< Steinhardt<6,double,T>,T > (m,typestr);
+    steinDef< Steinhardt<8,double,T>,T > (m,std::string("_8")+typestr);
+    steinDef< Steinhardt<10,double,T>,T > (m,std::string("_10")+typestr);
 
     using MSD=MSD<T>;
     py::class_<MSD>(m,(std::string("MeanSquareDisplacement")+typestr).c_str(),py::buffer_protocol())
