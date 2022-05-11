@@ -51,6 +51,7 @@ public:
         std::pair<size_t,size_t> res;
         res.first=ith*npassith;
         if (ith==nthreads-1) {
+            res.second=end;
             if constexpr ( FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE ){
                 //align the last timestep so it is a multiple of skip and the total number of points is ntimestep/skip
                 res.second = end - end%skip;
