@@ -6,7 +6,7 @@
 #include "compiler_types.h"
 
 #include <iostream>
-
+#include <exception>
 /**
   * CRTP class that makes easy to implement a multithreaded calculation. The calculation is divided in blocks of contiguous timesteps, and then a function that calculates the quantity for every block is called.
   * The user must be careful about multithreading safety of the calc_single_th function (that should write on different memory address for different threads)
@@ -108,30 +108,45 @@ public:
         if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT)) {
             static_cast<T*>(this)->calc_init(primo);
         }
+        std::exception_ptr * thread_exception = new std::exception_ptr[nthreads];
+        for (size_t i=0;i<nthreads;++i) thread_exception[i]=nullptr;
         std::vector<std::thread> threads;
         for (ssize_t t=t0;t<t1;t+=every){ // loop over time lags. Can be a loop over a single value if disabled
             for (ssize_t i=i0;i<i1;i+=skip){ //loop over trajectory. Can be a loop over a single value if disabled
                 for (unsigned int ith=0;ith<nthreads;++ith){ //this is a loop on TIME/AVERAGE INDEX/ATOM INDEX depending on what PARALLEL_SPLIT_* you choose
                     threads.push_back(std::thread([&,ith,t,i](){
-                        auto range=splitter(ith,primo);
-                        // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
-                        // select a different signature of the calculation function depending on where the loops (if present) are parallelized
-                        // rangeA and rangeB are passed to each thread and their meaning depends on what PARALLEL_SPLIT_* option you choose
-                        if constexpr (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME)) {
-                            static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith); // time, average, rangeA, rangeB, primo, thread id
-                        } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE) {
-                            static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith); // average, rangeA, rangeB, primo, thread id
-                        } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME) {
-                            static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith); // time, rangeA, rangeB, primo, thread id
-                        } else {
-                            static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith); // rangeA, rangeB, primo, thread id
+                        try {
+                            auto range=splitter(ith,primo);
+                            // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
+                            // select a different signature of the calculation function depending on where the loops (if present) are parallelized
+                            // rangeA and rangeB are passed to each thread and their meaning depends on what PARALLEL_SPLIT_* option you choose
+                            if constexpr (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME)) {
+                                static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith); // time, average, rangeA, rangeB, primo, thread id
+                            } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE) {
+                                static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith); // average, rangeA, rangeB, primo, thread id
+                            } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME) {
+                                static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith); // time, rangeA, rangeB, primo, thread id
+                            } else {
+                                static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith); // rangeA, rangeB, primo, thread id
+                            }
+                        } catch (...) {
+                            thread_exception[ith] = std::current_exception();
                         }
                     }));
 //                    std::cerr << "thread " << & threads.back() << " started" <<std::endl;
                 }
                 for (auto & t : threads){
                     t.join();
-//                    std::cerr << "thread " << &t << " joined" <<std::endl;
+                }
+                for (size_t i=0;i<nthreads;++i){
+                    if (thread_exception[i]) {
+                         std::cerr << "thread "<< i <<" exited with an exception"<<std::endl;
+                    }
+                }
+                for (size_t i=0;i<nthreads;++i){
+                    if (thread_exception[i]) {
+                         std::rethrow_exception(thread_exception[i]);
+                    }
                 }
                 threads.clear();
                 if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA))
@@ -142,6 +157,7 @@ public:
         if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE)) {
             static_cast<T*>(this)->calc_end();
         }
+        delete [] thread_exception;
 
     }
     /*
