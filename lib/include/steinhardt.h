@@ -36,7 +36,8 @@ public:
                unsigned int nthreads=2,
                unsigned int skip=1,
                bool do_histogram=true,
-               const NeighListSpec nls={}
+               const NeighListSpec nls={},
+               const bool averaged_order = false
             );
 
     unsigned int numeroTimestepsOltreFineBlocco(unsigned int nb) {return 0;}
@@ -103,7 +104,7 @@ public:
 
 private:
     using CMT::ntimesteps;
-    const bool do_histogram;
+    const bool do_histogram, averaged_order;
     const size_t natoms;
     const size_t ntypes;
     const size_t nbin;

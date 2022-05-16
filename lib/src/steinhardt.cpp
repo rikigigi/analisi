@@ -11,7 +11,9 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    std::vector<unsigned int> steinhardt_l_histogram,
                                    unsigned int nthreads,
                                    unsigned int skip,
-                                   bool do_histogram, const NeighListSpec nls) :
+                                   bool do_histogram,
+                                   const NeighListSpec nls,
+                                   const bool averaged_order) :
     SPB::SphericalBase{t,nbin,rminmax},
     CMT::CalcolaMultiThread{nthreads,skip},
     steinhardt_histogram_size{0},
@@ -22,8 +24,16 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
     nbin{nbin},
     neighListSpec{nls},
     t{*t},
-    do_histogram{do_histogram}
+    do_histogram{do_histogram},
+    averaged_order{averaged_order}
 {
+
+    if (neighListSpec.size()==0 && averaged_order) {
+        throw std::runtime_error("You must use a neighbour list when computing a averaged steinhardt order parameter! " AT);
+    }
+    if (neighListSpec.size()>0 && nbin >1) {
+        throw std::runtime_error("When using a neighbour list to compute steinhardt please set nbin to 1. " AT);
+    }
 
     steinhardt_histogram_size=1;
     for (unsigned i=0;i<steinhardt_l_histogram.size();++i) {
@@ -82,6 +92,7 @@ void Steinhardt<l,TFLOAT,T>::calc_init(int primo) {
     if (ntimesteps/CMT::skip>0) incr=1.0/int(ntimesteps/CMT::skip);
     else                   incr=1;
 }
+
 template <int l, class TFLOAT, class T>
 void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
                                             int istop,//timestep index, end
@@ -92,6 +103,8 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
     TFLOAT workspace[(l+1)*(l+1)];
     TFLOAT cheby[2*(l+1)];
     TFLOAT *result = new TFLOAT [(l+1)*(l+1)*natoms*nbin*ntypes];
+    TFLOAT *result_averaged = nullptr;
+    if (averaged_order) result_averaged = new TFLOAT [(l+1)*(l+1)*natoms*nbin*ntypes];
     TFLOAT * threadResult = threadResults + lunghezza_lista*ith;
     int * counter = new int[natoms*ntypes*nbin];
     if (do_histogram){
@@ -114,12 +127,62 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
         calc(primo+i,result,workspace,cheby,counter,nns);
         //calculate square, sum all m
         const int sh_size=SPB::get_result_size();
-        for (int is=0;is<sh_size;++is) {
-            result[is]=result[is]*result[is]; //square everything (SH are real here)
+        if (result_averaged) {
+            //a new loop over neighbours, sum everything again
+            for (int iatom=0;iatom<natoms;++iatom ) {
+                int itype=t.get_type(iatom);
+                for (int jtype=0;jtype<ntypes;++jtype){
+                    for (int ibin=0;ibin<nbin;++ibin){
+
+                        TFLOAT *to_sum=result+SPB::index_wrk(iatom,jtype,ibin);
+                        TFLOAT *destination = result_averaged+SPB::index_wrk(iatom,jtype,ibin);
+                        //size of stuff is (l+1)*(l+1)
+                        //copy value of atom itself
+                        if (itype==jtype){
+                            for (int im=0;im<(l+1)*(l+1);++im){
+                                destination[im]=to_sum[im]/counter[SPB::index_wrk_counter(iatom,jtype,ibin)];
+                            }
+                        }else {
+                            for (int im=0;im<(l+1)*(l+1);++im){
+                                destination[im]=0;
+                            }
+                        }
+                        //do a loop over neighbours and sum
+                        if (nns) {
+                            auto index_iterator = nns->get_sann(iatom,jtype);
+                            TFLOAT n_atoms_tot=index_iterator.size();
+                            if (n_atoms_tot>0) {
+                                for (auto nidx : index_iterator){
+                                    TFLOAT n_atoms_neigh = counter[SPB::index_wrk_counter(nidx,jtype,ibin)];
+                                    to_sum = result+SPB::index_wrk(nidx,jtype,ibin);
+                                    for (int im=0;im<(l+1)*(l+1);++im){
+                                        destination[im] += to_sum[im]/n_atoms_neigh; // add q_lm(nidx) inn \bar{q}_lm(iatom) accumulator
+                                    }
+                                }
+                            }
+                        } else {
+                            throw std::runtime_error("Not implemented" AT);
+                        }
+                    }
+                }
+            }
         }
-        //sum over m for each l:
+        //square everything (SH are real here)
+        if (averaged_order) {
+            for (int is=0;is<sh_size;++is) {
+                result[is]=result_averaged[is]*result_averaged[is]; //use average q_lm. Only differente with not averaged
+            }
+
+        } else {
+            for (int is=0;is<sh_size;++is) {
+                result[is]=result[is]*result[is]; //square everything (SH are real here)
+            }
+        }
+
+
         using MultiVal = SpecialFunctions::MultiValDynamic::MultiVal<l,TFLOAT>;
         MultiVal v_atomic;
+        //sum over m for each l:
         for (int iatom=0;iatom<natoms;++iatom) {
             int itype=t.get_type(iatom);
             for (int jtype=0;jtype<ntypes;++jtype){
@@ -134,8 +197,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
                         if (n_atoms>0) {
                             for (int jidx=0;jidx<steinhardt_l_histogram.size();++jidx) {
                                 int j=steinhardt_l_histogram[jidx];
-                                TFLOAT pre_sqrt=v_atomic.get_l_m0(j)/n_atoms/n_atoms*4*PI/(2*j+1);
-                                TFLOAT m_steinhardt = sqrt(pre_sqrt);
+                                TFLOAT m_steinhardt=sqrt(v_atomic.get_l_m0(j)/n_atoms/n_atoms*4*PI/(2*j+1));
                                 size_t jhidx=floorf(m_steinhardt*nbin_steinhardt);
                                 if (jhidx>=nbin_steinhardt) {
                                     jhidx=nbin_steinhardt-1;
@@ -152,8 +214,7 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
                         if (n_atoms>0){
                             for (size_t lidx=0;lidx<l;++lidx){
                                 //avoid l=0 that is always 1
-                                TFLOAT pre_sqrt=v_atomic.get_l_m0(lidx+1)/n_atoms/n_atoms*4*PI/(2*(lidx+1)+1);
-                                TFLOAT m_steinhardt = sqrt(pre_sqrt);
+                                TFLOAT m_steinhardt=sqrt(v_atomic.get_l_m0(lidx+1)/n_atoms/n_atoms*4*PI/(2*(lidx+1)+1));
                                 threadResult[get_index(ibin,i/CMT::skip,iatom,jtype,lidx)]=m_steinhardt;
                             }
                         }else {
@@ -168,8 +229,9 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
     }
     delete [] counter;
     delete [] result;
+    delete [] result_averaged;
     delete  nns;
-    std::cerr << "Thread " << ith << "istart,istop="<<istart<<","<<istop<< " finished" <<std::endl;
+    std::cerr << "Thread " << ith << " istart , istop = "<<istart<<" , "<<istop<< " finished" <<std::endl;
 }
 
 template <int l, class TFLOAT, class T>

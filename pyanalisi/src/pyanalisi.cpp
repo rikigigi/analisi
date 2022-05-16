@@ -27,7 +27,7 @@ template <class SOP, class T>
 void steinDef(py::module & m, std::string suffix){
     py::class_< SOP >(m,(std::string("SteinhardtOrderParameterHistogram")+suffix).c_str(),py::buffer_protocol())
             .def(py::init<T*,typename SOP::Rminmax_t,unsigned int, unsigned int, std::vector<unsigned int>,
-                 unsigned int,unsigned int, bool,typename SOP::NeighListSpec>(),
+                 unsigned int,unsigned int, bool,typename SOP::NeighListSpec,bool>(),
 R"lol(
 Parameters
 ----------
@@ -40,6 +40,7 @@ number of threads
 time skip
 if true do the histogram, otherwise calculate a trajectory-like object
 provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always. rminmax list is ignored
+if true compute the averaged steinhardt order parameter (an additional loop over neighbours is performed). Implemented only with SANN
 )lol")
             .def("reset",&SOP::reset)
             .def("calculate", &SOP::calcola)

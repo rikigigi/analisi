@@ -204,14 +204,13 @@ struct MultiVal {
     template<int j>
     constexpr MultiVal<j,T> & valm() {if constexpr (j==l) return *this; else return val_.template valm<j>();}
 
-    T get_l_m0(int j) {
+    T get_l_m0(const int & j) const {
         if (l==j) {
             return val[0];
         } else {
             return val_.get_l_m0(j);
         }
     }
-
 
 };
 
@@ -240,7 +239,7 @@ struct MultiVal<0,T> {
         return *this;
     }
 
-    T get_l_m0(int j) {
+    T get_l_m0(const int &j) const {
         if (j==0) {
             return val[0];
         } else {

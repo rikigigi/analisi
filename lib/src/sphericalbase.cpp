@@ -69,10 +69,10 @@ void SphericalBase<lmax,TFLOAT,T>::calc(int timestep,
     } else {
         nnl->update_neigh(timestep,true); //sorted list of neighbours, to use sann algorithm
         for (unsigned int iatom=0;iatom<natoms;iatom++) {
+            const unsigned int itype=t.get_type(iatom);
             for (unsigned int jtype=0;jtype<ntypes;jtype++) {
                 //other atom loop
                 auto position_iterator = nnl->get_sann_r(iatom,jtype);
-                const unsigned int itype=t.get_type(iatom);
                 const unsigned int pairidx=ntypes*itype+jtype;
                 for (const auto & x : position_iterator){
 

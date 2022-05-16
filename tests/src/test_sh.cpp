@@ -48,7 +48,7 @@ struct SteinhardtFixture{
 };
 template<int l,int NTH>
 struct SteinhardtFixtureNeigh{
-    SteinhardtFixtureNeigh(): nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()},
+    SteinhardtFixtureNeigh(): nbin{1}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()},
         sh{&(traj.traj),{{0.5, 3.0},{0.5, 3.0},{0.5, 3.0},{0.5, 3.0}},nbin,100,{4,6},NTH,13,false,{{19,4.0,4.0},{17,4.0,4.0}}} {
         sh.reset(traj.traj.get_nloaded_timesteps());
         data.path=data.path+"sh_stein/";
