@@ -350,7 +350,22 @@ R"lol(
      returns estimated number of timesteps from the file size
 )begend")
      .def("get_current_timestep",&Tk::get_current_timestep,"return the first timestep currently loaded in this object (meaningful for the lammps binary trajectory interface)")
-     .def("getWrapPbc",&Tk::get_pbc_wrap,"return the pbc wrapping of the trajectory around the center of the cell flag");
+     .def("getWrapPbc",&Tk::get_pbc_wrap,"return the pbc wrapping of the trajectory around the center of the cell flag")
+     .def("minImage",[](Tk & t,size_t i, size_t j, size_t it, size_t ij){
+        double *x = new double[4];
+        x[3]=t.d2_minImage(i,j,it,ij,x);
+        pybind11::capsule free_when_done(x, [](void *f) {
+           double *x = reinterpret_cast<double *>(f);
+           std::cerr << "freeing memory @ " << f << "\n"; 
+           delete [] x;
+        });
+        return pybind11::array_t<double>(
+         {{4}}, //shape
+         {{sizeof(double)}},
+         x,
+         free_when_done
+         );
+     });
 }
 
 PYBIND11_MODULE(pyanalisi,m) {

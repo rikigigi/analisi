@@ -87,6 +87,9 @@ def get_analisi_traj_from_aiida(traj):
     atraj_unw=pa.Trajectory(*params,pa.BoxFormat.CellVectors, False,True)
     return atraj, atraj_unw
 
+#only pos and cell
+def get_analisi_traj(pos,types,cell,wrap=False):
+    return pa.Trajectory(pos,np.zeros(pos.shape),types,cell,pa.BoxFormat.CellVectors, wrap,True)
 try:
     import k3d
     HAS_K3D=True
@@ -254,7 +257,9 @@ def analyze_vdos_numpy(pos, vel, types, box,
        
     return vdos #,copy=True)
 
-def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,tskip=10,print=print):
+def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,tskip=10,print=print,
+           sann=[] #list to tell how to build the neighbours list: [ (max_number_of_neigh,rcut**2,not_used) ]
+      ):
     tmax,n_ave = max_l(start,stop,tmax)
     sh=pyanalisi_wrapper('SphericalCorrelations',traj
                                      ,[(startr #minimum of radial distance
@@ -264,7 +269,7 @@ def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,ts
                                      ,nthreads # number of threads
                                      ,tskip # time skip to average over the trajectory
                                      ,20 # buffer for sh
-                                     ,True,[]) #no sann for the moment
+                                     ,True,sann) #flag that at the moment does nothing, sann if it is not empty activates the sann algorithm.
     sh.reset(n_ave) # number of timesteps to average
     print('calculating spherical harmonics correlation functions... (go away and have a coffee)',flush=True)
     sh.calculate(start) #calculate starting at this timestep    
