@@ -1,6 +1,7 @@
 import pytest
 import warnings
 import numpy as np
+import sys
 
 def test_write_binary_header(analisi_traj, numpy_traj, tmpdir_factory):
     import pyanalisi
@@ -43,7 +44,7 @@ def test_write_binary_header_triclinic(triclinic_traj, tmpdir_factory):
 @pytest.fixture
 def run_cli(testdir, filepath_tests):
    def do_run(ex,*args):
-       args = ['python', filepath_tests + '/../tools/'+ex] + list(args)
+       args = [sys.executable, filepath_tests + '/../tools/'+ex] + list(args)
        return testdir.run(*args)
    return do_run
 
