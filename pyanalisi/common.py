@@ -1,15 +1,21 @@
+import re
+import pickle
+import math
+
 try:
     import aiida
     HAS_AIIDA=True
 except:
     HAS_AIIDA=False
 if HAS_AIIDA:
-    from aiida import load_profile
-    from aiida.orm import Code, load_node
-    from aiida.orm import *
-    from aiida.engine import submit
-    load_profile()
-import re
+    try:
+       from aiida import load_profile
+       from aiida.orm import Code, load_node
+       from aiida.orm import *
+       from aiida.engine import submit
+       load_profile()
+    except:
+       HAS_AIIDA=False
 
 try:
     import aiida_QECpWorkChain
@@ -21,7 +27,10 @@ if HAS_QECPWORKCHAIN:
     from aiida_QECpWorkChain.workflow import *
     from aiida_QECpWorkChain import write_cp_traj
 
-import numpy as np
+try:
+    import numpy as np
+except:
+    print('WARNING: cannot import numpy')
 try:
    import matplotlib as mpl
    mpl.rcParams['agg.path.chunksize'] = 1000000
@@ -30,12 +39,6 @@ try:
    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 except:
    print('WARNING: cannot import matplotlib')
-import pickle
-
-try:
-    import thermocepstrum as tc
-except:
-    print('WARNING: cannot import thermocepstrum')
 
 
 import pyanalisi.pyanalisi as pa
@@ -315,7 +318,6 @@ try:
     import scipy.optimize 
 except:
     print('WARNING: cannot import scipy')
-import math
 
 
 
@@ -677,6 +679,12 @@ if not 'pickled_files' in globals():
 if not 'analysis_results' in globals():
     analysis_results={}
 
+def pickle_or_unpickle_reset():
+    global pickled_files
+    global analysis_results
+    pickled_files={}
+    analysis_results={}
+
 def pickle_or_unpickle(pickle_dump_name, analisi=None):
     """
     globals that it modifies:
@@ -750,16 +758,15 @@ def plot_simulation_box(box,**kwargs):
     return line
 
 def rotation(a,b,c,order='zxy'):
-   from math import cos,sin
    mats={}
    mats['x']=np.array([[1, 0,0],
-               [0, cos(a), -sin(a)],
-               [0,sin(a),cos(a)]])
-   mats['y']=np.array([[cos(b),0,sin(b)],
+               [0, math.cos(a), -math.sin(a)],
+               [0,math.sin(a),math.cos(a)]])
+   mats['y']=np.array([[math.cos(b),0,math.sin(b)],
               [0,1,0],
-              [-sin(b),0,cos(b)]])
-   mats['z']=np.array([[cos(c),-sin(c),0],
-               [sin(c),cos(c),0],
+              [-math.sin(b),0,math.cos(b)]])
+   mats['z']=np.array([[math.cos(c),-math.sin(c),0],
+               [math.sin(c),math.cos(c),0],
                [0,0,1]])
    
    print(order[0])
@@ -1004,12 +1011,12 @@ def density_field(res,box,box_kw={},plot=None):
         plot.clipping_planes=global_clipping_planes()
     return plot
         
-def force_ratio_histogram(wf,print=print,ax=[]):
+def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(dpi=300)):
     pwcalcjobs=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.pw.PwCalculation'>"]:
         pwcalcjobs.append(c)
         print(c.pk)
-    res,axs,figs,n_ax=analyze_forces_ratio(pwcalcjobs,minpk=wf.pk,ax_=ax,create_fig = lambda : plt.subplots(dpi=300))
+    res,axs,figs,n_ax=analyze_forces_ratio(pwcalcjobs,minpk=wf.pk,ax_=ax,create_fig = create_fig)
     return res,axs,figs,n_ax
 
 def plot_force_ratio(res,fig=None,ax=None,hheight=10):

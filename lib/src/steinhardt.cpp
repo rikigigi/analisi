@@ -81,6 +81,9 @@ void Steinhardt<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) 
 template <int l, class TFLOAT, class T>
 void Steinhardt<l,TFLOAT,T>::calc_init(int primo) {
     //check that everything is ok
+    if (ntimesteps+primo > t.get_ntimesteps()){
+        throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average " AT);
+    }
 
     //allocate the space for the threads work
     if (do_histogram){
