@@ -52,24 +52,24 @@ public:
         res.first=ith*npassith;
         if (ith==nthreads-1) {
             res.second=end;
-            if constexpr ( FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE ){
+            if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)){
                 //align the last timestep so it is a multiple of skip and the total number of points is ntimestep/skip
                 res.second = end - end%skip;
             }
-            if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME) {
+            if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME)) {
                 //align the last timestep so it is a multiple of every and the total number of points is leff/every
                 res.second= end - end%every;
             }
         } else {
             res.second=(ith+1)*npassith;
         }
-        if constexpr ( FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE ) {
+        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)) {
             if (skip > 1 && res.first % skip > 0) { 
                 //align the first timestep so it is a multiple of skip
                 res.first = res.first - res.first % skip + skip;
             }
         }
-        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME) {
+        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME)) {
             if (every > 1 && res.first % every > 0 ) {
                 res.first = res.first - res.first % every + every ;
             }
@@ -78,7 +78,7 @@ public:
     }
 
     void init_split() {
-        if constexpr (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE){
+        if constexpr ( !! (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)){
             npassith=ntimesteps/nthreads;
             end=ntimesteps;
         } else if (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME) {
