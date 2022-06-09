@@ -261,7 +261,8 @@ def analyze_vdos_numpy(pos, vel, types, box,
     return vdos #,copy=True)
 
 def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,tskip=10,print=print,
-           sann=[] #list to tell how to build the neighbours list: [ (max_number_of_neigh,rcut**2,not_used) ]
+           sann=[], #list to tell how to build the neighbours list: [ (max_number_of_neigh,rcut**2,not_used) ]
+           buffer_size=20
       ):
     tmax,n_ave = max_l(start,stop,tmax)
     sh=pyanalisi_wrapper('SphericalCorrelations',traj
@@ -271,7 +272,7 @@ def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,ts
                                      ,tmax # maximum length of correlation functions in timesteps
                                      ,nthreads # number of threads
                                      ,tskip # time skip to average over the trajectory
-                                     ,20 # buffer for sh
+                                     ,buffer_size # buffer for sh
                                      ,True,sann) #flag that at the moment does nothing, sann if it is not empty activates the sann algorithm.
     sh.reset(n_ave) # number of timesteps to average
     print('calculating spherical harmonics correlation functions... (go away and have a coffee)',flush=True)

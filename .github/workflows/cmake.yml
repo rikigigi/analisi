@@ -40,7 +40,7 @@ jobs:
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
         sudo -E ${{github.workspace}}/install/install_python.sh
       env:
-        SP_DIR: ${{github.workspace}}/tests
+        SP_DIR: __DETECT__
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
 
