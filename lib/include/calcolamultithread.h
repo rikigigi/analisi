@@ -120,11 +120,11 @@ public:
                             // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
                             // select a different signature of the calculation function depending on where the loops (if present) are parallelized
                             // rangeA and rangeB are passed to each thread and their meaning depends on what PARALLEL_SPLIT_* option you choose
-                            if constexpr (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME)) {
+                            if constexpr ( !! (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME))) {
                                 static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith); // time, average, rangeA, rangeB, primo, thread id
-                            } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE) {
+                            } else if constexpr( !! (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE) ) {
                                 static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith); // average, rangeA, rangeB, primo, thread id
-                            } else if constexpr(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME) {
+                            } else if constexpr( !! (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME) ) {
                                 static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith); // time, rangeA, rangeB, primo, thread id
                             } else {
                                 static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith); // rangeA, rangeB, primo, thread id
