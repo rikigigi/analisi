@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from testbook import testbook
+import warnings
 
 
 @pytest.fixture(scope='module')
