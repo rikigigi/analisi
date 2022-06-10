@@ -7,9 +7,10 @@ import warnings
 @pytest.fixture(scope='module')
 def tb():
     import pyanalisi as pa
+    execute=True
     if not pa.has_mmap():
-        return None
-    with testbook('../notebooks/calc_inspector.ipynb', execute=True) as tb:
+        execute=False
+    with testbook('../notebooks/calc_inspector.ipynb', execute=execute) as tb:
         yield tb
 
 def test_density(tb,num_regression):
