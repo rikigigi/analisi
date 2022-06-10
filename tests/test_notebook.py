@@ -8,7 +8,7 @@ import warnings
 def tb():
     import pyanalisi as pa
     if not pa.has_mmap():
-        yield None
+        return None
     with testbook('../notebooks/calc_inspector.ipynb', execute=True) as tb:
         yield tb
 
