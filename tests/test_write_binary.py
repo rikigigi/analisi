@@ -1,6 +1,7 @@
 import pytest
 import warnings
 import numpy as np
+import sys
 
 def test_write_binary_header(analisi_traj, numpy_traj, tmpdir_factory):
     import pyanalisi
@@ -43,7 +44,7 @@ def test_write_binary_header_triclinic(triclinic_traj, tmpdir_factory):
 @pytest.fixture
 def run_cli(testdir, filepath_tests):
    def do_run(ex,*args):
-       args = ['python', filepath_tests + '/../tools/'+ex] + list(args)
+       args = [sys.executable, filepath_tests + '/../tools/'+ex] + list(args)
        return testdir.run(*args)
    return do_run
 
@@ -60,7 +61,7 @@ def test_cp2analisi(tmpdir_factory, run_cli,filepath_tests, num_regression):
    import pyanalisi as pa
    inputf=filepath_tests+ '/../tools/cp/water125_testanalisi'
    outf=inputf+'.bin'
-   output = run_cli('cp2analisi.py', '-p', inputf, '-s', filepath_tests+ '/../tools/cp/water125_testanalisi.species', '--natoms', '375')
+   output = run_cli('cp2analisi.py', '-p', inputf, '-s', filepath_tests+ '/../tools/cp/water125_testanalisi.species', '--natoms', '375', '--nstep', '4')
    if pa.has_mmap():
       box,pos,vel = get_atraj_data(outf)
       num_regression.check({'pos':pos.flatten(), 'box':box.flatten(), 'vel':vel.flatten()})

@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE gk_tests
+//#define BOOST_TEST_MODULE gk_tests
 #include <boost/test/included/unit_test.hpp>
 
 #include "test_fixtures.h"

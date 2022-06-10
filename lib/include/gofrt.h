@@ -19,8 +19,8 @@
 
 namespace Gofrt_Flags {
 constexpr int FLAGS = CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM |
-        CalcolaMultiThread_Flags::PARALLEL_LOOP_TIME |
-        CalcolaMultiThread_Flags::PARALLEL_LOOP_AVERAGE |
+        CalcolaMultiThread_Flags::SERIAL_LOOP_TIME |
+        CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE |
         CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE |
         CalcolaMultiThread_Flags::CALL_CALC_INIT;
 }
@@ -41,6 +41,7 @@ public:
           unsigned int tmax=0,
           unsigned int nthreads=0,
           unsigned int skip=1,
+	  unsigned int every=1,
           bool debug=false);
     ~Gofrt();
     void reset(const unsigned int numeroTimestepsPerBlocco);

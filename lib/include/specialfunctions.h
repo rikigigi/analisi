@@ -45,13 +45,6 @@ constexpr T realSpericalHarmonics_coeff(long int l, long int m, long int cur_v, 
         return sqrt(T(2*l+1)/(4*PI)*2 / value)*pow(-1,m);
     }
 }
-void print_realSpericalHarmonics_coeff(int l,std::ostream & out) {
-    for (int j=0;j<=l;++j) {
-        for (int i=-j;i<=j;++i){
-            out << "(l,m) = ("<<j<<","<<i <<"): "<<realSpericalHarmonics_coeff<double>(j,i,j-abs(i)) <<std::endl;
-        }
-    }
-}
 
 
 namespace MultiValStatic {
@@ -107,6 +100,13 @@ struct MultiVal {
     template<int j>
     constexpr MultiVal<j,T> & valm() {if constexpr (j==l) return *this; else return val_.template valm<j>();}
 
+    T get_l_m0(int j) {
+        if (l==j) {
+            return val[0];
+        } else {
+            return val_.get_l_m0(j);
+        }
+    }
 
 };
 
@@ -130,6 +130,13 @@ struct MultiVal<0,T> {
     constexpr MultiVal<j,T> & valm()  noexcept{
         static_assert (j==0, "You specified a wrong value of j!" );
         return *this;
+    }
+    T get_l_m0(int j) {
+        if (j==0) {
+            return val[0];
+        } else {
+            throw std::runtime_error("Wrong value of l!");
+        }
     }
 };
 
@@ -197,6 +204,13 @@ struct MultiVal {
     template<int j>
     constexpr MultiVal<j,T> & valm() {if constexpr (j==l) return *this; else return val_.template valm<j>();}
 
+    T get_l_m0(const int & j) const {
+        if (l==j) {
+            return val[0];
+        } else {
+            return val_.get_l_m0(j);
+        }
+    }
 
 };
 
@@ -223,6 +237,14 @@ struct MultiVal<0,T> {
     constexpr MultiVal<j,T> & valm()  noexcept{
         static_assert (j==0, "You specified a wrong value of j!" );
         return *this;
+    }
+
+    T get_l_m0(const int &j) const {
+        if (j==0) {
+            return val[0];
+        } else {
+            throw std::runtime_error("Wrong value of l!");
+        }
     }
 };
 

@@ -23,9 +23,10 @@ jobs:
             os: [ubuntu-latest, macos-latest ]
             python-version: [ "3.7" ] 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Setup python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
+      id: setpy
       with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
@@ -38,9 +39,9 @@ jobs:
       # Build your program with the given configuration
       run: |
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-        sudo -E ${{github.workspace}}/install/install_python.sh
+        ${{github.workspace}}/install/install_python.sh
       env:
-        SP_DIR: ${{github.workspace}}/tests
+        SP_DIR: __DETECT__
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
 
@@ -93,5 +94,5 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         copy ${{github.workspace}}/build/${{env.BUILD_TYPE}}/pyanalisi* .
-        pip install pytest pytest-regressions pandas matplotlib numpy scipy
+        pip install pytest pytest-regressions pandas matplotlib numpy scipy testbook k3d
         pytest -sv .

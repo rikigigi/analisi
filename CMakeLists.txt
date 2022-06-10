@@ -196,8 +196,11 @@ set (ANALISI_LIB
     lib/src/centerofmassdiff.cpp
     lib/src/specialfunctions.cpp
     lib/src/sphericalcorrelations.cpp
+    lib/src/steinhardt.cpp
     lib/src/atomicdensity.cpp
     lib/src/traiettoriabase.cpp
+    lib/src/neighbour.cpp
+    lib/src/sphericalbase.cpp
     )
 
 if (BUILD_MMAP)
@@ -228,6 +231,7 @@ if ( USE_MPI )
 endif()
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET ${PROJECT_NAME}_lib PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${PROJECT_NAME}_lib PROPERTY CXX_VISIBILITY_PRESET hidden)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)

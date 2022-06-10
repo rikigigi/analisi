@@ -1,15 +1,21 @@
+import re
+import pickle
+import math
+
 try:
     import aiida
     HAS_AIIDA=True
 except:
     HAS_AIIDA=False
 if HAS_AIIDA:
-    from aiida import load_profile
-    from aiida.orm import Code, load_node
-    from aiida.orm import *
-    from aiida.engine import submit
-    load_profile()
-import re
+    try:
+       from aiida import load_profile
+       from aiida.orm import Code, load_node
+       from aiida.orm import *
+       from aiida.engine import submit
+       load_profile()
+    except:
+       HAS_AIIDA=False
 
 try:
     import aiida_QECpWorkChain
@@ -21,7 +27,10 @@ if HAS_QECPWORKCHAIN:
     from aiida_QECpWorkChain.workflow import *
     from aiida_QECpWorkChain import write_cp_traj
 
-import numpy as np
+try:
+    import numpy as np
+except:
+    print('WARNING: cannot import numpy')
 try:
    import matplotlib as mpl
    mpl.rcParams['agg.path.chunksize'] = 1000000
@@ -30,12 +39,6 @@ try:
    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 except:
    print('WARNING: cannot import matplotlib')
-import pickle
-
-try:
-    import thermocepstrum as tc
-except:
-    print('WARNING: cannot import thermocepstrum')
 
 
 import pyanalisi.pyanalisi as pa
@@ -80,13 +83,16 @@ def get_types_id_array(types_array):
 def get_analisi_traj_from_aiida(traj):
     pos=traj.get_array('positions')
     vel=traj.get_array('velocities')
-    cel=traj.get_array('cells')
+    cel=traj.get_array('cells').transpose((0,2,1)).copy(order='C') 
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
     atraj=pa.Trajectory(*params,pa.BoxFormat.CellVectors, True,True)
     atraj_unw=pa.Trajectory(*params,pa.BoxFormat.CellVectors, False,True)
     return atraj, atraj_unw
 
+#only pos and cell
+def get_analisi_traj(pos,types,cell,wrap=False):
+    return pa.Trajectory(pos,np.zeros(pos.shape),types,cell,pa.BoxFormat.CellVectors, wrap,True)
 try:
     import k3d
     HAS_K3D=True
@@ -149,7 +155,7 @@ def analyze_msd(traj_unw,start,stop,tmax=0,nthreads=4,tskip_msd=10,print=print):
 
 def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print):
     tmax,n_ave = max_l(start,stop,tmax)
-    gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False)
+    gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False,1)
     gofr.reset(n_ave)
     print('calculating g(r)...',flush=True)
     gofr.calculate(start)
@@ -254,17 +260,20 @@ def analyze_vdos_numpy(pos, vel, types, box,
        
     return vdos #,copy=True)
 
-def analyze_sh(traj,start,stop,startr,endr, nbin, tmax=0, nthreads=4,tskip=10,print=print):
+def analyze_sh(traj,start,stop,startr,endr, nbin,ntypes=2, tmax=0, nthreads=4,tskip=10,print=print,
+           sann=[], #list to tell how to build the neighbours list: [ (max_number_of_neigh,rcut**2,not_used) ]
+           buffer_size=20
+      ):
     tmax,n_ave = max_l(start,stop,tmax)
     sh=pyanalisi_wrapper('SphericalCorrelations',traj
-                                     ,startr #minimum of radial distance
-                                     ,endr #maximum of radial distance
+                                     ,[(startr #minimum of radial distance
+                                     ,endr)]*ntypes**2 #maximum of radial distance
                                      ,nbin # number of distance bins
                                      ,tmax # maximum length of correlation functions in timesteps
                                      ,nthreads # number of threads
                                      ,tskip # time skip to average over the trajectory
-                                     ,20 # buffer for sh
-                                     ,False)
+                                     ,buffer_size # buffer for sh
+                                     ,True,sann) #flag that at the moment does nothing, sann if it is not empty activates the sann algorithm.
     sh.reset(n_ave) # number of timesteps to average
     print('calculating spherical harmonics correlation functions... (go away and have a coffee)',flush=True)
     sh.calculate(start) #calculate starting at this timestep    
@@ -310,7 +319,6 @@ try:
     import scipy.optimize 
 except:
     print('WARNING: cannot import scipy')
-import math
 
 
 
@@ -526,11 +534,13 @@ def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None):
        fig, ax = fig_ax
     else:
        fig,ax =plt.subplots(figsize=(10,8),dpi=300)
-    r=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
+    rm=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
+    rp=(np.arange(res.shape[-1])+1)*(endr-startr)/res.shape[-1]+startr
+    vols=4*np.pi/3*(rp**3-rm**3)
     for i in range(0,res.shape[1]//2):
-        plt_err(ax,r,res[0,i,:]/(r**2),(res_var[0,i,:]/(r**4)) if res_var is not None else res_var)
+        plt_err(ax,(rm+rp)/2,res[0,i,:]/vols,(res_var[0,i,:]/(vols**4)) if res_var is not None else res_var)
     ax.set_xlabel('$\AA$')
-    ax.set_ylabel('number of atoms in the shell / $r^2$')
+    ax.set_ylabel('number of atoms in the shell / volume of the shell')
     ax.set_title('{}$g(r)$'.format(title))
     return fig, ax
 
@@ -670,6 +680,12 @@ if not 'pickled_files' in globals():
 if not 'analysis_results' in globals():
     analysis_results={}
 
+def pickle_or_unpickle_reset():
+    global pickled_files
+    global analysis_results
+    pickled_files={}
+    analysis_results={}
+
 def pickle_or_unpickle(pickle_dump_name, analisi=None):
     """
     globals that it modifies:
@@ -743,16 +759,15 @@ def plot_simulation_box(box,**kwargs):
     return line
 
 def rotation(a,b,c,order='zxy'):
-   from math import cos,sin
    mats={}
    mats['x']=np.array([[1, 0,0],
-               [0, cos(a), -sin(a)],
-               [0,sin(a),cos(a)]])
-   mats['y']=np.array([[cos(b),0,sin(b)],
+               [0, math.cos(a), -math.sin(a)],
+               [0,math.sin(a),math.cos(a)]])
+   mats['y']=np.array([[math.cos(b),0,math.sin(b)],
               [0,1,0],
-              [-sin(b),0,cos(b)]])
-   mats['z']=np.array([[cos(c),-sin(c),0],
-               [sin(c),cos(c),0],
+              [-math.sin(b),0,math.cos(b)]])
+   mats['z']=np.array([[math.cos(c),-math.sin(c),0],
+               [math.sin(c),math.cos(c),0],
                [0,0,1]])
    
    print(order[0])
@@ -763,6 +778,106 @@ def rotation(a,b,c,order='zxy'):
    r=np.eye(4)
    r[:3,:3]=xyz
    return r
+
+def density_field2(res,box,box_kw={},plot=None,ns=[[1,1,1]]):
+    bounds=[ 
+                                                        box[0],box[0]+2*box[3],
+                                                        box[1],box[1]+2*box[4],
+                                                        box[2],box[2]+2*box[5]
+                                                                           ]
+    print(bounds)
+    r0=np.array((box[0]+box[3],box[1]+box[4],box[2]+box[5]))
+    if plot is None:
+       plot = k3d.plot()
+    objs=[]
+    if len(res.shape) >3:
+        for i in range(res.shape[0]):
+            objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
+            plot+=objs[-1]
+    else:
+        objs.append(k3d.volume(np.array(res,dtype='float16'),bounds=bounds))
+        plot+=objs[-1]
+        
+    #points = k3d.points(g0_sites,point_size=0.02)
+    #points1 = k3d.points(g1_sites,point_size=0.005)
+    #plot += points
+    #plot += points1
+    plot += plot_simulation_box(box,**box_kw)
+    plot.display()
+    global _w_x
+    global _x
+    global _n_idx
+    _w_x=0.05
+    _x  =0.14
+    _n_idx = 0
+    global _rot_a
+    global _rot_b
+    global _rot_c
+    global _rot_Q
+    _rot_a = 0.0 
+    _rot_b = 0.0
+    _rot_c = 0.0
+    _rot_Q = np.eye(4)
+
+    nsn=np.array(ns)
+    nsn=np.einsum('ij,i->ij',nsn,((nsn**2).sum(axis=1))**-.5) 
+    nlabel=widgets.Label(value=f'n={nsn[_n_idx]}')
+    display(nlabel)
+    def rotate_plane(Q,ps):
+       prs=[]
+       for p in ps:
+          p=np.array(p)
+          prs.append(Q.dot(p).tolist())
+       return prs
+    def get_planes():
+        n=nsn[_n_idx]
+        c1=-(r0).dot(n) + _w_x +_x
+        c2=-(r0).dot(n) - _w_x +_x
+        return [
+                  [ n[0], n[1], n[2], c1],
+                  [-n[0],-n[1],-n[2],-c2]
+               ]
+    def global_clipping_planes():
+            return rotate_plane(_rot_Q, get_planes())
+    @interact(idx=widgets.IntSlider(value=0,min=0,max=nsn.shape[0]-1,step=1,description='select index of plane'))
+    def g(idx):
+        global _n_idx
+        _n_idx=idx
+        plot.clipping_planes=global_clipping_planes()
+        nlabel.value=f'n={nsn[_n_idx]}'
+    @interact(x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100))
+    def g(x):
+        global _x
+        _x=x
+        plot.clipping_planes=global_clipping_planes()
+    @interact(w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100))
+    def g(w_x):
+        global _w_x
+        _w_x=w_x
+        plot.clipping_planes=global_clipping_planes()
+    @interact(a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(a):
+        global _rot_a
+        global _rot_Q
+        _rot_a=a
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+    @interact(b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(b):
+        global _rot_b
+        global _rot_Q
+        _rot_b=b
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+    @interact(c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
+    def g(c):
+        global _rot_c
+        global _rot_Q
+        _rot_c=c
+        _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
+        plot.clipping_planes=global_clipping_planes()
+
+    return plot
 
 def density_field(res,box,box_kw={},plot=None):
     bounds=[ 
@@ -897,12 +1012,12 @@ def density_field(res,box,box_kw={},plot=None):
         plot.clipping_planes=global_clipping_planes()
     return plot
         
-def force_ratio_histogram(wf,print=print,ax=[]):
+def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(dpi=300)):
     pwcalcjobs=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.pw.PwCalculation'>"]:
         pwcalcjobs.append(c)
         print(c.pk)
-    res,axs,figs,n_ax=analyze_forces_ratio(pwcalcjobs,minpk=wf.pk,ax_=ax,create_fig = lambda : plt.subplots(dpi=300))
+    res,axs,figs,n_ax=analyze_forces_ratio(pwcalcjobs,minpk=wf.pk,ax_=ax,create_fig = create_fig)
     return res,axs,figs,n_ax
 
 def plot_force_ratio(res,fig=None,ax=None,hheight=10):

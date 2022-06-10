@@ -1,6 +1,7 @@
-#define BOOST_TEST_MODULE sh_tests
+//#define BOOST_TEST_MODULE sh_tests
 #include <boost/test/included/unit_test.hpp>
 #include "sphericalcorrelations.h"
+#include "steinhardt.h"
 #include <vector>
 #include <algorithm>
 
@@ -8,15 +9,15 @@
 
 template <int l,int NTH>
 struct ShFixture{
-    ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), 0.5, 3.0, nbin, 17, NTH, 13, 10,false} {
-	    sh.reset(100);
-            data.path=data.path+"sh/";
+    ShFixture() : nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()}, sh{&(traj.traj), {{0.5, 3.0},{0.5, 3.0},{0.5, 3.0},{0.5, 3.0}}, nbin, 17, NTH, 13, 10,false} {
+        sh.reset(100);
+        data.path=data.path+"sh/";
     }
     ~ShFixture(){}
     TrajSetup traj;
-    unsigned int nbin;
-    size_t natoms;
-    int ntypes;
+    const unsigned int nbin;
+    const size_t natoms;
+    const size_t ntypes;
     SphericalCorrelations<l,double,Traiettoria> sh;
     DataRegression<double> data;
     double  workspace[(l+1)*(l+1)], cheby[(l+1)*2];
@@ -31,22 +32,72 @@ struct ShFixture{
     }
 };
 
+template<int l,int NTH, int skip=17>
+struct SteinhardtFixture{
+    SteinhardtFixture(): nbin{4}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()},
+        sh{&(traj.traj),{{0.5, 3.0},{0.5, 3.0},{0.5, 3.0},{0.5, 3.0}},nbin,100,{4,6},NTH,skip,true,{}} {
+        sh.reset(traj.traj.get_nloaded_timesteps());
+        data.path=data.path+"sh_stein/";
+    }
+    TrajSetup traj;
+    const unsigned int nbin;
+    const size_t natoms;
+    const size_t ntypes;
+    Steinhardt<l,double,Traiettoria> sh;
+    DataRegression<double> data;
+};
+template<int l,int NTH>
+struct SteinhardtFixtureNeigh{
+    SteinhardtFixtureNeigh(): nbin{1}, natoms{traj.traj.get_natoms()}, ntypes{traj.traj.get_ntypes()},
+        sh{&(traj.traj),{{0.5, 3.0},{0.5, 3.0},{0.5, 3.0},{0.5, 3.0}},nbin,100,{4,6},NTH,13,false,{{19,4.0,4.0},{17,4.0,4.0}}} {
+        sh.reset(traj.traj.get_nloaded_timesteps());
+        data.path=data.path+"sh_stein/";
+    }
+    TrajSetup traj;
+    const unsigned int nbin;
+    const size_t natoms;
+    const size_t ntypes;
+    Steinhardt<l,double,Traiettoria> sh;
+    DataRegression<double> data;
+};
+
 typedef ShFixture<10,1> ShFix10_1 ;
 typedef ShFixture<10,2> ShFix10_2 ;
 typedef ShFixture<10,3> ShFix10_3 ;
 
-#define TESTS(T)\
+typedef SteinhardtFixture<6,1,17> StFix6_1;
+typedef SteinhardtFixture<6,2,17> StFix6_2;
+typedef SteinhardtFixture<6,3,17> StFix6_3;
+typedef SteinhardtFixture<6,1,53> StFix6_sk_1;
+typedef SteinhardtFixture<6,2,53> StFix6_sk_2;
+typedef SteinhardtFixture<6,3,53> StFix6_sk_3;
+
+typedef SteinhardtFixtureNeigh<6,1> StFix6_tr_1;
+typedef SteinhardtFixtureNeigh<6,2> StFix6_tr_2;
+typedef SteinhardtFixtureNeigh<6,3> StFix6_tr_3;
+
+#define TESTS(T,suff)\
 BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
 BOOST_AUTO_TEST_CASE(test_calcola)\
 {\
     sh.calcola(0);\
-    BOOST_TEST(data.test_regression("test_calcola",sh.accesso_lista(),sh.lunghezza()));\
+    BOOST_TEST(data.test_regression("test_calcola" # suff ,sh.accesso_lista(),sh.lunghezza()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 
-TESTS(ShFix10_1)
-TESTS(ShFix10_2)
-TESTS(ShFix10_3)
+TESTS(ShFix10_1,)
+TESTS(ShFix10_2,)
+TESTS(ShFix10_3,)
+
+TESTS(StFix6_1,)
+TESTS(StFix6_2,)
+TESTS(StFix6_3,)
+TESTS(StFix6_tr_1,_tr_neigh)
+TESTS(StFix6_tr_2,_tr_neigh)
+TESTS(StFix6_tr_3,_tr_neigh)
+TESTS(StFix6_sk_1,_skip)
+TESTS(StFix6_sk_2,_skip)
+TESTS(StFix6_sk_3,_skip)
 
 BOOST_FIXTURE_TEST_SUITE(sh_snapshots, ShFix10_1)
 BOOST_AUTO_TEST_CASE(test_single_snapshot)
@@ -98,6 +149,5 @@ BOOST_AUTO_TEST_CASE(test_corr_consistency){
 
 }
 BOOST_AUTO_TEST_SUITE_END()
-
 
 

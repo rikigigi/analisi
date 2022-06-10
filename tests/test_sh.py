@@ -8,14 +8,13 @@ def test_sh(analisi_traj,num_regression):
     nbin=4
     dr=(endr-startr)/nbin
     test=pyanalisi.SphericalCorrelations(analisi_traj
-                                         ,startr #minimum of radial distance
-                                         ,endr #maximum of radial distance
+                                         ,[(startr,endr)]*9 #minimum and maximum of radial distance for each pair of atomic type
                                          ,nbin # number of distance bins
                                          ,200 # maximum length of correlation functions in timesteps
                                          ,4 # number of threads
                                          ,90 # time skip to average over the trajectory
                                          ,10 #buffer size
-                                         ,False)
+                                         ,True,[])
     test.reset(700) # number of timesteps to analyze
     test.calculate(0) #calculate starting at this timestep
     res=np.array(test,copy=True) # get result

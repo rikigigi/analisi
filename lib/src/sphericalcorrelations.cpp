@@ -9,15 +9,16 @@
 
 template <int l, class TFLOAT, class T>
 SphericalCorrelations<l,TFLOAT,T>::SphericalCorrelations(T *t,
-                                                         TFLOAT rmin,
-                                                         TFLOAT rmax,
-                                                         unsigned int nbin,
-                                                         unsigned int tmax,
-                                                         unsigned int nthreads,
-                                                         unsigned int skip,
-                                                         unsigned int buffer_size,
-                                                         bool debug) :
-t{*t},rmin{rmin},rmax{rmax},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}{
+                                                         const rminmax_t rminmax,
+                                                         size_t nbin,
+                                                         size_t tmax,
+                                                         size_t nthreads,
+                                                         size_t skip,
+                                                         size_t buffer_size,
+                                                         bool debug, const NeighListSpec neighList) :
+t{*t},nbin{nbin}, skip{skip}, tmax{tmax}, nthreads{nthreads}, debug{debug},buffer_size{buffer_size}, neighList{neighList},
+SPB{t,nbin,rminmax},
+ntypes{static_cast<size_t>(t->get_ntypes())},natoms{t->get_natoms()}{
 
 }
 
@@ -43,16 +44,13 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
     descr << "#TODO"<<std::endl;
     c_descr=descr.str();
 
+    ntimesteps=numeroTimestepsPerBlocco;
 
     //quanti timestep è lunga la funzione di correlazione
     leff =(numeroTimestepsPerBlocco<tmax || tmax==0)? numeroTimestepsPerBlocco : tmax;
     //numero di timestep su cui fare la media
-    ntimesteps=numeroTimestepsPerBlocco;
-    natoms=t.get_natoms();
-    ntypes=t.get_ntypes();
     lunghezza_lista=leff*ntypes*ntypes*nbin*(l+1);
 
-    dr=(rmax-rmin)/nbin;
 
     delete [] lista;
     lista=new TFLOAT [lunghezza_lista];
@@ -60,39 +58,6 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
 
 
-template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::calc(int timestep, TFLOAT *result, TFLOAT *workspace, TFLOAT * cheby) const {
-    //zero result
-    for (int i=0;i<(lmax+1)*(lmax+1)*natoms*nbin*ntypes;++i) {
-        result[i]=0;
-    }
-    for (unsigned int iatom=0;iatom<natoms;iatom++) {
-        //other atom loop
-        for (unsigned int jatom=0;jatom<natoms;jatom++) {
-            unsigned int jtype=t.get_type(jatom);
-            if (iatom==jatom)
-                continue;
-
-            //minimum image distance
-            double x[3];
-            double d=sqrt(t.d2_minImage(iatom,jatom,timestep,timestep,x));
-            //bin index
-            int idx=(int)floorf((d-rmin)/dr);
-
-            if (idx<nbin && idx >= 0){
-                //calculate sin and cos
-                //calculate spherical harmonics and add to the correct average
-                SpecialFunctions::SphericalHarmonics<lmax,TFLOAT,true,true> sh(x[0],x[1],x[2],cheby,workspace);
-                sh.calc();
-                //now in workspace you have all the spherical harmonics components of the density of the current jatom around iatom
-                //add to the sh density of the current iatom of the current bin of the type jtype
-                for (int ll=0;ll<(lmax+1)*(lmax+1);++ll) {
-                    result[index_wrk(iatom,jtype,idx)+ll]+=workspace[ll];
-                }
-            }
-        }
-    }
-}
 
 template <int lmax, class TFLOAT, class T>
 void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
@@ -130,7 +95,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
         buffer_size=3;
         std::cerr << "Warning: setting buffer_size to 3 (not optimal, because there are too few timesteps) " AT;
     }
-    TwoLoopSplit<unsigned int> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
+    TwoLoopSplit<size_t> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
 
     //allocate space for per thread averages
     TFLOAT * lista_th = new TFLOAT[lunghezza_lista*(nthreads-1)];
@@ -141,6 +106,10 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
 
     for (unsigned int  ith=0;ith<nthreads;ith++) {
         threads.push_back(std::thread([&,ith](){
+            Neighbours_T * nns=nullptr;
+            if (neighList.size()>0) {
+                nns = new Neighbours_T{&t,neighList};
+            }
             TFLOAT * lista_th_= ith >0 ? lista_th+lunghezza_lista*(ith-1) : lista;
             unsigned int * lista_th_counters_ = lista_th_counters+leff*ith;
 
@@ -176,7 +145,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                     */
             //center atom loop for the snapshot at imedia
             bool finished=false;
-            unsigned int t1,t2,dt,t1_old=0;
+            size_t t1,t2,dt,t1_old=0;
             task_distributer.get_withoud_advancing(ith,t1_old,t2);
             while(!finished){
                 task_distributer.get_next_idx_pair(ith,t1,t2,finished);
@@ -187,11 +156,11 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
                 }
                 t1_old=t1;
                 TFLOAT * sh1=
-                        buffer.buffer_calc(*this,t1+primo,workspace,cheby);
+                        buffer.buffer_calc(* static_cast<SPB*>(this),t1+primo,workspace,cheby,nullptr,nns);
 
                 //center atom loop for the snapshot at imedia+dt
                 TFLOAT * sh2=
-                        buffer.buffer_calc(*this,t2+primo,workspace,cheby);
+                        buffer.buffer_calc(* static_cast<SPB*>(this),t2+primo,workspace,cheby,nullptr,nns);
 
                 corr_sh_calc(sh1,sh2,aveTypes,aveWork1, sh_snap_size, sh_final_size, avecont);
 
@@ -209,6 +178,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             delete [] aveWork1;
             delete [] aveTypes;
             delete [] avecont;
+            delete nns;
             hit[ith]=buffer.get_hit();
             miss[ith]=buffer.get_miss();
 
@@ -304,9 +274,11 @@ void SphericalCorrelations<lmax,TFLOAT,T>::corr_sh_calc(const TFLOAT * sh1, cons
 
 #ifdef BUILD_MMAP
 template class SphericalCorrelations<10,double,Traiettoria>;
+template class SphericalCorrelations<6,double,Traiettoria>;
 #endif
 
 #ifdef PYTHON_SUPPORT
 #include "traiettoria_numpy.h"
 template class SphericalCorrelations<10,double,Traiettoria_numpy>;
+template class SphericalCorrelations<6,double,Traiettoria_numpy>;
 #endif

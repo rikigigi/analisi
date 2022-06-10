@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE ph_tests
+//#define BOOST_TEST_MODULE ph_tests
 #include <boost/test/included/unit_test.hpp>
 #include "atomicdensity.h"
 
@@ -22,7 +22,7 @@ struct PhFixture {
     size_t size(){auto s= ret.get_shape(); return s[0]*s[1]*s[2];}
 };
 
-#define TEST_MULTIT(N)\
+#define TEST_MULTITph(N)\
 using PhFixture_ ## N = PhFixture<N,long>;\
 BOOST_FIXTURE_TEST_SUITE(test_atomic_density ## N, PhFixture_ ## N )\
 BOOST_AUTO_TEST_CASE(test_position_histogram ## N)\
@@ -34,5 +34,5 @@ BOOST_AUTO_TEST_CASE(test_position_histogram ## N)\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 
-TEST_MULTIT(1)
-TEST_MULTIT(3)
+TEST_MULTITph(1)
+TEST_MULTITph(3)

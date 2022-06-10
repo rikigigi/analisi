@@ -22,8 +22,8 @@
 #include "mp.h"
 #endif
 
-template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip, bool debug) :
-    CalcolaMultiThread_T {nthreads, skip, t->get_natoms()},
+template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip,unsigned int every, bool debug) :
+    CalcolaMultiThread_T {nthreads, skip, t->get_natoms(), every},
     traiettoria(t),rmin(rmin),rmax(rmax),nbin(nbin), lmax(tmax), debug(debug)
 {
 
@@ -44,13 +44,15 @@ template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::numeroTimestepsOl
 template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
     std::stringstream descr;
-    descr << "# every column is followed by the variance. Then you have the following: "<<std::endl;
+    descr << "# The first column is the time difference in timesteps, then you have the bin index. Every column after is followed by the variance. Then you have the following: "<<std::endl;
     for (unsigned int t1=0;t1<traiettoria->get_ntypes();t1++) {
         for (unsigned int t2=t1;t2<traiettoria->get_ntypes();t2++){
-            descr << "#g("<<t1<<", "<<t2<<"), different atom index: "<<get_itype(t1,t2)*2<<std::endl;
-            descr << "#g("<<t1<<", "<<t2<<"), same atom index: "<<(get_itype(t1,t2)+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2)*2<<std::endl;
+            descr << "#g("<<t1<<", "<<t2<<"), different atom index: "<<get_itype(t1,t2)*2+3<<std::endl;
+            descr << "#g("<<t1<<", "<<t2<<"), same atom index: "<<(get_itype(t1,t2)+traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)/2)*2+3<<std::endl;
         }
     }
+    descr << "# same atom index means that the atom is tracked around and the average self-spread is shown with larger time differences."<<std::endl;
+    descr << "# different atom index is something that for t=0 is the traditional g(r) "<<std::endl;
     c_descr=descr.str();
 
     //lunghezza in timestep
@@ -64,7 +66,7 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::reset(const unsigned int 
 }
 
 template <class TFLOAT, class T> std::vector<ssize_t> Gofrt<TFLOAT,T>::get_shape(){
-    return {leff,traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1),nbin};
+    return {leff,static_cast<ssize_t>(traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)),nbin};
 }
 template <class TFLOAT, class T> std::vector<ssize_t> Gofrt<TFLOAT,T>::get_stride(){
     return {static_cast<long>(traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin*sizeof(TFLOAT)),
@@ -117,8 +119,6 @@ void Gofrt<TFLOAT,T>::calc_single_th(int t, int imedia, int atom_start, int atom
 
             if (idx<nbin && idx >= 0)
                 th_data_[gofr_idx(t,itype,idx)]+=incr;
-
-
         }
     }
 

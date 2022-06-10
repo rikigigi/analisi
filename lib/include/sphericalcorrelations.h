@@ -2,21 +2,28 @@
 #define SPHERICALCORRELATIONS_H
 
 #include "operazionisulista.h"
-
+#include "neighbour.h"
+#include "sphericalbase.h"
 
 template <int l,class TFLOAT, class T>
-class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>
+class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>,
+        public SphericalBase<l,TFLOAT,T>
 {
 public:
+    using rminmax_t = std::vector<std::pair<TFLOAT,TFLOAT> >;
+    using NeighListSpec = typename Neighbours<T,double>::ListSpec;
+    using SPB = SphericalBase<l,TFLOAT,T>;
+    using Neighbours_T = typename SPB::Neighbours_T;
     SphericalCorrelations(T *t,
-                          TFLOAT rmin,
-                          TFLOAT rmax,
-                          unsigned int nbin,
-                          unsigned int tmax=0,
-                          unsigned int nthreads=0,
-                          unsigned int skip=1,
-                          unsigned int buffer_size=10,
-                          bool debug=false);
+                          const rminmax_t rminmax,
+                          size_t nbin,
+                          size_t tmax=0,
+                          size_t nthreads=0,
+                          size_t skip=1,
+                          size_t buffer_size=10,
+                          bool debug=false,
+                          const NeighListSpec neighList={}
+                         );
     ~SphericalCorrelations();
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int);
@@ -25,7 +32,7 @@ public:
         OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);
         return *this;
     }
-    const std::vector<ssize_t> get_shape()const { return {leff,ntypes,ntypes,nbin,(l+1)};}
+    const std::vector<ssize_t> get_shape()const { return {(ssize_t)leff,(ssize_t)ntypes,(ssize_t)ntypes,(ssize_t)nbin,(ssize_t)(l+1)};}
     const std::vector<ssize_t> get_stride()const {
         auto s=get_shape();
         auto s_old=s[s.size()-1];
@@ -43,36 +50,32 @@ public:
         return (l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);
     }
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
-    int get_single_type_size() const {
-        return (l+1)*(l+1)*nbin*ntypes;
+    size_t get_single_type_size() const {
+        return SPB::get_single_atom_size();
     }
-    int get_snap_size()const{
-        return get_single_type_size()*natoms;
+    size_t get_snap_size()const{
+        return SPB::get_result_size();
     }
-    int get_final_snap_size() const {
+    size_t get_final_snap_size() const {
         return get_single_type_size()*ntypes/(l+1);
     }
-    inline void calc(int timestep, TFLOAT * result, TFLOAT * workspace, TFLOAT * cheby) const;
     void corr_sh_calc(const TFLOAT * sh1, const TFLOAT *sh2, TFLOAT * aveTypes, TFLOAT * aveWork1, int sh_snap_size , int sh_final_size, int *avecont) const noexcept;
 
-private:
+    using SPB::calc;
+protected:
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
     using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
     T & t;
 
-    inline int index_wrk(const int iatom,const int jtype,const int ibin=0) const noexcept {
-        return (l+1)*(l+1)*(nbin*(ntypes*iatom+jtype)+ibin);
-    }
-
-
-
-
-
-    TFLOAT rmin, rmax,dr;
-    unsigned int nbin, tmax,nthreads,skip,leff,ntimesteps,ntypes,natoms,buffer_size;
+    size_t nbin, tmax,nthreads,skip,leff,ntimesteps,buffer_size;
+    const size_t ntypes,natoms;
     bool debug;
     std::string c_descr;
 
+private:
+    const NeighListSpec neighList;
+    using SPB::index_wrk;
+    using SPB::index_wrk_counter;
 };
 
 #endif // SPHERICALCORRELATIONS_H
