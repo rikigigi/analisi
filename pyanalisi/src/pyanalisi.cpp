@@ -468,7 +468,7 @@ PYBIND11_MODULE(pyanalisi,m) {
 
 #endif
     py::class_<ReadLog_numpy<double> >(m,"ReadLog")
-            .def(py::init<py::buffer, std::vector<std::string> >() ,R"begend(
+            .def(py::init<py::buffer, std::vector<std::string> >(), py::keep_alive<1, 2>(),R"begend(
                  proxy class between python arrays and library
 
                  Parameters
@@ -482,7 +482,12 @@ PYBIND11_MODULE(pyanalisi,m) {
 
     trajectory_common_interfaces<Traiettoria_numpy,py::class_<Traiettoria_numpy>>(
     py::class_<Traiettoria_numpy>(m,"Trajectory"))
-            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Traiettoria_numpy::BoxFormat,bool,bool>(),R"lol(
+            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Traiettoria_numpy::BoxFormat,bool,bool>(),
+	    py::keep_alive<1, 2>(),
+	    py::keep_alive<1, 3>(),
+	    py::keep_alive<1, 4>(),
+	    py::keep_alive<1, 5>(),
+	    R"lol(
                 Parameters
                 ----------
                 positions (double) python array (ntimesteps,natoms,3)

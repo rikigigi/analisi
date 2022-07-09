@@ -63,5 +63,8 @@ def numpy_log(filepath_tests):
 
 @pytest.fixture(scope='session')
 def analisi_log(numpy_log):
-    return pyanalisi.ReadLog(*numpy_log)
+    import numpy as np
+    log,headers=numpy_log
+    return pyanalisi.ReadLog(np.array(log,copy=True),headers)
+    #return pyanalisi.ReadLog(log,headers)
 
