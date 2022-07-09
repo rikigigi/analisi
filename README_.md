@@ -150,10 +150,17 @@ Calculations:
 - multicomponent green kubo time domain formula (MPI here can be useful...)
 - spherical harmonics number density time correlation analysis (MPI here can be useful...)
 - atomic position histogram
-- and more ...
+- (averaged) Steinhardt local order parameters
+- SANN first neighbors algorithm
 - ...
 
 # Building from source
+
+If you clone the repository you have to initialize the submodules with
+	
+	git submodule init
+
+this will initialize the pybind11 repository for the (optional) python interface
 Dependencies:
 
 - C++17 compatible compiler (GCC 7+, clang 6+, intel 19.0.1+, MSVC 19.29 [source](https://en.cppreference.com/w/cpp/compiler_support) )
@@ -165,7 +172,7 @@ Dependencies:
 - Boost (included in the package)
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- included in the package)
-- python (optional) 
+- python (optional, 3.6+) 
 
 Documentation build:
 
@@ -199,6 +206,7 @@ export SOURCE_DIR="/path/to/repository/dir"
 export BUILD_DIR="/path/to/build/directory"
 install/install_python.sh
 ```
+You can set `SP_DIR=__DETECT__` to try to autodetect the python package directory. 
 Be careful to choose the correct python executable, the same that you used to compile the library.
 
 To test that the library was compiled correctly and that there are no regressions, you can run the (small) test suite with the command
@@ -594,6 +602,60 @@ $$
 $$
 
 where $M$ is the number of atomic species and $N$ the number of timesteps. Note that in the command line versione each column but the first is followed by its variance
+
+
+## SANN algorithm
+The algorithm is described in [ J. Chem. Phys. 136, 234107 (2012); van Meel, Filion, Valeriani,Frenkel](https://arxiv.org/abs/1202.5281).
+
+It is implemented internally in the Steinhardt descriptor python ojects and the algorithm is exposed in the python interface as the following:
+
+	nns=pa.Neighbours(tr,[(40,4.0**2,0.0),(35,3.5**2,0.0)])
+
+where `tr` is a Trajectory object, and you must provide the list of the maximum number of atoms and maximum cutoff square for each atomic species. The last number of the 3-tuple is not used at the moment.
+You can calculate the neighbour list for each atom for a particular timestep:
+
+	nns.calculate_neigh(0,True)
+	
+where the first argument is the timestep index, and if the second argument is true the list is sorted by distance from the central atom.
+Then you can ask for the list of atomic indexes with the following function call:
+
+	nns.get_neigh_idx(1,0)
+
+where the first argument is the atomic index and the second argument is the list index, one for each type.
+You can ask also for the list of the atomic distances (in order: modulus and vector) with the call:
+
+	nns.get_neigh(1,0)
+
+In the same way you can ask for the SANN first neighbor list:
+
+	nns.get_sann(1,0)
+
+or, for the atomic indexes only:
+
+	nns.get_sann_idx(1,0)
+
+
+
+## Steinhardt descriptors
+
+To distinguish the various phases of the system this is a useful tool. It is defined as 
+$$
+\begin{aligned} 
+    q_l(i)&=\sqrt{\frac{4\pi}{2l+1}\sum_{m=-l}^l \left|q_{lm}\right|^2} \\
+    q_{lm}(i) &= \frac{1}{N_b(i)}\sum_{j=1}^{N_b(i)}Y_{lm}(\bf{r}_{ij})
+\end{aligned}
+$$
+where $Y_{lm}$ are the spherical harmonics. An issue with the Steinhardt descriptors, particularly relevant for some system, is that it is not able to distinguish in a nice way the local BCC and HCP structures when computing the $\left(q_6(i),q_4(i)\right)$ histogram. This issue is solved by the averaged order parameter, a slightly different version that is defined as:
+$$
+\begin{aligned}
+    \bar{q}_l(i)&=\sqrt{\frac{4\pi}{2l+1}\sum_{m=-l}^l \left|\bar{q}_{lm}\right|^2} \\
+    \bar{q}_{lm}(i)&=\frac{1}{N_b(i)}\sum_{k=0}^{N_b(i)}q_{lm}(k) \\
+\end{aligned}
+$$
+where the last sum is performed on all the first neighbors plus the particle itself. To find the nearest neighbors we used the SANN\cite{sann} algorithm.
+
+The python interface allows you to evaluate the descriptors for all the atoms or compute directly histograms of the descriptors value. Classes in the python interface are called `SteinhardtOrderParameterHistogram*`. The usage is documented in the docstring.
+
 
 ### command line version
 The options that you can use for this calculation are simply:

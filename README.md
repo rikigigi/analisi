@@ -150,10 +150,17 @@ Calculations:
 - multicomponent green kubo time domain formula (MPI here can be useful...)
 - spherical harmonics number density time correlation analysis (MPI here can be useful...)
 - atomic position histogram
-- and more ...
+- (averaged) Steinhardt local order parameters
+- SANN first neighbors algorithm
 - ...
 
 # Building from source
+
+If you clone the repository you have to initialize the submodules with
+	
+	git submodule init
+
+this will initialize the pybind11 repository for the (optional) python interface
 Dependencies:
 
 - C++17 compatible compiler (GCC 7+, clang 6+, intel 19.0.1+, MSVC 19.29 [source](https://en.cppreference.com/w/cpp/compiler_support) )
@@ -165,7 +172,7 @@ Dependencies:
 - Boost (included in the package)
 - Mpi (optional)
 - libxdrfile (for gromacs file conversion -- included in the package)
-- python (optional) 
+- python (optional, 3.6+) 
 
 Documentation build:
 
@@ -199,6 +206,7 @@ export SOURCE_DIR="/path/to/repository/dir"
 export BUILD_DIR="/path/to/build/directory"
 install/install_python.sh
 ```
+You can set `SP_DIR=__DETECT__` to try to autodetect the python package directory. 
 Be careful to choose the correct python executable, the same that you used to compile the library.
 
 To test that the library was compiled correctly and that there are no regressions, you can run the (small) test suite with the command
@@ -449,7 +457,7 @@ In general the object msd_calculation supports the buffer protocol interface, so
 
 ## Green-Kubo
 
- Given <img src="svgs/fb97d38bcc19230b0acd442e17db879c.svg?invert_in_darkmode" align=middle width=17.73973739999999pt height=22.465723500000017pt/> vector time series of length <img src="svgs/f9c4988898e7f532b9f826a75014ed3c.svg?invert_in_darkmode" align=middle width=14.99998994999999pt height=22.465723500000017pt/> <img src="svgs/6ea8ff937f14aa2a3e0622a395dee889.svg?invert_in_darkmode" align=middle width=27.22419314999999pt height=22.55708729999998pt/>, <img src="svgs/e17d8a1279f0bfa5b92c35f05c242243.svg?invert_in_darkmode" align=middle width=101.57889059999998pt height=24.65753399999998pt/>, <img src="svgs/3ef98fe3db393644cede24e594d556d5.svg?invert_in_darkmode" align=middle width=90.34214144999999pt height=24.65753399999998pt/>,
+ Given <img src="svgs/fb97d38bcc19230b0acd442e17db879c.svg?invert_in_darkmode" align=middle width=17.73973739999999pt height=22.465723500000017pt/> vector time series of length <img src="svgs/f9c4988898e7f532b9f826a75014ed3c.svg?invert_in_darkmode" align=middle width=14.99998994999999pt height=22.465723500000017pt/> <img src="svgs/6ea8ff937f14aa2a3e0622a395dee889.svg?invert_in_darkmode" align=middle width=27.224196449999987pt height=22.55708729999998pt/>, <img src="svgs/e17d8a1279f0bfa5b92c35f05c242243.svg?invert_in_darkmode" align=middle width=101.57889059999998pt height=24.65753399999998pt/>, <img src="svgs/3ef98fe3db393644cede24e594d556d5.svg?invert_in_darkmode" align=middle width=90.34214144999999pt height=24.65753399999998pt/>,
  implements an expression equivalent to the following formula:
  <p align="center"><img src="svgs/168f1aff83bb74b9c5f70ae822348485.svg?invert_in_darkmode" align=middle width=251.32803135pt height=254.2893243pt/></p>
  but with the trapezoidal rule in place of the sums marked with <img src="svgs/cdcac8939f3840cd8cddf40059a4cf58.svg?invert_in_darkmode" align=middle width=6.735194399999992pt height=22.63846199999998pt/>. Note that <img src="svgs/bcd81920696e26093495d90eb4cd7b1b.svg?invert_in_darkmode" align=middle width=16.153034699999992pt height=22.465723500000017pt/> is a matrix. To get the correct units of measure, you have still to multiply all the quantities but the <img src="svgs/9442d407594839d38f91ad3d2deb134e.svg?invert_in_darkmode" align=middle width=16.71464189999999pt height=22.465723500000017pt/>s by the integration timestep. <img src="svgs/8379d82223552fdbdfd98783823c755b.svg?invert_in_darkmode" align=middle width=33.56332814999999pt height=22.465723500000017pt/> is the number of timesteps on which the code runs the average.
@@ -516,6 +524,50 @@ The columns of the output are ordered like the following:
 <p align="center"><img src="svgs/7ded6b2994b505ccc139d8bee7e8cef1.svg?invert_in_darkmode" align=middle width=521.3424876pt height=79.58436255pt/></p>
 
 where <img src="svgs/fb97d38bcc19230b0acd442e17db879c.svg?invert_in_darkmode" align=middle width=17.73973739999999pt height=22.465723500000017pt/> is the number of atomic species and <img src="svgs/f9c4988898e7f532b9f826a75014ed3c.svg?invert_in_darkmode" align=middle width=14.99998994999999pt height=22.465723500000017pt/> the number of timesteps. Note that in the command line versione each column but the first is followed by its variance
+
+
+## SANN algorithm
+The algorithm is described in [ J. Chem. Phys. 136, 234107 (2012); van Meel, Filion, Valeriani,Frenkel](https://arxiv.org/abs/1202.5281).
+
+It is implemented internally in the Steinhardt descriptor python ojects and the algorithm is exposed in the python interface as the following:
+
+	nns=pa.Neighbours(tr,[(40,4.0**2,0.0),(35,3.5**2,0.0)])
+
+where `tr` is a Trajectory object, and you must provide the list of the maximum number of atoms and maximum cutoff square for each atomic species. The last number of the 3-tuple is not used at the moment.
+You can calculate the neighbour list for each atom for a particular timestep:
+
+	nns.calculate_neigh(0,True)
+	
+where the first argument is the timestep index, and if the second argument is true the list is sorted by distance from the central atom.
+Then you can ask for the list of atomic indexes with the following function call:
+
+	nns.get_neigh_idx(1,0)
+
+where the first argument is the atomic index and the second argument is the list index, one for each type.
+You can ask also for the list of the atomic distances (in order: modulus and vector) with the call:
+
+	nns.get_neigh(1,0)
+
+In the same way you can ask for the SANN first neighbor list:
+
+	nns.get_sann(1,0)
+
+or, for the atomic indexes only:
+
+	nns.get_sann_idx(1,0)
+
+
+
+## Steinhardt descriptors
+
+To distinguish the various phases of the system this is a useful tool. It is defined as 
+<p align="center"><img src="svgs/8247bafb4de59a8c8953170c96eb1aef.svg?invert_in_darkmode" align=middle width=209.75890979999997pt height=119.62404794999998pt/></p>
+where <img src="svgs/3b9fb1ae4bcf57f79c6994cbdec0c49a.svg?invert_in_darkmode" align=middle width=25.432037399999988pt height=22.465723500000017pt/> are the spherical harmonics. An issue with the Steinhardt descriptors, particularly relevant for some system, is that it is not able to distinguish in a nice way the local BCC and HCP structures when computing the <img src="svgs/593723f6e38238bd83e03afb8af7e162.svg?invert_in_darkmode" align=middle width=86.41417784999999pt height=24.65753399999998pt/> histogram. This issue is solved by the averaged order parameter, a slightly different version that is defined as:
+<p align="center"><img src="svgs/535ad854dc0dab1ca08ac39ab20b25ed.svg?invert_in_darkmode" align=middle width=209.75890979999997pt height=117.76332315pt/></p>
+where the last sum is performed on all the first neighbors plus the particle itself. To find the nearest neighbors we used the SANN\cite{sann} algorithm.
+
+The python interface allows you to evaluate the descriptors for all the atoms or compute directly histograms of the descriptors value. Classes in the python interface are called `SteinhardtOrderParameterHistogram*`. The usage is documented in the docstring.
+
 
 ### command line version
 The options that you can use for this calculation are simply:
