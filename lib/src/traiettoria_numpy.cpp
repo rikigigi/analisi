@@ -4,10 +4,10 @@
 #include "buffer_utils.h"
 #include "triclinic.h"
 
-Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer &&buffer_pos_,
-                                     pybind11::buffer &&buffer_vel_,
-                                     pybind11::buffer &&buffer_types_,
-                                     pybind11::buffer &&buffer_box_,
+Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos_,
+                                     pybind11::buffer buffer_vel_,
+                                     pybind11::buffer buffer_types_,
+                                     pybind11::buffer buffer_box_,
                                      TraiettoriaBase::BoxFormat matrix_box,
                                      bool wrap_pbc_, bool save_rotation_matrix) :
     buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_},rotation_matrix{nullptr}

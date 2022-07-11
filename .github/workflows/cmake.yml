@@ -24,6 +24,8 @@ jobs:
             python-version: [ "3.7" ] 
     steps:
     - uses: actions/checkout@v3
+      with:
+          submodules: true
     - name: Setup python
       uses: actions/setup-python@v4
       id: setpy
@@ -73,6 +75,8 @@ jobs:
             python-version: [ "3.7" ] 
     steps:
     - uses: actions/checkout@v2
+      with:
+          submodules: true
     - name: Setup python
       uses: actions/setup-python@v2
       with:

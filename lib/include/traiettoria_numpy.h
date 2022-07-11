@@ -7,10 +7,10 @@
 class Traiettoria_numpy : public TraiettoriaBase<Traiettoria_numpy>
 {
 public:
-    Traiettoria_numpy(pybind11::buffer &&buffer_pos,
-                      pybind11::buffer &&buffer_vel,
-                      pybind11::buffer &&buffer_types,
-                      pybind11::buffer &&buffer_box, ///data of the boxes, in the format specified by matrix_box
+    Traiettoria_numpy(pybind11::buffer buffer_pos,
+                      pybind11::buffer buffer_vel,
+                      pybind11::buffer buffer_types,
+                      pybind11::buffer buffer_box, ///data of the boxes, in the format specified by matrix_box
                       TraiettoriaBase::BoxFormat matrix_box=TraiettoriaBase::BoxFormat::Cell_vectors,
                       bool pbc_wrap=false,
                       bool save_rotation_matrix=false);
