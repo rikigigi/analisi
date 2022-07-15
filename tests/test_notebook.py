@@ -5,12 +5,12 @@ import warnings
 
 
 @pytest.fixture(scope='module')
-def tb():
+def tb(filepath_tests):
     import pyanalisi as pa
     execute=True
     if not pa.has_mmap():
         execute=False
-    with testbook('../notebooks/calc_inspector.ipynb', execute=execute) as tb:
+    with testbook(filepath_tests + '/../notebooks/calc_inspector.ipynb', execute=execute) as tb:
         yield tb
 
 def test_density(tb,num_regression):
