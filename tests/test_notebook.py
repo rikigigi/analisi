@@ -13,9 +13,9 @@ def tb(filepath_tests):
         execute=False
     old_path=os.getcwd()
     os.chdir(filepath_tests)
-    with testbook(filepath_tests + '/../notebooks/calc_inspector.ipynb', execute=execute) as tb:
+    with testbook(filepath_tests + '/../notebooks/calc_inspector.ipynb', execute=execute, timeout=240) as tb:
         yield tb
-    os.chdir(old_path) #note that this is executed somewhere in the future
+    os.chdir(old_path) #note that this is executed somewhen in the future
 
 def test_density(tb,num_regression):
     import pyanalisi as pa
