@@ -7,11 +7,15 @@ import warnings
 @pytest.fixture(scope='module')
 def tb(filepath_tests):
     import pyanalisi as pa
+    import os
     execute=True
     if not pa.has_mmap():
         execute=False
+    old_path=os.getcwd()
+    os.chdir(filepath_tests)
     with testbook(filepath_tests + '/../notebooks/calc_inspector.ipynb', execute=execute) as tb:
         yield tb
+    os.chdir(old_path) #note that this is executed somewhere in the future
 
 def test_density(tb,num_regression):
     import pyanalisi as pa
