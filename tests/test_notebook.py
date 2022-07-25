@@ -13,7 +13,7 @@ def tb(filepath_tests):
         execute=False
     old_path=os.getcwd()
     os.chdir(filepath_tests)
-    with testbook(filepath_tests + '/../notebooks/calc_inspector.ipynb', execute=execute, timeout=240) as tb:
+    with testbook(filepath_tests + '/../notebooks/calc_inspector.ipynb', execute=execute, timeout=480) as tb:
         yield tb
     os.chdir(old_path) #note that this is executed somewhen in the future
 
