@@ -22,7 +22,6 @@
 #include <boost/lexical_cast.hpp>
 #include "config.h"
 #include "istogrammavelocita.h"
-#include "greenkubo2componentionicfluid.h"
 #include "greenkuboNcomponentionicfluid.h"
 #include "convolution.h"
 #include "heatfluxts.h"
@@ -48,6 +47,8 @@
 #include "mp.h"
 #endif
 #include <cstdlib>
+
+#include "blockaverage.h"
 
 namespace std{
 
@@ -390,64 +391,8 @@ int main(int argc, char ** argv)
 
 
                 if (headers.size()==0){
-
-                    MediaBlocchiG<ReadLog<>,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
-                            greenK_c(&test,blocknumber);
-
-                    MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
-
-                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
-
-                    double factors[GreenKubo2ComponentIonicFluid::narr]={
-                        factor_conv*factor_intToCorr, //Jee
-                        factor_conv2*factor_intToCorr, //Jzz
-                        factor_conv*factor_intToCorr, //Jez
-                        factor_conv, //intee
-                        factor_conv2, //intzz
-                        factor_conv, //intez
-                        factor_conv, //lambda
-                        factor_conv*factor_intToCorr, //Jze
-                        factor_conv, //intze
-                        factor_conv, //int_ein_ee
-                        factor_conv, //int_ein_ez
-                        factor_conv, //int_ein_ze
-                        factor_conv2, //int_ein_zz
-                        factor_conv //lambda_einst
-                    };
-                    double *lambda_conv=new double[greenK.size()];
-                    double *lambda_conv_var=new double[greenK.size()];
-
-                    if (final>=greenK.size()) final=greenK.size()-1;
-                    if (final <0) final=0;
-
-                    Convolution<double> convoluzione( std::function<double (const double  &)> ([&conv_n](const double & x)->double{
-                        return exp(-x*x/(2*conv_n*conv_n));
-                    }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
-                    convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
-                    convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
-                    if (factors_input.size()==0)
-                        std::cout << "# T T1sigma  factor1 factor2\n#"
-                              <<media_ << " " << sqrt(var_) << " "
-                              << factor_conv<<" "<<factor_intToCorr<< "\n";
-                    std::cout <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
-
-                    std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
-                    for (unsigned int i=0;i<greenK.size();i++) {
-                        for (unsigned int j=0;j<GreenKubo2ComponentIonicFluid::narr;j++) {
-                            std::cout << greenK.media(j)[i]*factors[j] << " "
-                                      << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
-                        }
-
-                        std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
-                                  << factor_conv*(greenK.media(3)[i]-pow(greenK.media(5)[i],2)/greenK.media(4)[i])<<" ";
-                        for (unsigned int j=0;j<greenK.n_cvar();j++){
-                            std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
-                        }
-                        std::cout  << "\n";
-
-                    }
-                    delete [] lambda_conv;
-                    delete [] lambda_conv_var;
+                    std::cerr << "You must specify the headers for the GK calculation";
+		    abort();
 
                 } else {
 

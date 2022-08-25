@@ -11,7 +11,6 @@
 
 
 #include "posizioniequilibrio.h"
-#include "traiettoria.h"
 #include <limits>
 #include <cmath>
 #include <cfenv>

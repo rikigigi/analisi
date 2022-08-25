@@ -17,7 +17,6 @@
 #include <sstream>
 #include "msd.h"
 #include "config.h"
-#include "traiettoria.h"
 #include "floating_exceptions.h"
 
 #ifdef USE_MPI
@@ -153,6 +152,7 @@ MSD<T,FPE> & MSD<T,FPE>::operator=(const MSD<T,FPE> &destra) {
 }
 
 #ifdef BUILD_MMAP
+#include "traiettoria.h"
 template class MSD<Traiettoria,true>;
 template class MSD<Traiettoria,false>;
 #endif

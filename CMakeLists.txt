@@ -168,7 +168,6 @@ set (MMAP_LIB
     lib/src/readlog.cpp
     lib/src/testtraiettoria.cpp
     lib/src/traiettoria.cpp
-    lib/src/greenkubo2componentionicfluid.cpp
     lib/src/posizioniequilibrio.cpp
     lib/src/chargefluxts.cpp
     )
@@ -177,7 +176,6 @@ set (ANALISI_LIB
     lib/src/calcoliblocchi.cpp
     lib/src/convertibinario.cpp
     lib/src/convolution.cpp
-    lib/src/correlatorespaziale.cpp
     lib/src/cronometro.C
     lib/src/doubleround.cpp
     lib/src/gofrt.cpp
@@ -190,10 +188,7 @@ set (ANALISI_LIB
     lib/src/msd.cpp
     lib/src/rnd.c
     lib/src/spettrovibrazionale.cpp
-    lib/src/heatc.cpp
     lib/src/calcolamultithread.cpp
-    lib/src/centerdiff.cpp
-    lib/src/centerofmassdiff.cpp
     lib/src/specialfunctions.cpp
     lib/src/sphericalcorrelations.cpp
     lib/src/steinhardt.cpp

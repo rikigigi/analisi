@@ -15,15 +15,13 @@
 
 #include "config.h"
 
-#include "mediablocchi.h"
 #include "operazionisulista.h"
 #ifdef HAVEfftw3
 #include <fftw3.h>
 #else
 #include <fftw.h>
 #endif
-#include "mediablocchi.h"
-//#include <memory>
+#include <vector>
 
 class Traiettoria;
 

@@ -11,7 +11,6 @@
 
 
 #include "istogrammavelocita.h"
-#include "mediablocchi.h"
 
 
 void istg(double a,/// estremo inferiore dell'intervallo da istogrammare

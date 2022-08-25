@@ -14,9 +14,10 @@
 #define MODIVIBRAZIONALI_H
 
 #include "operazionisulista.h"
-#include "posizioniequilibrio.h"
 #include <string>
 #include <complex>
+#include "traiettoria.h"
+#include "posizioniequilibrio.h"
 
 class ModiVibrazionali : public VectorOp<ModiVibrazionali>
 {

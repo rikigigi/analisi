@@ -273,6 +273,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::corr_sh_calc(const TFLOAT * sh1, cons
 }
 
 #ifdef BUILD_MMAP
+#include "traiettoria.h"
 template class SphericalCorrelations<10,double,Traiettoria>;
 template class SphericalCorrelations<6,double,Traiettoria>;
 #endif

@@ -19,6 +19,7 @@
 #include <array>
 #include <vector>
 #include "eigen_include.h"
+#include "traiettoria.h"
 
 class PosizioniEquilibrio : public VectorOp<PosizioniEquilibrio>
 {

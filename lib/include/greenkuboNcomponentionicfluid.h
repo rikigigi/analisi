@@ -15,7 +15,6 @@
 
 
 #include "operazionisulista.h"
-#include "mediablocchi.h"
 #include <array>
 #include <vector>
 #include <string>

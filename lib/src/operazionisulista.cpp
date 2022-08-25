@@ -22,12 +22,6 @@
 #include "greenkuboNcomponentionicfluid.h"
 #include "gofrt.h"
 #include "msd.h"
-#include "correlatorespaziale.h"
-#include "heatc.h"
-#include "calcolamultithread.h"
-#include "centerdiff.h"
-#include "centerofmassdiff.h"
-
 
 template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator + (const T & destra) const {
     T res = static_cast<const T&>(*this);
@@ -86,9 +80,5 @@ template class VectorOp<GreenKuboNComponentIonicFluid<long double,long double>,l
 template class VectorOp<MSD>;
 template class VectorOp<Gofrt<double>,double>;
 template class VectorOp<Gofrt<long double>,long double>;
-template class VectorOp<HeatC, double>;
 template class VectorOp<CorrelatoreSpaziale,double>;
-template class VectorOp<CenterDiff,double>;
-template class VectorOp<CenterOfMassDiff,double>;
-//template class VectorOp<CalcolaMultiThread,double>;
 */

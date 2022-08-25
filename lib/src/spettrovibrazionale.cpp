@@ -11,8 +11,8 @@
 
 
 #include "spettrovibrazionale.h"
-#include "traiettoria.h"
 #include <fstream>
+#include <stdexcept>
 
 template <class T>
 SpettroVibrazionale<T>::SpettroVibrazionale(T * t, bool dump_):VectorOp<SpettroVibrazionale>()
@@ -61,15 +61,11 @@ void SpettroVibrazionale<T>::reset(const unsigned int numeroTimestepsPerBlocco) 
         delete [] vdata;
         tipi_atomi=traiettoria->get_ntypes();
         if (tipi_atomi<=0) {
+	    throw std::runtime_error("Number of types in the trajectory must be > 0");
             tipi_atomi=1;
-            std::cerr << "Attenzione: non ho letto il numero di tipi diversi di atomi (non hai caricato la traiettoria prima di iniziare l'analisi?\n";
         }
         data_length=(size/2+1)*3*tipi_atomi; // uno per ogni direzione dello spazio, per testare l'isotropia, e per tipo di atomo
         vdata = new double[data_length];
-#ifdef DEBUG
-        std::cerr << "called SpettroVibrazionale::reset " __FILE__ ":"<<__LINE__<<"\n";
-        std::cerr << "new double [] "<<vdata<<"\n";
-#endif
 
     }
 
@@ -137,12 +133,10 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
                 double modulo2=x*x+y*y;
                 int itipo=traiettoria->get_type(iatom);
                 if (itipo < 0 ) {
-                    std::cerr << "Errore: tipo dell'atomo fuori dal range! (memoria corrotta?)\n";
-                    abort();
+		    throw std::runtime_error("Type index of the atom out of range (!?)");
                     itipo=0;
                 } else if (itipo >= tipi_atomi) {
-                    std::cerr << "Errore: tipo dell'atomo fuori dal range! (numerazione dei tipi non consecutiva?)\n";
-                    abort();
+		    throw std::runtime_error("Type index of the atom out of range (non consecutive indexes?!)");
                     itipo=tipi_atomi-1;
                 }
                 double delta = modulo2-media[itipo];
@@ -183,12 +177,8 @@ double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,
 
 template <class T>
 SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibrazionale<T> & destra) {
-#ifdef DEBUG
-    std::cerr << "called SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
-#endif
     VectorOp<SpettroVibrazionale<T>>::operator =(destra);
 
-    //TODO: cos'è sta roba?????
     fftw_free(trasformata);
 //    deallocate_plan();
     trasformata=0;
@@ -196,6 +186,7 @@ SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibraz
 }
 
 #ifdef BUILD_MMAP
+#include "traiettoria.h"
 template class SpettroVibrazionale<Traiettoria>;
 #endif
 

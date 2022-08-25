@@ -11,12 +11,12 @@
 
 
 #include "modivibrazionali.h"
-#include "traiettoria.h"
 #include <fstream>
 #include <complex>
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <iostream>
 
 
 const double evjoules  = 1.60217733e-19, // from eV to Joules

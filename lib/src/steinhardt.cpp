@@ -1,6 +1,6 @@
 #include "steinhardt.h"
 #include "specialfunctions.h"
-
+#include "traiettoria.h"
 #include "config.h"
 
 template <int l, class TFLOAT, class T>
