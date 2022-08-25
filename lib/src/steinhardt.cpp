@@ -1,7 +1,7 @@
 #include "steinhardt.h"
 #include "specialfunctions.h"
-#include "traiettoria.h"
 #include "config.h"
+#include <sstream>
 
 template <int l, class TFLOAT, class T>
 Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
@@ -252,13 +252,14 @@ void Steinhardt<l,TFLOAT,T>::join_data() {
 }
 
 #ifdef BUILD_MMAP
-template class Steinhardt<6,double,Traiettoria>;
-template class Steinhardt<8,double,Traiettoria>;
-template class Steinhardt<10,double,Traiettoria>;
+#include "trajectory.h"
+template class Steinhardt<6,double,Trajectory>;
+template class Steinhardt<8,double,Trajectory>;
+template class Steinhardt<10,double,Trajectory>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class Steinhardt<6,double,Traiettoria_numpy>;
-template class Steinhardt<8,double,Traiettoria_numpy>;
-template class Steinhardt<10,double,Traiettoria_numpy>;
+#include "trajectory_numpy.h"
+template class Steinhardt<6,double,Trajectory_numpy>;
+template class Steinhardt<8,double,Trajectory_numpy>;
+template class Steinhardt<10,double,Trajectory_numpy>;
 #endif

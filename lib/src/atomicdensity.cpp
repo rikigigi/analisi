@@ -68,13 +68,13 @@ std::vector<ssize_t>  AtomicDensity<T,Hist>::get_stride() const {
 }
 
 #ifdef BUILD_MMAP
-#include "traiettoria.h"
-template class AtomicDensity<Traiettoria,long>;
+#include "trajectory.h"
+template class AtomicDensity<Trajectory,long>;
 #endif
 
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class AtomicDensity<Traiettoria_numpy,long>;
+#include "trajectory_numpy.h"
+template class AtomicDensity<Trajectory_numpy,long>;
 
 #endif
 

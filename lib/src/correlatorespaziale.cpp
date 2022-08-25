@@ -15,13 +15,13 @@
 #include <array>
 
 #include "correlatorespaziale.h"
-#include "traiettoria.h"
+#include "trajectory.h"
 #include "operazionisulista.h"
 #include "config.h"
 
 #define PI 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628
 
-CorrelatoreSpaziale::CorrelatoreSpaziale(Traiettoria *t,
+CorrelatoreSpaziale::CorrelatoreSpaziale(Trajectory *t,
                                                  std::vector< std::array<double,3> >  ks,
                                                  double sigma2,
                                                  unsigned int nthreads,

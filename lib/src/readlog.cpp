@@ -23,7 +23,7 @@
 
 #include "chargefluxts.h"
 
-template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip, unsigned int nthreads, unsigned int nbatch, std::vector<std::string> req_headers):
+template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Trajectory *t, unsigned int skip, unsigned int nthreads, unsigned int nbatch, std::vector<std::string> req_headers):
     traiettoria(t),skip(skip),nthreads(nthreads),nbatch(nbatch)
 {
     cronometro cron;
@@ -257,7 +257,7 @@ template <class TFLOAT> int ReadLog<TFLOAT>::need_binary(std::vector<std::string
 
 }
 
-template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsigned int n_b){
+template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Trajectory * t,unsigned int n_b){
     traiettoria=t;
     //calcola e legge la corrente partendo dal file binario (nella classe traiettoria sono già presenti le velocità dei centri di massa)
     unsigned int timesteps_tot=data.size()/data_size;

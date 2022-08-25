@@ -186,11 +186,11 @@ SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibraz
 }
 
 #ifdef BUILD_MMAP
-#include "traiettoria.h"
-template class SpettroVibrazionale<Traiettoria>;
+#include "trajectory.h"
+template class SpettroVibrazionale<Trajectory>;
 #endif
 
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class SpettroVibrazionale<Traiettoria_numpy>;
+#include "trajectory_numpy.h"
+template class SpettroVibrazionale<Trajectory_numpy>;
 #endif

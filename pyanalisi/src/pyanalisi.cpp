@@ -3,14 +3,14 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 #include <pybind11/numpy.h>
-#include "traiettoria.h"
+#include "trajectory.h"
 #include "spettrovibrazionale.h"
 #include "readlog.h"
 #include "correlatorespaziale.h"
 #include "gofrt.h"
 #include "greenkuboNcomponentionicfluid.h"
 #include "msd.h"
-#include "traiettoria_numpy.h"
+#include "trajectory_numpy.h"
 #include "readlog_numpy.h"
 #include "sphericalcorrelations.h"
 #include "config.h"
@@ -367,21 +367,21 @@ R"lol(
 
 PYBIND11_MODULE(pyanalisi,m) {
 #ifdef BUILD_MMAP
-    trajectory_common_interfaces<Traiettoria,py::class_<Traiettoria>>(
-    py::class_<Traiettoria>(m,"Traj", py::buffer_protocol()))
+    trajectory_common_interfaces<Trajectory,py::class_<Trajectory>>(
+    py::class_<Trajectory>(m,"Traj", py::buffer_protocol()))
             .def(py::init<std::string>(),R"begend(
                  Parameters
                  ----------
                  name of the binary file to open
 )begend")
-            .def("setWrapPbc",&Traiettoria::set_pbc_wrap,R"begend(
+            .def("setWrapPbc",&Trajectory::set_pbc_wrap,R"begend(
                  wrap all the atomic coordinate inside the simulation box, red from the binary file
 
                  Parameters
                  ----------
                  True/False
 )begend")
-            .def("setAccessWindowSize",[](Traiettoria & t,int ts) {return (int) t.set_data_access_block_size(ts);},R"begend(
+            .def("setAccessWindowSize",[](Trajectory & t,int ts) {return (int) t.set_data_access_block_size(ts);},R"begend(
                  sets the size of the read block. Must fit in memory
                  
                  Parameters
@@ -393,17 +393,17 @@ PYBIND11_MODULE(pyanalisi,m) {
                  1 -> success
                  0/-1 -> failure
 )begend")
-            .def("setAccessStart",[](Traiettoria & t,int ts) {return (int) t.set_access_at(ts);},R"begend(
+            .def("setAccessStart",[](Trajectory & t,int ts) {return (int) t.set_access_at(ts);},R"begend(
                  sets the first timestep to read, and read the full block
 
                  Parameters
                  ----------
                  int -> first timestep to read
 )begend")
-    //.def("getPosition",[](Traiettoria & t, int ts,int natoms){return std::array<>})
-            .def("serving_pos", &Traiettoria::serving_pos)
-            .def("toggle_pos_vel", &Traiettoria::toggle_pos_vel)
-            .def_buffer([](Traiettoria & g) -> py::buffer_info {
+    //.def("getPosition",[](Trajectory & t, int ts,int natoms){return std::array<>})
+            .def("serving_pos", &Trajectory::serving_pos)
+            .def("toggle_pos_vel", &Trajectory::toggle_pos_vel)
+            .def_buffer([](Trajectory & g) -> py::buffer_info {
 
                 return py::buffer_info(
                 g.serving_pos()? g.posizioni_inizio() : g.velocita_inizio(),                               /* Pointer to buffer */
@@ -413,7 +413,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                 g.get_shape(),                 /* Buffer dimensions */
                 g.get_stride());
             })
-            .def("get_lammps_id", [](Traiettoria & t) {
+            .def("get_lammps_id", [](Trajectory & t) {
                 int * foo=t.get_lammps_id();
                 pybind11::capsule free_when_done(foo, [](void *f) {
                  int *foo = reinterpret_cast<int *>(f);
@@ -427,7 +427,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                     foo,
                     free_when_done
                  );})
-            .def("get_lammps_type", [](Traiettoria & t) {
+            .def("get_lammps_type", [](Trajectory & t) {
                 int * foo=t.get_lammps_type();
                 pybind11::capsule free_when_done(foo, [](void *f) {
                  int *foo = reinterpret_cast<int *>(f);
@@ -447,7 +447,7 @@ PYBIND11_MODULE(pyanalisi,m) {
 
     using RL = ReadLog<double>;
     py::class_<RL>(m,"ReadLog_file")
-            .def(py::init<std::string,Traiettoria*,unsigned int, unsigned int, unsigned int, std::vector<std::string> >() ,R"begend(
+            .def(py::init<std::string,Trajectory*,unsigned int, unsigned int, unsigned int, std::vector<std::string> >() ,R"begend(
                  perform an advanced read of a column formatted textfile with headers. Support multithreaded reading of chunks of lines.
 
                  Parameters
@@ -477,9 +477,9 @@ PYBIND11_MODULE(pyanalisi,m) {
                  return number of timesteps read
 )begend");
 
-    trajectory_common_interfaces<Traiettoria_numpy,py::class_<Traiettoria_numpy>>(
-    py::class_<Traiettoria_numpy>(m,"Trajectory"))
-            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Traiettoria_numpy::BoxFormat,bool,bool>(),
+    trajectory_common_interfaces<Trajectory_numpy,py::class_<Trajectory_numpy>>(
+    py::class_<Trajectory_numpy>(m,"Trajectory"))
+            .def(py::init<py::buffer,py::buffer,py::buffer,py::buffer,Trajectory_numpy::BoxFormat,bool,bool>(),
 	    py::keep_alive<1, 2>(),
 	    py::keep_alive<1, 3>(),
 	    py::keep_alive<1, 4>(),
@@ -498,7 +498,7 @@ PYBIND11_MODULE(pyanalisi,m) {
 
 
 
-            .def("get_rotation_matrix", [](Traiettoria_numpy & t) {
+            .def("get_rotation_matrix", [](Trajectory_numpy & t) {
         double * foo=t.get_rotation_matrix(0);
         if (foo == nullptr) {
             return pybind11::array_t<double>();
@@ -518,17 +518,17 @@ PYBIND11_MODULE(pyanalisi,m) {
             free_when_done
          );})
     ;
-    py::enum_<Traiettoria_numpy::BoxFormat>(m, "BoxFormat", py::arithmetic())
-            .value("Invalid", Traiettoria_numpy::BoxFormat::Invalid)
-            .value("CellVectors", Traiettoria_numpy::BoxFormat::Cell_vectors)
-            .value("LammpsOrtho", Traiettoria_numpy::BoxFormat::Lammps_ortho)
-            .value("LammpsTriclinic", Traiettoria_numpy::BoxFormat::Lammps_triclinic);
+    py::enum_<Trajectory_numpy::BoxFormat>(m, "BoxFormat", py::arithmetic())
+            .value("Invalid", Trajectory_numpy::BoxFormat::Invalid)
+            .value("CellVectors", Trajectory_numpy::BoxFormat::Cell_vectors)
+            .value("LammpsOrtho", Trajectory_numpy::BoxFormat::Lammps_ortho)
+            .value("LammpsTriclinic", Trajectory_numpy::BoxFormat::Lammps_triclinic);
 
 #ifdef BUILD_MMAP
-    define_atomic_traj<Traiettoria>(m,"_lammps");
+    define_atomic_traj<Trajectory>(m,"_lammps");
     gk<ReadLog<> >(m,"_file");
 #endif
-    define_atomic_traj<Traiettoria_numpy>(m,"");
+    define_atomic_traj<Trajectory_numpy>(m,"");
     gk<ReadLog_numpy<double> >(m,"");
     m.def("info",[]() -> std::string{
         return _info_msg ;

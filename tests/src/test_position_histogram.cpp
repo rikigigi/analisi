@@ -10,7 +10,7 @@ struct PhFixture {
         data.path+="ad/";
     }
     TrajSetup traj;
-    using AD = AtomicDensity<Traiettoria,H>;
+    using AD = AtomicDensity<Trajectory,H>;
     AD ret;
     DataRegression<H> data;
 

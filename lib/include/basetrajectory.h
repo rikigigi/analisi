@@ -43,13 +43,13 @@ struct Cell<false> : public Cell_ {
 };
 
 template <class T>
-class TraiettoriaBase {
+class BaseTrajectory {
 
 
 public:
     enum class BoxFormat{Lammps_ortho,Lammps_triclinic,Cell_vectors, Invalid};
 
-    TraiettoriaBase() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},timestep_corrente{0},
+    BaseTrajectory() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},timestep_corrente{0},
     wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
     buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
     buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},

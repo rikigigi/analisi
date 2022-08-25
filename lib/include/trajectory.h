@@ -20,7 +20,7 @@
 #include <map>
 #include <sstream>
 
-#include "traiettoriabase.h"
+#include "basetrajectory.h"
 
 
 #include "lammps_struct.h"
@@ -34,11 +34,11 @@
  * della finestra (quindi consumando meno memoria che nel caricamento del file in un unico colpo)
 **/
 
-class Traiettoria : public TraiettoriaBase<Traiettoria>
+class Trajectory : public BaseTrajectory<Trajectory>
 {
 public:
-    Traiettoria(std::string filename);
-    ~Traiettoria();
+    Trajectory(std::string filename);
+    ~Trajectory();
 
     template <bool SAFE=true, bool ATOM=false>
     double * get_array(double * base, const size_t & timestep, const size_t & atomo, const size_t & stride1, const size_t &stride2) {
@@ -104,9 +104,9 @@ public:
         }
     }
 
-    using TraiettoriaBase<Traiettoria>::Errori;
-    Traiettoria::Errori set_data_access_block_size(const size_t & timesteps);
-    Traiettoria::Errori set_access_at(const size_t & timesteps);
+    using BaseTrajectory<Trajectory>::Errori;
+    Trajectory::Errori set_data_access_block_size(const size_t & timesteps);
+    Trajectory::Errori set_access_at(const size_t & timesteps);
     int64_t get_timestep_lammps(size_t timestep);
     void index_all();
     int * get_lammps_id();

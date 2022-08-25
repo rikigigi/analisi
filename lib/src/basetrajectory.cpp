@@ -1,10 +1,10 @@
 #include "testtraiettoria.h"
-#include "traiettoria.h"
-#include "traiettoria_numpy.h"
+#include "trajectory.h"
+#include "trajectory_numpy.h"
 #include "config.h"
 
 template <class T>
-void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts){
+void BaseTrajectory<T>::dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts){
     if (start_ts<0 || start_ts>=n_timesteps){
         throw std::runtime_error("You must provide a starting timestep between 0 and the number of timesteps!");
     }
@@ -51,7 +51,7 @@ void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int star
 }
 
 template <class T>
-size_t TraiettoriaBase<T>::get_ntypes (){
+size_t BaseTrajectory<T>::get_ntypes (){
     if (ntypes==0) {
         types.clear();
         min_type=buffer_tipi[0];
@@ -91,9 +91,9 @@ size_t TraiettoriaBase<T>::get_ntypes (){
 }
 
 #ifdef PYTHON_SUPPORT
-template class TraiettoriaBase<Traiettoria_numpy>;
+template class BaseTrajectory<Trajectory_numpy>;
 #endif
 
 #ifdef BUILD_MMAP
-template class TraiettoriaBase<Traiettoria>;
+template class BaseTrajectory<Trajectory>;
 #endif

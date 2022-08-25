@@ -16,13 +16,13 @@
 #include "operazionisulista.h"
 #include <string>
 #include <complex>
-#include "traiettoria.h"
+#include "trajectory.h"
 #include "posizioniequilibrio.h"
 
 class ModiVibrazionali : public VectorOp<ModiVibrazionali>
 {
 public:
-    ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads, unsigned int timestep_blocco=0);
+    ModiVibrazionali(Trajectory * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads, unsigned int timestep_blocco=0);
     void read_force_file(std::string f);
     unsigned int nExtraTimesteps(unsigned int n_b);
     void azzera();
@@ -43,7 +43,7 @@ private:
     Eigen::Matrix3Xd vettori_onda;
     std::string fileFononi;
     unsigned int numero_timesteps,numero_threads,timestepBlocco;
-    Traiettoria * traiettoria;
+    Trajectory * traiettoria;
     PosizioniEquilibrio * posizioni_equilibrio;
     Eigen::MatrixXd ifc;
 };

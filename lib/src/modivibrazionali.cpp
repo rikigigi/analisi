@@ -37,7 +37,7 @@ void istg(double a,/// estremo inferiore dell'intervallo da istogrammare
 //unità immaginaria
 const std::complex<double> I(0.0,1.0);
 
-ModiVibrazionali::ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads,unsigned int timestep_blocco) : VectorOp<ModiVibrazionali>()
+ModiVibrazionali::ModiVibrazionali(Trajectory * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads,unsigned int timestep_blocco) : VectorOp<ModiVibrazionali>()
 {
     if (n_threads==0)
         numero_threads=1;

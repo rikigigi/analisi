@@ -14,7 +14,7 @@
 
 #include "config.h"
 
-#include "traiettoria.h"
+#include "trajectory.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <iostream>
@@ -41,7 +41,7 @@
 
 
 
-Traiettoria::Traiettoria(std::string filename)
+Trajectory::Trajectory(std::string filename)
 {
     struct stat sb;
 
@@ -130,7 +130,7 @@ Traiettoria::Traiettoria(std::string filename)
 }
 
 
-void Traiettoria::init_buffer_tipi() {
+void Trajectory::init_buffer_tipi() {
 
    TimestepManager intestazione;
    Chunk * pezzi=0;
@@ -192,7 +192,7 @@ void Traiettoria::init_buffer_tipi() {
  * return the original lammps id for each atom
  * allocate a new array that is returned, no ownership by this class
  **/
-int * Traiettoria::get_lammps_id() {
+int * Trajectory::get_lammps_id() {
    size_t natoms=get_natoms();               
    int *types = new int[natoms];             
    for (size_t i=0;i<natoms;++i) types[i]=-1;
@@ -208,7 +208,7 @@ int * Traiettoria::get_lammps_id() {
  * return the original lammps type for each atom
  * allocate a new array that is returned, no ownership by this class
  **/
-int * Traiettoria::get_lammps_type() {
+int * Trajectory::get_lammps_type() {
    size_t natoms=get_natoms();               
    int *types = new int[natoms];             
    for (size_t i=0;i<natoms;++i) {
@@ -222,7 +222,7 @@ int * Traiettoria::get_lammps_type() {
   * Allinea la memoria alla pagina precedente.
 **/
 
-size_t Traiettoria::allinea_offset(const long & offset /// memoria da allineare
+size_t Trajectory::allinea_offset(const long & offset /// memoria da allineare
                                    ,size_t & differenza  /// qui viene memorizzata la differenza necessaria all'allineamento
                                    ){
     if (offset < pagesize){
@@ -234,7 +234,7 @@ size_t Traiettoria::allinea_offset(const long & offset /// memoria da allineare
     }
 }
 
-Traiettoria::~Traiettoria(){
+Trajectory::~Trajectory(){
     delete [] timesteps;
     delete [] timesteps_lammps;
     delete [] buffer_tipi;
@@ -258,7 +258,7 @@ Traiettoria::~Traiettoria(){
   * (quindi il pezzo successivo si troverà ad un offset di "partenza" + "il risultato di questa chiamata")
 **/
 template <bool set_chunk>
-size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire (in "file")
+size_t Trajectory::leggi_pezzo(const size_t &partenza /// offset da cui partire (in "file")
                                 ,TimestepManager &timestep /// timesteps header
                                 ,Chunk * &chunk /// actual data of the trajectory
                                 ){
@@ -321,7 +321,7 @@ size_t Traiettoria::leggi_pezzo(const size_t &partenza /// offset da cui partire
   * restituisce la dimensione in byte del pezzo letto, comprensiva dei chunk con i dati veri e propri che però non vengono restituiti
   * (quindi il pezzo successivo si troverà ad un offset di "partenza" + "il risultato di questa chiamata")
 **/
-size_t Traiettoria::leggi_pezzo_intestazione(const size_t &partenza /// offset da cui partire (in "file")
+size_t Trajectory::leggi_pezzo_intestazione(const size_t &partenza /// offset da cui partire (in "file")
                                 ,TimestepManager &timestep /// qui viene restituito un oggetto TimestepManager
                                 ){
     Chunk * ch;
@@ -329,7 +329,7 @@ size_t Traiettoria::leggi_pezzo_intestazione(const size_t &partenza /// offset d
 }
 
 
-Traiettoria::Errori Traiettoria::set_data_access_block_size(const size_t &Ntimesteps){
+Trajectory::Errori Trajectory::set_data_access_block_size(const size_t &Ntimesteps){
     if (!ok) {
         std::cerr << "mmap not correctly initialized!\n";
         return non_inizializzato;
@@ -366,7 +366,7 @@ Traiettoria::Errori Traiettoria::set_data_access_block_size(const size_t &Ntimes
   * alloca un array (timesteps) piu' lungo e copia il contenuto del vecchio indice in quello nuovo.
   * Inizializza a zero gli elementi in piu' che ci sono alla fine dell'array
 **/
-void Traiettoria::allunga_timesteps(size_t nuova_dimensione){
+void Trajectory::allunga_timesteps(size_t nuova_dimensione){
     if (nuova_dimensione<=n_timesteps)
         return;
     size_t *tmp=new size_t [nuova_dimensione];
@@ -387,7 +387,7 @@ void Traiettoria::allunga_timesteps(size_t nuova_dimensione){
 
 }
 
-void Traiettoria::index_all() {
+void Trajectory::index_all() {
 
     if (timestep_indicizzato>=n_timesteps-1)
         return;
@@ -430,7 +430,7 @@ void Traiettoria::index_all() {
 #endif
 }
 
-Traiettoria::Errori Traiettoria::set_access_at(const size_t &timestep) {
+Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
 
     cronometro cron;
     cron.start();
@@ -674,7 +674,7 @@ Traiettoria::Errori Traiettoria::set_access_at(const size_t &timestep) {
 
 
 
-int64_t Traiettoria::get_timestep_lammps(size_t timestep) {
+int64_t Trajectory::get_timestep_lammps(size_t timestep) {
     if (timestep<=timestep_indicizzato) {
         return timesteps_lammps[timestep];
     } else if (timestep < n_timesteps) {

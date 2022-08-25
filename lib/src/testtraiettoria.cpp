@@ -13,7 +13,7 @@
 #include "testtraiettoria.h"
 #include <iostream>
 #include <fstream>
-TestTraiettoria::TestTraiettoria(std::string filename) : Traiettoria(filename)
+TestTraiettoria::TestTraiettoria(std::string filename) : Trajectory(filename)
 {
 
     std::ofstream out("analisi_test.debug");

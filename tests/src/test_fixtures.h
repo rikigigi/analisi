@@ -5,7 +5,7 @@
 #include <fstream>
 #include <boost/test/included/unit_test.hpp>
 #include "config.h"
-#include "traiettoria.h"
+#include "trajectory.h"
 #include "readlog.h"
 
 struct TestPath{
@@ -20,7 +20,7 @@ struct TrajSetup{
 	traj.set_access_at(0);
     }
     const TestPath path;
-    Traiettoria traj;
+    Trajectory traj;
 
 };
 

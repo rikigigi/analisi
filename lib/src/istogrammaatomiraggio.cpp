@@ -11,10 +11,10 @@
 
 
 #include "istogrammaatomiraggio.h"
-#include "traiettoria.h"
+#include "trajectory.h"
 #include<thread>
 
-IstogrammaAtomiRaggio::IstogrammaAtomiRaggio(Traiettoria *t, double r, unsigned int skip,unsigned int nthreads) : r2(r*r), skip(skip),traiettoria(t),nthreads(nthreads),hist(0)
+IstogrammaAtomiRaggio::IstogrammaAtomiRaggio(Trajectory *t, double r, unsigned int skip,unsigned int nthreads) : r2(r*r), skip(skip),traiettoria(t),nthreads(nthreads),hist(0)
 {
     if (IstogrammaAtomiRaggio::skip<1) IstogrammaAtomiRaggio::skip=1;
     if (IstogrammaAtomiRaggio::nthreads<1) IstogrammaAtomiRaggio::nthreads=1;

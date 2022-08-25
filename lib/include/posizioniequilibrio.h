@@ -19,12 +19,12 @@
 #include <array>
 #include <vector>
 #include "eigen_include.h"
-#include "traiettoria.h"
+#include "trajectory.h"
 
 class PosizioniEquilibrio : public VectorOp<PosizioniEquilibrio>
 {
 public:
-    PosizioniEquilibrio(Traiettoria *, unsigned int timesteps_sottoblocco=0);
+    PosizioniEquilibrio(Trajectory *, unsigned int timesteps_sottoblocco=0);
     ~PosizioniEquilibrio();
     unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
@@ -61,7 +61,7 @@ private:
     void reticolo_inizializza(double * base_r, double * base, unsigned int *base_type, const unsigned int & nbase);
     void coord_reticolo(double *xyz,double *uvw_min,double *uvw_max);
     bool calcolato;
-    Traiettoria *traiettoria;
+    Trajectory *traiettoria;
     unsigned int lunghezza_media,timestepSottoblocco;
 };
 

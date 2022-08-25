@@ -13,7 +13,7 @@
 #ifndef MEDIABLOCCHI_H
 #define MEDIABLOCCHI_H
 
-#include "traiettoria.h"
+#include "trajectory.h"
 #include "assert.h"
 #include <type_traits>
 #include <iostream>
@@ -36,15 +36,15 @@ public:
     static unsigned int get_ntimesteps(TR* traiettoria ){abort();return 0;}
 };
 
-template <> class TraiettoriaF<Traiettoria> {
+template <> class TraiettoriaF<Trajectory> {
 public:
-static void set_data_access_block_size(unsigned int s_,Traiettoria* traiettoria ){
+static void set_data_access_block_size(unsigned int s_,Trajectory* traiettoria ){
     traiettoria->set_data_access_block_size(s_);
 }
-static void set_access_at(unsigned int s_,Traiettoria* traiettoria  ){
+static void set_access_at(unsigned int s_,Trajectory* traiettoria  ){
     traiettoria->set_access_at(s_);
 }
-static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
+static unsigned int get_ntimesteps(Trajectory* traiettoria ){
     return traiettoria->get_ntimesteps();
 }
 
@@ -218,7 +218,7 @@ private:
 };
 
 
-template<class T, typename ... Args> using BlockAverage = BlockAverageG<Traiettoria,T,Args...>;
+template<class T, typename ... Args> using BlockAverage = BlockAverageG<Trajectory,T,Args...>;
 
 
 

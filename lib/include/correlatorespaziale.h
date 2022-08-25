@@ -17,13 +17,13 @@
 #include <vector>
 
 
-class Traiettoria;
+class Trajectory;
 
 
 class CorrelatoreSpaziale : public CalculateMultiThread<CorrelatoreSpaziale>, public VectorOp<CorrelatoreSpaziale,double>
 {
 public:
-    CorrelatoreSpaziale(Traiettoria *t,
+    CorrelatoreSpaziale(Trajectory *t,
                         std::vector< std::array<double,3> >  k,
                         double sigma2,
                         unsigned int nthreads=0,
@@ -45,7 +45,7 @@ public:
 private:
     using VectorOp<CorrelatoreSpaziale,double>::vdata;
     using VectorOp<CorrelatoreSpaziale,double>::data_length;
-    Traiettoria *t;
+    Trajectory *t;
     double * sfac;
     std::vector< std::array<double,3> > klist;
     double sigma2;

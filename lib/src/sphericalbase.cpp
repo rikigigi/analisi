@@ -99,14 +99,14 @@ void SphericalBase<lmax,TFLOAT,T>::calc(int timestep,
 }
 #include "config.h"
 #ifdef BUILD_MMAP
-#include "traiettoria.h"
-template class SphericalBase<6,double,Traiettoria>;
-template class SphericalBase<8,double,Traiettoria>;
-template class SphericalBase<10,double,Traiettoria>;
+#include "trajectory.h"
+template class SphericalBase<6,double,Trajectory>;
+template class SphericalBase<8,double,Trajectory>;
+template class SphericalBase<10,double,Trajectory>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class SphericalBase<6,double,Traiettoria_numpy>;
-template class SphericalBase<8,double,Traiettoria_numpy>;
-template class SphericalBase<10,double,Traiettoria_numpy>;
+#include "trajectory_numpy.h"
+template class SphericalBase<6,double,Trajectory_numpy>;
+template class SphericalBase<8,double,Trajectory_numpy>;
+template class SphericalBase<10,double,Trajectory_numpy>;
 #endif

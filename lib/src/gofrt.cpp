@@ -159,10 +159,10 @@ template <class TFLOAT, class T> Gofrt<TFLOAT,T> & Gofrt<TFLOAT,T>::operator =(c
 }
 
 #ifdef BUILD_MMAP
-#include "traiettoria.h"
-template class Gofrt<double,Traiettoria>;
+#include "trajectory.h"
+template class Gofrt<double,Trajectory>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class Gofrt<double, Traiettoria_numpy>;
+#include "trajectory_numpy.h"
+template class Gofrt<double, Trajectory_numpy>;
 #endif

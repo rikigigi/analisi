@@ -152,12 +152,12 @@ MSD<T,FPE> & MSD<T,FPE>::operator=(const MSD<T,FPE> &destra) {
 }
 
 #ifdef BUILD_MMAP
-#include "traiettoria.h"
-template class MSD<Traiettoria,true>;
-template class MSD<Traiettoria,false>;
+#include "trajectory.h"
+template class MSD<Trajectory,true>;
+template class MSD<Trajectory,false>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class MSD<Traiettoria_numpy,true>;
-template class MSD<Traiettoria_numpy,false>;
+#include "trajectory_numpy.h"
+template class MSD<Trajectory_numpy,true>;
+template class MSD<Trajectory_numpy,false>;
 #endif

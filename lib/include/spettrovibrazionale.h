@@ -23,7 +23,7 @@
 #endif
 #include <vector>
 
-class Traiettoria;
+class Trajectory;
 
 
 template <class T>

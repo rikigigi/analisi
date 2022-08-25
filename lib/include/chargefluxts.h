@@ -12,18 +12,18 @@
 #ifndef CHARGEFLUXTS_H
 #define CHARGEFLUXTS_H
 
-#include "traiettoria.h"
+#include "trajectory.h"
 
 class ChargeFluxTs
 {
 public:
-    ChargeFluxTs(Traiettoria * t);
+    ChargeFluxTs(Trajectory * t);
     ~ChargeFluxTs();
     double *J_z(const unsigned int & timestep);
     void calculate(unsigned int primo);
     void reset(unsigned int numeroTimestepPerBlocco);
 private:
-    Traiettoria * traiettoria;
+    Trajectory * traiettoria;
     double *J;
     unsigned int timestep_finestra,timestep_corrente;
     bool calcolato;

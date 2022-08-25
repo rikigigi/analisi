@@ -302,9 +302,9 @@ int main(int argc, char ** argv)
         if (debug2){
 
             ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
-            Traiettoria * binary_traj=NULL;
+            Trajectory * binary_traj=NULL;
             if (test.need_binary(headers)>0) {
-                binary_traj=new Traiettoria(input);
+                binary_traj=new Trajectory(input);
                 test.calc_currents(binary_traj,blocknumber);
             }
             for (unsigned int i=0;i<test.n_timestep();i++){
@@ -321,10 +321,10 @@ int main(int argc, char ** argv)
             if (heat_coeff) {
                 std::cerr << "Green-Kubo heat transport coefficient calculation is beginning...\n";
                 ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
-                Traiettoria * binary_traj=NULL;
+                Trajectory * binary_traj=NULL;
                 //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
                 if (test.need_binary(headers)>0) {
-                    binary_traj=new Traiettoria(input);
+                    binary_traj=new Trajectory(input);
                     test.calc_currents(binary_traj,blocknumber);
                 }
 
@@ -475,9 +475,9 @@ int main(int argc, char ** argv)
                      }
                 }
 
-                Traiettoria test(input);
+                Trajectory test(input);
 #define MSD_(fpe_)\
-                {using MSD=MSD<Traiettoria,fpe_>;\
+                {using MSD=MSD<Trajectory,fpe_>;\
                 BlockAverage<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
                 Msd.calculate(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
                 for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {\
@@ -497,10 +497,10 @@ int main(int argc, char ** argv)
                     throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
                 std::cerr << "Calculation of g(r,t) -- distinctive and non distinctive part of the van Hove function...\n";
-                Traiettoria tr(input);
+                Trajectory tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                BlockAverage<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
+                BlockAverage<Gofrt<double,Trajectory>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
                         gofr(&tr,blocknumber);
                 gofr.calculate(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
 
@@ -532,10 +532,10 @@ int main(int argc, char ** argv)
                     throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
                 std::cerr << "Calculation of spherical harmonic density correlation function is beginning (this can take a lot of time)...\n";
-                Traiettoria tr(input);
+                Trajectory tr(input);
                 tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                using SHC=SphericalCorrelations<10,double,Traiettoria>;
+                using SHC=SphericalCorrelations<10,double,Trajectory>;
                 SHC::rminmax_t rminmax;
                 for (unsigned int i=0; i<factors_input.size()/2;++i){
                    rminmax.push_back({factors_input[i*2],factors_input[i*2+1]});
@@ -562,7 +562,7 @@ int main(int argc, char ** argv)
 
             }else if (vicini_r>0){
                 std::cerr << "Beginning of calculation of neighbour histogram\n";
-                Traiettoria test(input);
+                Trajectory test(input);
                 test.set_pbc_wrap(true);
 
                 IstogrammaAtomiRaggio h(&test,vicini_r,skip,numero_thread);
@@ -587,7 +587,7 @@ int main(int argc, char ** argv)
 
             }else if (nbins_vel>0) {
                 std::cerr << "Velocity histogram...\n";
-                Traiettoria test(input);
+                Trajectory test(input);
                 BlockAverage<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
                 istogramma_vel.calculate(nbins_vel,vmax_h);
 
@@ -603,7 +603,7 @@ int main(int argc, char ** argv)
 
             } else if (fononefile != "") {
                 std::cerr << "Normal mode coordinate transformation...\n";
-                Traiettoria test(input);
+                Trajectory test(input);
 		blocksize = test.get_ntimesteps()/blocknumber;
                 ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
                 test_normali.reset(stop_acf);
@@ -612,9 +612,9 @@ int main(int argc, char ** argv)
                 return 1;
             } else if (spettro_vibraz) {
                 std::cerr << "Vibrational spectrum...\n";
-                Traiettoria test(input);
+                Trajectory test(input);
                 //            SpettroVibrazionale test_spettro(&test);
-                BlockAverage<SpettroVibrazionale<Traiettoria>,bool> test_spettro_blocchi(&test,blocknumber);
+                BlockAverage<SpettroVibrazionale<Trajectory>,bool> test_spettro_blocchi(&test,blocknumber);
 
                 test_spettro_blocchi.calculate(dumpGK);
                 for (unsigned int i=0;i<test_spettro_blocchi.media()->lunghezza()/(3*test.get_ntypes());i++) {
@@ -638,7 +638,7 @@ int main(int argc, char ** argv)
                     }
                     klist.push_back(k);
                 }
-                Traiettoria t(input);
+                Trajectory t(input);
                 t.set_pbc_wrap(true);
 
                 CorrelatoreSpaziale corr(&t,klist,0.0,numero_thread,skip,false);

@@ -26,7 +26,7 @@ double k;
 
 }
 
-IstogrammaVelocita::IstogrammaVelocita(Traiettoria *t, unsigned int nbins,double vminmax_) : VectorOp<IstogrammaVelocita> ()
+IstogrammaVelocita::IstogrammaVelocita(Trajectory *t, unsigned int nbins,double vminmax_) : VectorOp<IstogrammaVelocita> ()
 {
 
     traiettoria=t;

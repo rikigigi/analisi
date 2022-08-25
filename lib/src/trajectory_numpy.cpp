@@ -1,14 +1,14 @@
-#include "traiettoria_numpy.h"
+#include "trajectory_numpy.h"
 #include <fstream>
 #include "lammps_struct.h"
 #include "buffer_utils.h"
 #include "triclinic.h"
 
-Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos_,
+Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
                                      pybind11::buffer buffer_vel_,
                                      pybind11::buffer buffer_types_,
                                      pybind11::buffer buffer_box_,
-                                     TraiettoriaBase::BoxFormat matrix_box,
+                                     BaseTrajectory::BoxFormat matrix_box,
                                      bool wrap_pbc_, bool save_rotation_matrix) :
     buffer_pos{buffer_pos_},buffer_vel{buffer_vel_},buffer_types{buffer_types_},buffer_box{buffer_box_},rotation_matrix{nullptr}
 {
@@ -199,7 +199,7 @@ Traiettoria_numpy::Traiettoria_numpy(pybind11::buffer buffer_pos_,
 }
 
 void
-Traiettoria_numpy::calc_cm_pos_vel(double * a, double * & cm){
+Trajectory_numpy::calc_cm_pos_vel(double * a, double * & cm){
     if (cm==nullptr){
         cm=new double[3*n_timesteps*ntypes];
     } else {
@@ -224,7 +224,7 @@ Traiettoria_numpy::calc_cm_pos_vel(double * a, double * & cm){
     delete [] cont;
 }
 
-Traiettoria_numpy::~Traiettoria_numpy() {
+Trajectory_numpy::~Trajectory_numpy() {
     if (box_allocated)
         delete [] buffer_scatola;
     if (velocities_allocated)

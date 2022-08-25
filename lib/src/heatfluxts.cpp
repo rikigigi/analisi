@@ -17,7 +17,7 @@
 //TODO: anche questo dovrebbe leggere il file a blocchi!
 
 
-HeatFluxTs::HeatFluxTs(std::string filename, Traiettoria *t,unsigned int skip)
+HeatFluxTs::HeatFluxTs(std::string filename, Trajectory *t,unsigned int skip)
     : traiettoria(t),heatflux(0),skip(skip)
 {
 

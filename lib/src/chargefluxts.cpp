@@ -12,7 +12,7 @@
 #include "chargefluxts.h"
 
 
-ChargeFluxTs::ChargeFluxTs(Traiettoria *t) :
+ChargeFluxTs::ChargeFluxTs(Trajectory *t) :
     traiettoria(t),J(0),timestep_finestra(0),calcolato(false)
 {
 

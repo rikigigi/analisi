@@ -11,9 +11,9 @@ struct MsdFixture {
         msd{&traj.traj, 1,0,NTH,true}
     {}
     TrajSetup traj;
-    MSD<Traiettoria> msd;
+    MSD<Trajectory> msd;
     DataRegression<double> data;
-    MSD<Traiettoria> & calc(int primo) {
+    MSD<Trajectory> & calc(int primo) {
         msd.reset(75-primo);
         msd.calculate(primo);
         return msd;
@@ -37,9 +37,9 @@ struct GofrFixture {
 }
     {}
     TrajSetup traj;
-    Gofrt<double, Traiettoria> gofr;
+    Gofrt<double, Trajectory> gofr;
     DataRegression<double> data;
-    Gofrt<double, Traiettoria> & calc(int primo) {
+    Gofrt<double, Trajectory> & calc(int primo) {
         gofr.reset(75-primo);
         gofr.calculate(primo);
         return gofr;
@@ -50,8 +50,8 @@ struct GofrFixture {
 BOOST_AUTO_TEST_CASE(test_cell_permutator){
     double d[6]={1,2,3,4,5,6};
     double e[6]={1,2,3,4,5,6};
-    Traiettoria::lammps_to_internal(d);
-    Traiettoria::internal_to_lammps(d);
+    Trajectory::lammps_to_internal(d);
+    Trajectory::internal_to_lammps(d);
     for (int i=0;i<6;++i){
         BOOST_TEST(d[i]==e[i]);
     }

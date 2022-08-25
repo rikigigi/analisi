@@ -17,7 +17,7 @@
 #include <map>
 #include "doubleround.h"
 
-PosizioniEquilibrio::PosizioniEquilibrio(Traiettoria * tr,unsigned int timesteps_sottoblocco)
+PosizioniEquilibrio::PosizioniEquilibrio(Trajectory * tr,unsigned int timesteps_sottoblocco)
 {
     traiettoria=tr;
     data_length=traiettoria->get_natoms()*3;
