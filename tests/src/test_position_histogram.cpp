@@ -28,9 +28,9 @@ BOOST_FIXTURE_TEST_SUITE(test_atomic_density ## N, PhFixture_ ## N )\
 BOOST_AUTO_TEST_CASE(test_position_histogram ## N)\
 {\
     calc(0);\
-    BOOST_TEST(data.test_regression("test_calcola_0",ret.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("test_calcola_0",ret.access_vdata(),size()));\
     calc(12);\
-    BOOST_TEST(data.test_regression("test_calcola_1",ret.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("test_calcola_1",ret.access_vdata(),size()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 

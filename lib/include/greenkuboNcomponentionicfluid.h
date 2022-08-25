@@ -52,8 +52,8 @@ public:
     std::vector<ssize_t> get_stride();
 
     private:
-    using VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::lista;
-    using VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::lunghezza_lista;
+    using VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::vdata;
+    using VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::data_length;
     static bool benchmarked;
     unsigned int narr,N_corr,start_mean,n_seg,n_seg_start,n_seg_stop;
     bool scrivi_file,subtract_mean,bench;

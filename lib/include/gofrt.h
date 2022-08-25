@@ -57,8 +57,8 @@ public:
     void calc_end();
 
 private:
-    using VectorOp_T::lista;
-    using VectorOp_T::lunghezza_lista;
+    using VectorOp_T::vdata;
+    using VectorOp_T::data_length;
     TFLOAT * th_data;
     TFLOAT rmin,rmax,rmax2,rmin2,dr,incr;
     bool debug;
@@ -76,11 +76,11 @@ private:
     }
     TFLOAT * gofr(unsigned int ts, unsigned int itype=0, unsigned int r=0){
     unsigned int idx= gofr_idx(ts,itype,r);
-    if (idx >= lunghezza_lista) {
+    if (idx >= data_length) {
         std::cerr << "Errore: indice fuori dal range!\n";
         abort();
     }
-    return &lista[idx];
+    return &vdata[idx];
 }
     std::string c_descr;
     unsigned int get_itype(unsigned int & type1,unsigned int & type2) const {

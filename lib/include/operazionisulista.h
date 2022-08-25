@@ -30,20 +30,20 @@ public:
 #ifdef DEBUG2
         std::cerr << "chiamato VectorOp<T, TFLOAT>::operator = " __FILE__ ":"<<__LINE__<<"\n";
 #endif
-        if (lunghezza_lista!=destra.lunghezza_lista) { //rialloca la memoria
+        if (data_length!=destra.data_length) { //rialloca la memoria
 #ifdef DEBUG2
-            std::cerr << "delete [] "<<lista<<"\n";
+            std::cerr << "delete [] "<<vdata<<"\n";
 #endif
-            delete  [] lista;
-            lunghezza_lista=destra.lunghezza_lista;
-            lista = new TFLOAT[lunghezza_lista];
+            delete  [] vdata;
+            data_length=destra.data_length;
+            vdata = new TFLOAT[data_length];
 #ifdef DEBUG2
-            std::cerr << "new TFLOAT [] "<<lista<<"\n";
+            std::cerr << "new TFLOAT [] "<<vdata<<"\n";
 #endif
         }
-        if (lunghezza_lista==destra.lunghezza_lista){
-            for (unsigned int i=0;i<lunghezza_lista;i++) {
-                lista[i]=destra.lista[i];
+        if (data_length==destra.data_length){
+            for (unsigned int i=0;i<data_length;i++) {
+                vdata[i]=destra.vdata[i];
             }
         } else {
             abort();
@@ -53,9 +53,9 @@ public:
     }
     VectorOp<T,TFLOAT> &operator =(VectorOp<T,TFLOAT> &&) = default;
     T & operator+= (const T&destra){
-        if (destra.lunghezza()== lunghezza_lista) {
-            for (unsigned int i=0;i<lunghezza_lista;i++) {
-                lista[i]+=destra.elemento(i);
+        if (destra.lunghezza()== data_length) {
+            for (unsigned int i=0;i<data_length;i++) {
+                vdata[i]+=destra.elemento(i);
             }
         } else {
             std::cerr << "Errore: lunghezza delle liste diverse! ("<< __FILE__<< ":"<< __LINE__ <<")\n";
@@ -64,9 +64,9 @@ public:
         return static_cast<T&>(*this);
     }
     T & operator-= (const T & destra) {
-        if (destra.lunghezza()== lunghezza_lista) {
-            for (unsigned int i=0;i<lunghezza_lista;i++) {
-                lista[i]-=destra.elemento(i);
+        if (destra.lunghezza()== data_length) {
+            for (unsigned int i=0;i<data_length;i++) {
+                vdata[i]-=destra.elemento(i);
             }
         } else {
             std::cerr << "Errore: lunghezza delle liste diverse! ("<< __FILE__ << ":"<< __LINE__ <<")\n";
@@ -75,13 +75,13 @@ public:
         return static_cast<T&>(*this);
     }
     T & operator*= (const T & destra) {
-        if (destra.lunghezza()== lunghezza_lista) {
+        if (destra.lunghezza()== data_length) {
 #ifdef DEBUG2
             std::cerr << "chiamato VectorOp<T>::operator *= " __FILE__ ":"<<__LINE__<<"\n";
-            std::cerr << "lista = "<<lista<<", destra.lista = " << destra.lista << "\n";
+            std::cerr << "vdata = "<<vdata<<", destra.vdata = " << destra.vdata << "\n";
 #endif
-            for (unsigned int i=0;i<lunghezza_lista;i++) {
-                lista[i]*=destra.elemento(i);
+            for (unsigned int i=0;i<data_length;i++) {
+                vdata[i]*=destra.elemento(i);
             }
         } else {
             std::cerr << "Errore: lunghezza delle liste diverse! ("<< __FILE__<< ":"<< __LINE__ <<")\n";
@@ -90,9 +90,9 @@ public:
         return static_cast<T&>(*this);
     }
     T & operator/= (const T & destra) {
-        if (destra.lunghezza()== lunghezza_lista) {
-            for (unsigned int i=0;i<lunghezza_lista;i++) {
-                lista[i]/=destra.elemento(i);
+        if (destra.lunghezza()== data_length) {
+            for (unsigned int i=0;i<data_length;i++) {
+                vdata[i]/=destra.elemento(i);
             }
         } else {
             std::cerr << "Errore: lunghezza delle liste diverse! ("<< __FILE__<< ":"<< __LINE__ <<")\n";
@@ -102,26 +102,26 @@ public:
     }
 
     T & operator+= (const TFLOAT & destra) {
-        for (unsigned int i=0;i<lunghezza_lista;i++) {
-            lista[i]+=destra;
+        for (unsigned int i=0;i<data_length;i++) {
+            vdata[i]+=destra;
         }
         return static_cast<T&>(*this);
     }
     T & operator-= (const TFLOAT & destra) {
-        for (unsigned int i=0;i<lunghezza_lista;i++) {
-            lista[i]-=destra;
+        for (unsigned int i=0;i<data_length;i++) {
+            vdata[i]-=destra;
         }
         return static_cast<T&>(*this);
     }
     T & operator*= (const TFLOAT & destra) {
-        for (unsigned int i=0;i<lunghezza_lista;i++) {
-            lista[i]*=destra;
+        for (unsigned int i=0;i<data_length;i++) {
+            vdata[i]*=destra;
         }
         return static_cast<T&>(*this);
     }
     T & operator/= (const TFLOAT & destra) {
-        for (unsigned int i=0;i<lunghezza_lista;i++) {
-            lista[i]/=destra;
+        for (unsigned int i=0;i<data_length;i++) {
+            vdata[i]/=destra;
         }
         return static_cast<T&>(*this);
     }
@@ -146,52 +146,52 @@ public:
 //    const T operator* (const TFLOAT&) const ;
 //    const T operator/ (const TFLOAT&) const ;
     unsigned int lunghezza() const{
-        return lunghezza_lista;
+        return data_length;
     }
 
     TFLOAT elemento(unsigned int i)const{
-        if (i<lunghezza_lista) {
-            return lista[i];
+        if (i<data_length) {
+            return vdata[i];
         } else {
             std::cerr << "Errore: fuori dal range! ("<< __FILE__<< ":"<< __LINE__ <<")\n";
             abort();
         }
     }
-    TFLOAT * accesso_lista(){return lista;}
+    TFLOAT * access_vdata(){return vdata;}
     void azzera(){
-        for (unsigned int i=0;i<lunghezza_lista;i++) {
-            lista[i]=0;
+        for (unsigned int i=0;i<data_length;i++) {
+            vdata[i]=0;
         }
     }
     inline void azzera(int start, int stop){
         for (unsigned int i=start;i<stop;i++) {
-            lista[i]=0;
+            vdata[i]=0;
         }
     }
 protected:
     VectorOp<T,TFLOAT> (const VectorOp<T, TFLOAT> & copiare) {
-        lista=0;
-        lunghezza_lista=0;
+        vdata=0;
+        data_length=0;
         operator=(copiare);
     #ifdef DEBUG
-        std::cerr << "VectorOp<T, TFLOAT>::VectorOp(const VectorOp<T, TFLOAT> & copiare) "<<lista<<"\n";
+        std::cerr << "VectorOp<T, TFLOAT>::VectorOp(const VectorOp<T, TFLOAT> & copiare) "<<vdata<<"\n";
     #endif
     }
 
-    TFLOAT * lista;
+    TFLOAT * vdata;
     VectorOp(){
-        lista=0;
-        lunghezza_lista=0;
+        vdata=0;
+        data_length=0;
     }
     ~VectorOp(){
 #ifdef DEBUG2
     std::cerr << "chiamato VectorOp<T, TFLOAT>::~VectorOp " __FILE__ ":"<<__LINE__<<"\n";
-    std::cerr << "delete [] "<<lista<<"\n";
+    std::cerr << "delete [] "<<vdata<<"\n";
 #endif
-    delete [] lista;
+    delete [] vdata;
 
 }
-    unsigned int lunghezza_lista;
+    unsigned int data_length;
 };
 
 #endif // OPERAZIONISULISTA_H

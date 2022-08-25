@@ -55,8 +55,8 @@ private:
     using CalcolaMultiThread<This>::ntimesteps;
     using CalcolaMultiThread<This>::skip;
     using CalcolaMultiThread<This>::nthreads;
-    using VectorOp<This,Hist>::lunghezza_lista;
-    using VectorOp<This,Hist>::lista;
+    using VectorOp<This,Hist>::data_length;
+    using VectorOp<This,Hist>::vdata;
 
 };
 

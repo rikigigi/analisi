@@ -9,12 +9,12 @@ CenterOfMassDiff::CenterOfMassDiff(Traiettoria *t, unsigned int nthreads, unsign
 void CenterOfMassDiff::reset(const unsigned int numeroTimestepsPerBlocco) {
     ntype=t->get_ntypes();
     ntimesteps=numeroTimestepsPerBlocco;
-    lunghezza_lista=ntimesteps*3*ntype/skip;
+    data_length=ntimesteps*3*ntype/skip;
     starting_center.resize(3*ntype);
-    if (lunghezza_lista>lista_alloc) {
-        delete [] lista;
-        lista = new double [lunghezza_lista];
-        lista_alloc=lunghezza_lista;
+    if (data_length>lista_alloc) {
+        delete [] vdata;
+        vdata = new double [data_length];
+        lista_alloc=data_length;
     }
 }
 
@@ -57,7 +57,7 @@ void CenterOfMassDiff::calc_single_th(const unsigned int &start, const unsigned 
         }
         for (unsigned int itype=0;itype<ntype;++itype){
             for (unsigned int idim1=0;idim1<3;++idim1){
-                lista[ilista*3*ntype+3*itype+idim1]=dx[itype*3+idim1];
+                vdata[ilista*3*ntype+3*itype+idim1]=dx[itype*3+idim1];
             }
         }
         ++ilista;

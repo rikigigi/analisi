@@ -48,8 +48,8 @@ public:
     using This = MSD<T, FPE>;
     using CMT = CalcolaMultiThread<This,MSD_Flags::FLAGS>;
 private:
-    using VectorOp<MSD<T,FPE> >::lista;
-    using VectorOp<MSD<T,FPE> >::lunghezza_lista;
+    using VectorOp<MSD<T,FPE> >::vdata;
+    using VectorOp<MSD<T,FPE> >::data_length;
     T * traiettoria;
     size_t lmax,f_cm,ntypes;
     using CMT::nthreads;

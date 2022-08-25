@@ -39,7 +39,7 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
     for (unsigned i=0;i<steinhardt_l_histogram.size();++i) {
         steinhardt_histogram_size*=nbin_steinhardt;
     }
-    lunghezza_lista=0;
+    data_length=0;
 
 }
 
@@ -71,10 +71,10 @@ void Steinhardt<l,TFLOAT,T>::reset(const unsigned int numeroTimestepsPerBlocco) 
 
 
     c_descr=descr.str();
-    if (new_lungh_lista != lunghezza_lista) {
-        delete [] lista;
-        lunghezza_lista=new_lungh_lista;
-        lista = new TFLOAT [lunghezza_lista];
+    if (new_lungh_lista != data_length) {
+        delete [] vdata;
+        data_length=new_lungh_lista;
+        vdata = new TFLOAT [data_length];
     }
 }
 
@@ -87,7 +87,7 @@ void Steinhardt<l,TFLOAT,T>::calc_init(int primo) {
 
     //allocate the space for the threads work
     if (do_histogram){
-        threadResults = new TFLOAT [lunghezza_lista*(CMT::nthreads-1)];
+        threadResults = new TFLOAT [data_length*(CMT::nthreads-1)];
     } else {
         threadResults = nullptr;
     }
@@ -108,17 +108,17 @@ void Steinhardt<l,TFLOAT,T>::calc_single_th(int istart,//timestep index, begin
     TFLOAT *result = new TFLOAT [(l+1)*(l+1)*natoms*nbin*ntypes];
     TFLOAT *result_averaged = nullptr;
     if (averaged_order) result_averaged = new TFLOAT [(l+1)*(l+1)*natoms*nbin*ntypes];
-    TFLOAT * threadResult = threadResults + lunghezza_lista*ith;
+    TFLOAT * threadResult = threadResults + data_length*ith;
     int * counter = new int[natoms*ntypes*nbin];
     if (do_histogram){
         if (ith==CMT::nthreads-1) { // last thread writes directly on the final result memory
-            threadResult = lista;
+            threadResult = vdata;
         }
-        for (size_t i=0;i<lunghezza_lista;++i) {
+        for (size_t i=0;i<data_length;++i) {
             threadResult[i]=0;
         }
     } else {
-        threadResult = lista; //every thread will write its own timesteps
+        threadResult = vdata; //every thread will write its own timesteps
     }
 
     Neighbours_T * nns = nullptr;
@@ -242,8 +242,8 @@ void Steinhardt<l,TFLOAT,T>::join_data() {
     if (do_histogram){
         //sum all the threads result
         for (int ith=0;ith<CMT::nthreads-1;ith++) {
-            for (int i=0;i<lunghezza_lista;++i) {
-                lista[i]+=threadResults[ith*lunghezza_lista+i];
+            for (int i=0;i<data_length;++i) {
+                vdata[i]+=threadResults[ith*data_length+i];
             }
         }
     }

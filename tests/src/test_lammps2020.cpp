@@ -62,9 +62,9 @@ using MsdFixture_ ## N = MsdFixture<N>;\
 BOOST_FIXTURE_TEST_SUITE(test_msd##N, MsdFixture_ ## N)\
 BOOST_AUTO_TEST_CASE(test_msd_##N){\
     calc(0);\
-    BOOST_TEST(data.test_regression("msd_"#N"a",msd.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("msd_"#N"a",msd.access_vdata(),size()));\
     calc(13);\
-    BOOST_TEST(data.test_regression("msd_"#N"b",msd.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("msd_"#N"b",msd.access_vdata(),size()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 
@@ -78,9 +78,9 @@ using GofrFixture_ ## N ## _ ## T = GofrFixture<N,T>;\
 BOOST_FIXTURE_TEST_SUITE(test_gofr##N ## _ ## T, GofrFixture_ ## N ## _ ## T)\
 BOOST_AUTO_TEST_CASE(test_gofr_##N ## _ ## T){\
     calc(0);\
-    BOOST_TEST(data.test_regression("gofr_"#N"a"#T,gofr.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("gofr_"#N"a"#T,gofr.access_vdata(),size()));\
     calc(13);\
-    BOOST_TEST(data.test_regression("gofr_"#N"b"#T,gofr.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("gofr_"#N"b"#T,gofr.access_vdata(),size()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 

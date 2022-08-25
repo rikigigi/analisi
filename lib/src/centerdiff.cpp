@@ -9,12 +9,12 @@ CenterDiff::CenterDiff(Traiettoria *t, unsigned int nthreads, unsigned int skip,
 }
 
 void CenterDiff::reset(const unsigned int numeroTimestepsPerBlocco) {
-    lunghezza_lista=numeroTimestepsPerBlocco*3*3*nit/skip;
+    data_length=numeroTimestepsPerBlocco*3*3*nit/skip;
     ntimesteps=numeroTimestepsPerBlocco;
-    if (lunghezza_lista> lista_alloc){
-        delete [] lista;
-        lista = new double[lunghezza_lista];
-        lista_alloc=lunghezza_lista;
+    if (data_length> lista_alloc){
+        delete [] vdata;
+        vdata = new double[data_length];
+        lista_alloc=data_length;
     }
 }
 
@@ -71,7 +71,7 @@ void CenterDiff::calc_single_th(const unsigned int &start, const unsigned int &s
             for (unsigned int idim1=0;idim1<3;++idim1){
                 for (unsigned int idim2=0;idim2<3;++idim2){
                     dx[idim2*3+idim1]=dx[idim2*3+idim1]+cn[idim2*3+idim1]/sums[idim2];
-                    lista[ilista*3*3*nit+i*3*3+idim2*3+idim1]=dx[idim2*3+idim1];
+                    vdata[ilista*3*3*nit+i*3*3+idim2*3+idim1]=dx[idim2*3+idim1];
                 }
             }
         }

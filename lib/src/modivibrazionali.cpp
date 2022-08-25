@@ -107,15 +107,15 @@ unsigned int ModiVibrazionali::nExtraTimesteps(unsigned int n_b){
 
 void ModiVibrazionali::reset(unsigned int s) {
     numero_timesteps=s;
-    lunghezza_lista=traiettoria->get_natoms()*3;
-    delete [] lista;
-    lista=new double[lunghezza_lista];
+    data_length=traiettoria->get_natoms()*3;
+    delete [] vdata;
+    vdata=new double[data_length];
     posizioni_equilibrio->reset(s);
 }
 
 void ModiVibrazionali::azzera() {
-    for (unsigned int i=0;i<lunghezza_lista;i++) {
-        lista[i]=0;
+    for (unsigned int i=0;i<data_length;i++) {
+        vdata[i]=0;
     }
 }
 

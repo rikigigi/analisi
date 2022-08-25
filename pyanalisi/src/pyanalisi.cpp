@@ -49,12 +49,12 @@ if true compute the averaged steinhardt order parameter (an additional loop over
         std::cerr <<"shape ("<< m.get_shape().size() << "): ";
         for (auto & n: m.get_shape()) std::cerr << n << " ";
         std::cerr <<std::endl<< m.lunghezza()<<std::endl;
-        std::cerr << "allocated memory from"<<m.accesso_lista() << " to " <<m.accesso_lista() + m.lunghezza()<<std::endl;
+        std::cerr << "allocated memory from"<<m.access_vdata() << " to " <<m.access_vdata() + m.lunghezza()<<std::endl;
         std::cerr <<"strides ("<<  m.get_stride().size() << "): ";
         for (auto & n: m.get_stride()) std::cerr << n << " ";
         std::cerr << std::endl;*/
         return py::buffer_info(
-                    m.accesso_lista(),
+                    m.access_vdata(),
                     sizeof(double),
                     py::format_descriptor<double>::format(),
                     m.get_shape().size(),
@@ -76,7 +76,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def("calculate", & Gofrt<double,T>::calcola,R"begend()begend")
             .def_buffer([](Gofrt<double,T> & g) -> py::buffer_info {
         return py::buffer_info(
-                    g.accesso_lista(),                               /* Pointer to buffer */
+                    g.access_vdata(),                               /* Pointer to buffer */
                     sizeof(double),                          /* Size of one scalar */
                     py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
                     g.get_shape().size(),                                      /* Number of dimensions */
@@ -104,7 +104,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def("calculate", &SHC::calcola)
             .def_buffer([](SHC & m) -> py::buffer_info {
         return py::buffer_info(
-                    m.accesso_lista(),
+                    m.access_vdata(),
                     sizeof(double),
                     py::format_descriptor<double>::format(),
                     m.get_shape().size(),
@@ -137,7 +137,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def("calculate", &MSD::calcola)
             .def_buffer([](MSD & m) -> py::buffer_info {
                 return py::buffer_info(
-                            m.accesso_lista(),
+                            m.access_vdata(),
                             sizeof(double),
                             py::format_descriptor<double>::format(),
                             m.get_shape().size(),
@@ -155,7 +155,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def("calculate",&AD::calcola)
             .def_buffer([](AD & m)->py::buffer_info {
         return py::buffer_info(
-                    m.accesso_lista(),
+                    m.access_vdata(),
                     sizeof(long),
                     py::format_descriptor<long>::format(),
                     m.get_shape().size(),
@@ -178,7 +178,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
             .def("spectrum", &VDOS::spettro)
             .def_buffer([](VDOS & m) -> py::buffer_info {
                 return py::buffer_info(
-                            m.accesso_lista(),
+                            m.access_vdata(),
                             sizeof(double),
                             py::format_descriptor<double>::format(),
                             m.get_shape().size(),
@@ -265,7 +265,7 @@ void gk(py::module & m, std::string typestr){
             .def("calculate",&GK::calcola,R"begend()begend")
             .def_buffer([](GK & g) -> py::buffer_info {
                 return py::buffer_info(
-                g.accesso_lista(),                               /* Pointer to buffer */
+                g.access_vdata(),                               /* Pointer to buffer */
                 sizeof(double),                          /* Size of one scalar */
                 py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
                 g.get_shape().size(),                                      /* Number of dimensions */

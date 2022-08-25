@@ -32,8 +32,8 @@ IstogrammaVelocita::IstogrammaVelocita(Traiettoria *t, unsigned int nbins,double
 
     traiettoria=t;
 
-    lunghezza_lista=traiettoria->get_ntypes()*3*nbins;
-    lista = new double [lunghezza_lista];
+    data_length=traiettoria->get_ntypes()*3*nbins;
+    vdata = new double [data_length];
     bins=nbins;
     vminmax=vminmax_;
 
@@ -51,8 +51,8 @@ IstogrammaVelocita & IstogrammaVelocita::operator = (const IstogrammaVelocita & 
 
 void IstogrammaVelocita::reset(const unsigned int numeroTimestepsPerBlocco) {
 
-    for (unsigned int i=0;i<lunghezza_lista;i++)
-        lista[i]=0.0;
+    for (unsigned int i=0;i<data_length;i++)
+        vdata[i]=0.0;
 
     ntimestep=numeroTimestepsPerBlocco;
 
@@ -63,7 +63,7 @@ void IstogrammaVelocita::calcola(unsigned int primo) {
     for (unsigned int itimestep=primo;itimestep<primo+ntimestep;itimestep++)
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
             for (unsigned int icoord=0;icoord<3;icoord++)
-                istg(-vminmax,+vminmax,bins,&lista[(traiettoria->get_type(iatom)*3+icoord)*bins],traiettoria->velocita(itimestep,iatom)[icoord]);
+                istg(-vminmax,+vminmax,bins,&vdata[(traiettoria->get_type(iatom)*3+icoord)*bins],traiettoria->velocita(itimestep,iatom)[icoord]);
         }
 
 

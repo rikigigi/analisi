@@ -27,11 +27,11 @@ void HeatC::reset(const unsigned int numeroTimestepsPerBlocco) {
         ntimesteps=numeroTimestepsPerBlocco;
         return;
     }
-    delete [] lista;
+    delete [] vdata;
     tipi_atomi=t->get_ntypes();
     ntimesteps=numeroTimestepsPerBlocco;
-    lunghezza_lista=ntimesteps*3*3*tipi_atomi/skip;
-    lista = new double[lunghezza_lista];
+    data_length=ntimesteps*3*3*tipi_atomi/skip;
+    vdata = new double[data_length];
 }
 
 double calc0(const double & pre, const double & A,const double & B) {
@@ -71,7 +71,7 @@ void HeatC::calcola(unsigned int primo) {
 
                 //more specific code here
                 for (unsigned int i=0;i<3*3*tipi_atomi;++i) {
-                    lista[ilista*tipi_atomi*3*3+i]=0.0;
+                    vdata[ilista*tipi_atomi*3*3+i]=0.0;
                 }
 
                 //loop over atoms
@@ -82,8 +82,8 @@ void HeatC::calcola(unsigned int primo) {
                     double *rp = t->posizioni(itimestep+1,iatom);
                     double *vm = t->velocita(itimestep,iatom);
                     double *vp = t->velocita(itimestep+1,iatom);
-                    calc<-1>(cellm,rm,vm,sigma,&lista[ilista*tipi_atomi*3*3+t->get_type(iatom)*3*3]);
-                    calc<1>(cellp,rp,vp,sigma,&lista[ilista*tipi_atomi*3*3+t->get_type(iatom)*3*3]);
+                    calc<-1>(cellm,rm,vm,sigma,&vdata[ilista*tipi_atomi*3*3+t->get_type(iatom)*3*3]);
+                    calc<1>(cellp,rp,vp,sigma,&vdata[ilista*tipi_atomi*3*3+t->get_type(iatom)*3*3]);
                 }
 
                 ilista++;

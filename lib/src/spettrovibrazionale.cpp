@@ -55,20 +55,20 @@ unsigned int SpettroVibrazionale<T>::nExtraTimesteps(unsigned int n_b){
 template <class T>
 void SpettroVibrazionale<T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 //inizializzo la memoria per i moduli quadri e basta, se necessario!
-// size è la lunghezza della trasformata. La lista che contiene i moduli quadri sarà size/2+1 (trasformata reale).
+// size è la lunghezza della trasformata. La vdata che contiene i moduli quadri sarà size/2+1 (trasformata reale).
     if (numeroTimestepsPerBlocco!=size) {
         size=numeroTimestepsPerBlocco;
-        delete [] lista;
+        delete [] vdata;
         tipi_atomi=traiettoria->get_ntypes();
         if (tipi_atomi<=0) {
             tipi_atomi=1;
             std::cerr << "Attenzione: non ho letto il numero di tipi diversi di atomi (non hai caricato la traiettoria prima di iniziare l'analisi?\n";
         }
-        lunghezza_lista=(size/2+1)*3*tipi_atomi; // uno per ogni direzione dello spazio, per testare l'isotropia, e per tipo di atomo
-        lista = new double[lunghezza_lista];
+        data_length=(size/2+1)*3*tipi_atomi; // uno per ogni direzione dello spazio, per testare l'isotropia, e per tipo di atomo
+        vdata = new double[data_length];
 #ifdef DEBUG
         std::cerr << "called SpettroVibrazionale::reset " __FILE__ ":"<<__LINE__<<"\n";
-        std::cerr << "new double [] "<<lista<<"\n";
+        std::cerr << "new double [] "<<vdata<<"\n";
 #endif
 
     }
@@ -115,7 +115,7 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
     double * media = new double[tipi_atomi];
     unsigned int * cont = new unsigned int [tipi_atomi];
 
-    for (unsigned int iomega=0;iomega<lunghezza_lista/(tipi_atomi*3);iomega++) {
+    for (unsigned int iomega=0;iomega<data_length/(tipi_atomi*3);iomega++) {
         //una media per dimensione
         for (unsigned int idim=0;idim<3;idim++){
             //media sugli atomi
@@ -151,7 +151,7 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
 
             }
             for (unsigned int itipo=0;itipo < tipi_atomi;itipo++){
-                lista[itipo*lunghezza_lista/tipi_atomi+ iomega*3+idim]=media[itipo];
+                vdata[itipo*data_length/tipi_atomi+ iomega*3+idim]=media[itipo];
             }
         }
     }
@@ -160,7 +160,7 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
 
     if (dump) {
        std::ofstream out("analisi_vibr.debug",std::fstream::app);
-       for (unsigned int iomega=0;iomega<lunghezza_lista/(tipi_atomi*3);iomega++){
+       for (unsigned int iomega=0;iomega<data_length/(tipi_atomi*3);iomega++){
            out << iomega;
            for (unsigned int itype=0;itype<tipi_atomi;itype++) {
                for (unsigned int idim=0;idim<3;idim++)
@@ -174,8 +174,8 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
 
 template <class T>
 double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,unsigned int tipo_atomo) {
-    if (frequenza<lunghezza_lista/(3*tipi_atomi) && dim<3 && tipo_atomo < tipi_atomi) {
-        return lista[tipo_atomo*lunghezza_lista/tipi_atomi+ frequenza*3+dim];
+    if (frequenza<data_length/(3*tipi_atomi) && dim<3 && tipo_atomo < tipi_atomi) {
+        return vdata[tipo_atomo*data_length/tipi_atomi+ frequenza*3+dim];
     } else {
         throw std::runtime_error("Error: index out of range!\n");
     }

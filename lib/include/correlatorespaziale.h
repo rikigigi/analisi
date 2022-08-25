@@ -43,8 +43,8 @@ public:
     void join_data(){}
 
 private:
-    using VectorOp<CorrelatoreSpaziale,double>::lista;
-    using VectorOp<CorrelatoreSpaziale,double>::lunghezza_lista;
+    using VectorOp<CorrelatoreSpaziale,double>::vdata;
+    using VectorOp<CorrelatoreSpaziale,double>::data_length;
     Traiettoria *t;
     double * sfac;
     std::vector< std::array<double,3> > klist;

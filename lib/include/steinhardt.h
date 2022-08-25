@@ -110,8 +110,8 @@ private:
     const size_t nbin;
     std::string c_descr;
     T & t;
-    using LISTA::lunghezza_lista;
-    using LISTA::lista;
+    using LISTA::data_length;
+    using LISTA::vdata;
     const std::vector<unsigned int> steinhardt_l_histogram;
     size_t nbin_steinhardt,steinhardt_histogram_size;
     TFLOAT * threadResults;

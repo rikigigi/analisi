@@ -21,8 +21,8 @@ public:
     ~CenterOfMassDiff();
 private:
     Traiettoria *t;
-    using VectorOp<CenterOfMassDiff,double>::lista;
-    using VectorOp<CenterOfMassDiff,double>::lunghezza_lista;
+    using VectorOp<CenterOfMassDiff,double>::vdata;
+    using VectorOp<CenterOfMassDiff,double>::data_length;
     unsigned int lista_alloc;
     int ntype,maxiter;
     std::valarray<double> starting_center;

@@ -63,8 +63,8 @@ public:
 
     using SPB::calc;
 protected:
-    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
-    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
+    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::vdata;
+    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::data_length;
     T & t;
 
     size_t nbin, tmax,nthreads,skip,leff,ntimesteps,buffer_size;

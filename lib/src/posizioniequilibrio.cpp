@@ -21,12 +21,12 @@
 PosizioniEquilibrio::PosizioniEquilibrio(Traiettoria * tr,unsigned int timesteps_sottoblocco)
 {
     traiettoria=tr;
-    lunghezza_lista=traiettoria->get_natoms()*3;
-    lista = new double [lunghezza_lista];
-    posizioni_fittate_reticolo=new double[lunghezza_lista];
-    for (unsigned int i=0;i<lunghezza_lista;i++){
+    data_length=traiettoria->get_natoms()*3;
+    vdata = new double [data_length];
+    posizioni_fittate_reticolo=new double[data_length];
+    for (unsigned int i=0;i<data_length;i++){
         posizioni_fittate_reticolo[i]=0.0;
-        lista[i]=0.0;
+        vdata[i]=0.0;
     }
     traslation= new std::vector< std::array<double,3> > [traiettoria->get_natoms()];
     calcolato=false;
@@ -126,8 +126,8 @@ void PosizioniEquilibrio::calcola(unsigned int primo) {
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++){
             for (unsigned int icoord=0;icoord<3;icoord++){
                 double delta = traiettoria->posizioni(primo+i,iatom)[icoord]
-                               - lista[iatom*3+icoord];
-                lista[iatom*3+icoord] += delta/(i+1);
+                               - vdata[iatom*3+icoord];
+                vdata[iatom*3+icoord] += delta/(i+1);
             }
         }
     }
@@ -141,7 +141,7 @@ double * PosizioniEquilibrio::get_atom_position(unsigned int iatom){
         return 0;
     }
 
-    return & lista[iatom*3];
+    return & vdata[iatom*3];
 }
 
 void PosizioniEquilibrio::reticolo_inizializza(double *base_r, double *base,unsigned int *base_type, const unsigned int &nbase) {
@@ -311,7 +311,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
             if (iatom!=jatom) {
                 double d2=0.0;
                 for (unsigned int i=0;i<3;i++)
-                    d2+=(lista[iatom*3+i]-lista[jatom*3+i])*(lista[iatom*3+i]-lista[jatom*3+i]);
+                    d2+=(vdata[iatom*3+i]-vdata[jatom*3+i])*(vdata[iatom*3+i]-vdata[jatom*3+i]);
                 distanze.insert(std::pair<double,unsigned int>(d2,jatom));
             }
         }
@@ -343,8 +343,8 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
             for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                 double d2=0.0;
                 for (unsigned int i=0;i<3;i++ )
-                    d2+=(lista[iatom*3+i]-(lista[*iterator *3+i]+base_reticolo(i,ibase)) )*
-                        (lista[iatom*3+i]-(lista[*iterator *3+i]+base_reticolo(i,ibase)) );
+                    d2+=(vdata[iatom*3+i]-(vdata[*iterator *3+i]+base_reticolo(i,ibase)) )*
+                        (vdata[iatom*3+i]-(vdata[*iterator *3+i]+base_reticolo(i,ibase)) );
                 distanze.insert(std::pair<double,unsigned int>(d2,iatom));
             }
             //prendi il più vicino. se la distanza è maggiore di una cerca soglia, scarta questo atomo dell'angolo
@@ -371,7 +371,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
         abort();
     }
 
-    double origin[3]={lista[3* *iterator+0],lista[3* *iterator+1],lista[3* *iterator+2]};
+    double origin[3]={vdata[3* *iterator+0],vdata[3* *iterator+1],vdata[3* *iterator+2]};
 
     //stima molto rozza dei limiti degli indici che coprono completamente la cella di simulazione
     double coord[]={max[0]-origin[0],max[1]-origin[1],max[2]-origin[2]},
@@ -439,12 +439,12 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
         std::array<int,4> uvwi=reticolo_xyz.begin()->first;
             // cerco l'atomo più vicino dello stesso tipo, per restituire comunque un numero sensato
             auto iteratore = reticolo_xyz.begin();
-            Eigen::Vector3d d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&lista[iatom*3]);
+            Eigen::Vector3d d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&vdata[iatom*3]);
             Eigen::Vector3d dmin;
             d2m= d.dot(d)*4;
             for (iteratore++;iteratore != reticolo_xyz.end();iteratore++) {
                 if (base_tipi[iteratore->first[3]]==traiettoria->get_type(iatom) && iteratore->second.second == traiettoria->get_natoms()){
-                    d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&lista[iatom*3]);
+                    d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&vdata[iatom*3]);
                     d2t= d.dot(d);
                     if (d2t<d2m) {
                         d2m=d2t;

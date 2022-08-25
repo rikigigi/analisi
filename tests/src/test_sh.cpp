@@ -81,7 +81,7 @@ BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
 BOOST_AUTO_TEST_CASE(test_calcola)\
 {\
     sh.calcola(0);\
-    BOOST_TEST(data.test_regression("test_calcola" # suff ,sh.accesso_lista(),sh.lunghezza()));\
+    BOOST_TEST(data.test_regression("test_calcola" # suff ,sh.access_vdata(),sh.lunghezza()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 

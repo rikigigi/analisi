@@ -49,11 +49,11 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
     //quanti timestep è lunga la funzione di correlazione
     leff =(numeroTimestepsPerBlocco<tmax || tmax==0)? numeroTimestepsPerBlocco : tmax;
     //numero di timestep su cui fare la media
-    lunghezza_lista=leff*ntypes*ntypes*nbin*(l+1);
+    data_length=leff*ntypes*ntypes*nbin*(l+1);
 
 
-    delete [] lista;
-    lista=new TFLOAT [lunghezza_lista];
+    delete [] vdata;
+    vdata=new TFLOAT [data_length];
 }
 
 
@@ -98,7 +98,7 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     TwoLoopSplit<size_t> task_distributer(nthreads,ntimesteps,skip,skip*10,leff,1,block_t);
 
     //allocate space for per thread averages
-    TFLOAT * lista_th = new TFLOAT[lunghezza_lista*(nthreads-1)];
+    TFLOAT * lista_th = new TFLOAT[data_length*(nthreads-1)];
     unsigned int * lista_th_counters = new unsigned int [leff*nthreads];
     size_t * hit = new size_t[nthreads];
     size_t * miss = new size_t[nthreads];
@@ -110,10 +110,10 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
             if (neighList.size()>0) {
                 nns = new Neighbours_T{&t,neighList};
             }
-            TFLOAT * lista_th_= ith >0 ? lista_th+lunghezza_lista*(ith-1) : lista;
+            TFLOAT * lista_th_= ith >0 ? lista_th+data_length*(ith-1) : vdata;
             unsigned int * lista_th_counters_ = lista_th_counters+leff*ith;
 
-            for (unsigned int i=0;i<lunghezza_lista;++i) lista_th_[i]=0.0;
+            for (unsigned int i=0;i<data_length;++i) lista_th_[i]=0.0;
             for (unsigned int i=0;i<leff;++i) lista_th_counters_[i]=0;
 
 
@@ -200,21 +200,21 @@ void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
     //the data of the first thread is in place
     for (unsigned int dt=0;dt<leff;++dt){
         for (unsigned int ith=1;ith<nthreads;++ith){
-            TFLOAT * lista_th_=lista_th+lunghezza_lista*(ith-1);
+            TFLOAT * lista_th_=lista_th+data_length*(ith-1);
             unsigned int * lista_th_counters_ = lista_th_counters+leff*ith;
             if (lista_th_counters_[dt]==0) continue;
-            //sum everything in lista, use lista_th_counters[0] as counter for that accumulator
+            //sum everything in vdata, use lista_th_counters[0] as counter for that accumulator
             if (lista_th_counters[dt]==0) { // just copy
                 for (unsigned int i=0;i<get_final_snap_size();++i){
-                    lista[index(dt,0,0)+i]=lista_th_[index(dt,0,0)+i];
+                    vdata[index(dt,0,0)+i]=lista_th_[index(dt,0,0)+i];
                 }
             } else if (fabs(double(lista_th_counters[dt])/double(lista_th_counters_[dt])-1.0)<0.01) { // use traditional algorithm to update the mean
                 for (unsigned int i=0;i<get_final_snap_size();++i){
-                    lista[index(dt,0,0)+i]=(lista[index(dt,0,0)+i]*lista_th_counters[dt]+ lista_th_[index(dt,0,0)+i]*lista_th_counters_[dt])/double(lista_th_counters_[dt]+lista_th_counters[dt]);
+                    vdata[index(dt,0,0)+i]=(vdata[index(dt,0,0)+i]*lista_th_counters[dt]+ lista_th_[index(dt,0,0)+i]*lista_th_counters_[dt])/double(lista_th_counters_[dt]+lista_th_counters[dt]);
                 }
             } else { // use delta algorithm
                 for (unsigned int i=0;i<get_final_snap_size();++i){
-                    lista[index(dt,0,0)+i] += (lista_th_[index(dt,0,0)+i]-lista[index(dt,0,0)+i])*lista_th_counters_[dt]/double(lista_th_counters_[dt]+lista_th_counters[dt]);
+                    vdata[index(dt,0,0)+i] += (lista_th_[index(dt,0,0)+i]-vdata[index(dt,0,0)+i])*lista_th_counters_[dt]/double(lista_th_counters_[dt]+lista_th_counters[dt]);
                 }
             }
             lista_th_counters[dt]+=lista_th_counters_[dt];
