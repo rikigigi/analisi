@@ -12,7 +12,7 @@
 
 #ifndef CORRELATORESPAZIALE_H
 #define CORRELATORESPAZIALE_H
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 #include "operazionisulista.h"
 #include <vector>
 
@@ -20,7 +20,7 @@
 class Traiettoria;
 
 
-class CorrelatoreSpaziale : public CalcolaMultiThread<CorrelatoreSpaziale>, public VectorOp<CorrelatoreSpaziale,double>
+class CorrelatoreSpaziale : public CalculateMultiThread<CorrelatoreSpaziale>, public VectorOp<CorrelatoreSpaziale,double>
 {
 public:
     CorrelatoreSpaziale(Traiettoria *t,
@@ -36,7 +36,7 @@ public:
     void s_fac_k(const double  k[3], const unsigned int i_t,double * out ) const;
     int get_sfac_size()const {return size_sfac;}
     void print(std::ostream & out);
-    using CalcolaMultiThread::operator=;
+    using CalculateMultiThread::operator=;
     ~CorrelatoreSpaziale();
     std::vector<ssize_t> get_shape() const;
     std::vector<ssize_t> get_stride() const;

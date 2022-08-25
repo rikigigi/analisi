@@ -2,27 +2,27 @@
 #define STEINHARDT_H
 
 #include "sphericalbase.h"
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 #include "operazionisulista.h"
 
 namespace Steinhardt_Flags {
 
 constexpr int FLAGS =
-        CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE |
-        CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA |
-        CalcolaMultiThread_Flags::CALL_CALC_INIT;
+        CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE |
+        CalculateMultiThread_Flags::CALL_INNER_JOIN_DATA |
+        CalculateMultiThread_Flags::CALL_CALC_INIT;
 
 }
 
 template <int l, class TFLOAT, class T>
 class Steinhardt : public SphericalBase<l,TFLOAT,T>,
-        public CalcolaMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >,
+        public CalculateMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >,
         public VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>
 {
 public:
     using LISTA = VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>;
     using SPB = SphericalBase<l,TFLOAT,T>;
-    using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
+    using CMT = CalculateMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
     using CMT::calculate;
     using SPB::calc;
     using typename SPB::Rminmax_t;

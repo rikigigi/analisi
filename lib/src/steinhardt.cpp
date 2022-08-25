@@ -15,7 +15,7 @@ Steinhardt<l,TFLOAT,T>::Steinhardt(T *t,
                                    const NeighListSpec nls,
                                    const bool averaged_order) :
     SPB::SphericalBase{t,nbin,rminmax},
-    CMT::CalcolaMultiThread{nthreads,skip},
+    CMT::CalculateMultiThread{nthreads,skip},
     steinhardt_histogram_size{0},
     steinhardt_l_histogram{steinhardt_l_histogram},
     nbin_steinhardt{nbin_steinhardt},

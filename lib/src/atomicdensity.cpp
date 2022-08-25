@@ -3,7 +3,7 @@
 
 template <class T, class Hist>
 AtomicDensity<T,Hist>::AtomicDensity(T *t, std::array<ssize_t, 3> nbin, unsigned int nthreads, unsigned int skip) :
-    CalcolaMultiThread<This> {nthreads, skip}, nbin{nbin},t{t}, ntypes{t->get_ntypes()}
+    CalculateMultiThread<This> {nthreads, skip}, nbin{nbin},t{t}, ntypes{t->get_ntypes()}
 {
     data_length=nbin[0]*nbin[1]*nbin[2]*ntypes;
     vdata=new Hist [data_length];

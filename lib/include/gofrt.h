@@ -14,24 +14,24 @@
 #define GOFRT_H
 
 #include "operazionisulista.h"
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 
 
 namespace Gofrt_Flags {
-constexpr int FLAGS = CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM |
-        CalcolaMultiThread_Flags::SERIAL_LOOP_TIME |
-        CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE |
-        CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE |
-        CalcolaMultiThread_Flags::CALL_CALC_INIT;
+constexpr int FLAGS = CalculateMultiThread_Flags::PARALLEL_SPLIT_ATOM |
+        CalculateMultiThread_Flags::SERIAL_LOOP_TIME |
+        CalculateMultiThread_Flags::SERIAL_LOOP_AVERAGE |
+        CalculateMultiThread_Flags::CALL_DEBUG_ROUTINE |
+        CalculateMultiThread_Flags::CALL_CALC_INIT;
 }
 
 template <class TFLOAT, class T>
-class Gofrt : public VectorOp<Gofrt<TFLOAT,T>,TFLOAT>, public CalcolaMultiThread<Gofrt<TFLOAT,T>, Gofrt_Flags::FLAGS  >
+class Gofrt : public VectorOp<Gofrt<TFLOAT,T>,TFLOAT>, public CalculateMultiThread<Gofrt<TFLOAT,T>, Gofrt_Flags::FLAGS  >
 {
 public:
     using This = Gofrt<TFLOAT,T>;
-    using CalcolaMultiThread_T = CalcolaMultiThread<This, Gofrt_Flags::FLAGS>;
-    using CalcolaMultiThread_T::FLAGS;
+    using CalculateMultiThread_T = CalculateMultiThread<This, Gofrt_Flags::FLAGS>;
+    using CalculateMultiThread_T::FLAGS;
     using VectorOp_T = VectorOp<This,TFLOAT>;
 
     Gofrt(T *t,
@@ -64,10 +64,10 @@ private:
     bool debug;
     T * traiettoria;
     unsigned int nbin,lmax;
-    using CalcolaMultiThread_T::ntimesteps;
-    using CalcolaMultiThread_T::skip;
-    using CalcolaMultiThread_T::nthreads;
-    using CalcolaMultiThread_T::leff;
+    using CalculateMultiThread_T::ntimesteps;
+    using CalculateMultiThread_T::skip;
+    using CalculateMultiThread_T::nthreads;
+    using CalculateMultiThread_T::leff;
     int gofr_idx(unsigned int ts, unsigned int itype=0, unsigned int r=0) {
         unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin
                          +nbin * itype

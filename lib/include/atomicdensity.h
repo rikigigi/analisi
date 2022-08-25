@@ -1,13 +1,13 @@
 #ifndef ATOMICDENSITY_H
 #define ATOMICDENSITY_H
 
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 #include "operazionisulista.h"
 #include <array>
 #include <cmath>
 
 template <class T, class Hist >
-class AtomicDensity : public CalcolaMultiThread<AtomicDensity<T,Hist>>, public VectorOp<AtomicDensity<T,Hist>,Hist>
+class AtomicDensity : public CalculateMultiThread<AtomicDensity<T,Hist>>, public VectorOp<AtomicDensity<T,Hist>,Hist>
 {
 public:
     AtomicDensity(T *t,
@@ -52,9 +52,9 @@ private:
         return idx(idxs[2],idxs[1],idxs[0],itype);
     }
 
-    using CalcolaMultiThread<This>::ntimesteps;
-    using CalcolaMultiThread<This>::skip;
-    using CalcolaMultiThread<This>::nthreads;
+    using CalculateMultiThread<This>::ntimesteps;
+    using CalculateMultiThread<This>::skip;
+    using CalculateMultiThread<This>::nthreads;
     using VectorOp<This,Hist>::data_length;
     using VectorOp<This,Hist>::vdata;
 
