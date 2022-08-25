@@ -23,7 +23,7 @@ public:
     using LISTA = VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>;
     using SPB = SphericalBase<l,TFLOAT,T>;
     using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
-    using CMT::calcola;
+    using CMT::calculate;
     using SPB::calc;
     using typename SPB::Rminmax_t;
     using typename SPB::Neighbours_T;

@@ -28,7 +28,7 @@ public:
     ~PosizioniEquilibrio();
     unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
     void fit_nacl();
     double d2_reticolo_spostamento_medio(double *min, double *max, double *spostamento);
     bool zona_brillouin(double * k_test);

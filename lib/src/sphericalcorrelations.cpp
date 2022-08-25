@@ -60,7 +60,7 @@ void SphericalCorrelations<l,TFLOAT,T>::reset(const unsigned int numeroTimesteps
 
 
 template <int lmax, class TFLOAT, class T>
-void SphericalCorrelations<lmax,TFLOAT,T>::calcola(unsigned int primo) {
+void SphericalCorrelations<lmax,TFLOAT,T>::calculate(unsigned int primo) {
 
     if (leff+ntimesteps+primo > t.get_ntimesteps()){
         throw std::runtime_error("trajectory is too short for this kind of calculation. Select a different starting timestep or lower the size of the average or the lenght of the correlation function");

@@ -26,7 +26,7 @@ public:
                          );
     ~SphericalCorrelations();
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int);
+    void calculate(unsigned int);
     unsigned int nExtraTimesteps(unsigned int n_b);
     SphericalCorrelations<l,TFLOAT,T> & operator =(const SphericalCorrelations<l,TFLOAT,T> & destra){
         VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);

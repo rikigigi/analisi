@@ -20,7 +20,7 @@ struct GkFixture{
 BOOST_FIXTURE_TEST_SUITE(gk_traj_1, GkFixture<1>)
 BOOST_AUTO_TEST_CASE(test_gk_2comp_nth1)
 {
-    gk.calcola(0);
+    gk.calculate(0);
     BOOST_TEST(data.test_regression("gk_2comp",gk.access_vdata(),gk.lunghezza()));
 }
 BOOST_AUTO_TEST_SUITE_END()
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE(gk_traj_2, GkFixture<2>)
 BOOST_AUTO_TEST_CASE(test_gk_2comp_nth2)
 {
-    gk.calcola(0);
+    gk.calculate(0);
     BOOST_TEST(data.test_regression("gk_2comp",gk.access_vdata(),gk.lunghezza()));
 }
 

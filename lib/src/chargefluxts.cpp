@@ -31,7 +31,7 @@ void ChargeFluxTs::reset(unsigned int numeroTimestepPerBlocco) {
     }
 }
 
-void ChargeFluxTs::calcola(unsigned int timestep) {
+void ChargeFluxTs::calculate(unsigned int timestep) {
 
 
 

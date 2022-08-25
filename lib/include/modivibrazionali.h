@@ -27,7 +27,7 @@ public:
     unsigned int nExtraTimesteps(unsigned int n_b);
     void azzera();
     void reset(unsigned int s);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
 
     /*
     ModiVibrazionali &operator =(const ModiVibrazionali &);

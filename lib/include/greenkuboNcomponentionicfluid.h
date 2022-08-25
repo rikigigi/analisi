@@ -40,7 +40,7 @@ public:
     ~GreenKuboNComponentIonicFluid();
     unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
     GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ> & operator =(const GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ> &);
     unsigned int get_narr();
     unsigned int get_indexOfKappa();

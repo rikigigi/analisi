@@ -40,7 +40,7 @@ provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use th
 if true compute the averaged steinhardt order parameter (an additional loop over neighbours is performed). Implemented only with SANN
 )lol")
             .def("reset",&SOP::reset)
-            .def("calculate", &SOP::calcola)
+            .def("calculate", &SOP::calculate)
             .def_buffer([](SOP & m) -> py::buffer_info {
         /*
         std::cerr <<"shape ("<< m.get_shape().size() << "): ";
@@ -70,7 +70,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                                                                                                           Parameters                                                                                                          ----------                                                                                                         Trajectory instance                                                                                                          rmin                                                                                                          rmax                                                                                                          nbin                                                                                                          maximum time lag                                                                                                          number of threads                                                                                                          time skip                                                    every time                                         debug flag                                                                                                          )begend")
             .def("reset",& Gofrt<double,T>::reset,R"begend()begend")
             .def("getNumberOfExtraTimestepsNeeded",&Gofrt<double,T>::nExtraTimesteps ,R"begend()begend")
-            .def("calculate", & Gofrt<double,T>::calcola,R"begend()begend")
+            .def("calculate", & Gofrt<double,T>::calculate,R"begend()begend")
             .def_buffer([](Gofrt<double,T> & g) -> py::buffer_info {
         return py::buffer_info(
                     g.access_vdata(),                               /* Pointer to buffer */
@@ -98,7 +98,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                  provide a list of [(max_neighbours, rmax^2, rmax_2^2),...] if you want to use the SANN algorithm and use ibin=0 always
 )lol")
             .def("reset",&SHC::reset)
-            .def("calculate", &SHC::calcola)
+            .def("calculate", &SHC::calculate)
             .def_buffer([](SHC & m) -> py::buffer_info {
         return py::buffer_info(
                     m.access_vdata(),
@@ -131,7 +131,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                  )begend")
             .def("reset",&MSD::reset)
             .def("getNumberOfExtraTimestepsNeeded",&MSD::nExtraTimesteps)
-            .def("calculate", &MSD::calcola)
+            .def("calculate", &MSD::calculate)
             .def_buffer([](MSD & m) -> py::buffer_info {
                 return py::buffer_info(
                             m.access_vdata(),
@@ -149,7 +149,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
     py::class_<AD>(m,(std::string("PositionHistogram")+typestr).c_str(),py::buffer_protocol())
             .def(py::init<T*,std::array<ssize_t, 3>,unsigned, unsigned>())
             .def("reset",&AD::reset)
-            .def("calculate",&AD::calcola)
+            .def("calculate",&AD::calculate)
             .def_buffer([](AD & m)->py::buffer_info {
         return py::buffer_info(
                     m.access_vdata(),
@@ -171,7 +171,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                  debug flag
                  )begend")
             .def("reset",&VDOS::reset)
-            .def("calculate", &VDOS::calcola)
+            .def("calculate", &VDOS::calculate)
             .def("spectrum", &VDOS::spettro)
             .def_buffer([](VDOS & m) -> py::buffer_info {
                 return py::buffer_info(
@@ -259,7 +259,7 @@ void gk(py::module & m, std::string typestr){
                 perform an efficient, multithreaded Green-Kubo calculations of the transport coefficient of a condensed matter system, given the currents.
 )begend")
             .def("reset",&GK::reset,R"begend()begend")
-            .def("calculate",&GK::calcola,R"begend()begend")
+            .def("calculate",&GK::calculate,R"begend()begend")
             .def_buffer([](GK & g) -> py::buffer_info {
                 return py::buffer_info(
                 g.access_vdata(),                               /* Pointer to buffer */

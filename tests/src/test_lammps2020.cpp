@@ -15,7 +15,7 @@ struct MsdFixture {
     DataRegression<double> data;
     MSD<Traiettoria> & calc(int primo) {
         msd.reset(75-primo);
-        msd.calcola(primo);
+        msd.calculate(primo);
         return msd;
     }
     size_t size(){auto s= msd.get_shape(); return s[0]*s[1]*s[2];}
@@ -41,7 +41,7 @@ struct GofrFixture {
     DataRegression<double> data;
     Gofrt<double, Traiettoria> & calc(int primo) {
         gofr.reset(75-primo);
-        gofr.calcola(primo);
+        gofr.calculate(primo);
         return gofr;
     }
     size_t size(){auto s= gofr.get_shape(); return s[0]*s[1]*s[2];}

@@ -80,13 +80,12 @@ static unsigned int get_ntimesteps(ReadLog<long double>* traiettoria ){
 };
 
 
-template <class TR,class T, typename ... Args > class MediaBlocchiG
+template <class TR,class T, typename ... Args > class BlockAverageG
 {
 public:
-    MediaBlocchiG(TR * t,
+    BlockAverageG(TR * t,
                  const unsigned int & numero_blocchi
                  ) {
-//        static_assert(std::is_base_of<Calcolo,T>::value,"T deve essere derivato da Calcolo!");
         traiettoria=t;
         n_b=numero_blocchi;
         ok=false;
@@ -98,10 +97,7 @@ public:
 
     }
 
-    ~MediaBlocchiG() {
-#ifdef DEBUG
-        std::cerr << "~MediaBlocchiG(): Tmedio="<<Tmedio<<", Tvar="<<Tvar<< ", delta="<<delta<<", tmp="<<tmp<<".\n";
-#endif
+    ~BlockAverageG() {
         delete Tmedio;
         delete Tvar;
         delete delta;
@@ -137,9 +133,9 @@ public:
 
             calcolo->reset(s);
             TraiettoriaF<TR>::set_access_at(iblock*s,traiettoria);
-            calcolo->calcola(iblock*s);
+            calcolo->calculate(iblock*s);
 
-            calc->calcola(calcolo);
+            calc->calculate(calcolo);
             cron.stop();
 #ifdef DEBUG
             std::cerr << "Time for block "<<iblock+1<<" / "<<n_b <<": "<< cron.time_last()<<
@@ -163,12 +159,12 @@ public:
             }
             calcolo->reset(s);
             TraiettoriaF<TR>::set_access_at(ib*s,traiettoria);
-            calcolo->calcola(ib*s);
+            calcolo->calculate(ib*s);
             cronometro cronmpi;
             unsigned int mpirecv=1;
             if (mpime==0){
                 //ricevi i risultati degli altri e calcola ciò che è da calcolare.
-                calc->calcola(calcolo);
+                calc->calculate(calcolo);
                 if (iblock+mpisize<n_b){
                     mpirecv=mpisize;
                 }else{
@@ -179,7 +175,7 @@ public:
                     cronmpi.start();
                     Mp::mpi().recv_root(calcolo,i);
                     cronmpi.stop();
-                    calc->calcola(calcolo);
+                    calc->calculate(calcolo);
                 }
             } else {
                 Mp::mpi().send_to_root(calcolo);
@@ -195,7 +191,7 @@ public:
 
 
 
-    void calcola(Args ... arg) {
+    void calculate(Args ... arg) {
         Tmedio = new T(traiettoria, arg...);
         Tvar = new T(traiettoria,arg...);
         delta = new T(traiettoria,arg...);
@@ -222,7 +218,7 @@ private:
 };
 
 
-template<class T, typename ... Args> using MediaBlocchi = MediaBlocchiG<Traiettoria,T,Args...>;
+template<class T, typename ... Args> using BlockAverage = BlockAverageG<Traiettoria,T,Args...>;
 
 
 

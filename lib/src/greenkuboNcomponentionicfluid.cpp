@@ -153,7 +153,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboN
     return 3*N_corr;
 }
 
-template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::calcola(unsigned int primo) {
+template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::calculate(unsigned int primo) {
 
 
     if(!benchmarked)
@@ -394,7 +394,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboN
         cronometro cron;
 
         cron.start();
-        calcola(0);
+        calculate(0);
         cron.stop();
         std::cerr << i<<" "<<cron.time()*i<<"\n";
         if (cron.time()*i<min){

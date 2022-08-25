@@ -16,7 +16,7 @@ struct PhFixture {
 
     AD & calc(int primo){
         ret.reset(150-primo);
-        ret.calcola(primo);
+        ret.calculate(primo);
         return ret;
     }
     size_t size(){auto s= ret.get_shape(); return s[0]*s[1]*s[2];}

@@ -103,7 +103,7 @@ public:
         }
     }
 
-    void calcola(size_t primo){
+    void calculate(size_t primo){
         init_split();
         if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT)) {
             static_cast<T*>(this)->calc_init(primo);

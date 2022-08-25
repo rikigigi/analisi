@@ -28,7 +28,7 @@ void IstogrammaAtomiRaggio::reset(const unsigned int numeroTimestepsPerBlocco) {
     hist= new std::map<unsigned int, unsigned int> [ntypes];
 }
 
-void IstogrammaAtomiRaggio::calcola(unsigned int tstart) {
+void IstogrammaAtomiRaggio::calculate(unsigned int tstart) {
     unsigned int natomith=natoms/nthreads;
     std::vector<std::thread> threads;
 

@@ -119,8 +119,8 @@ void ModiVibrazionali::azzera() {
     }
 }
 
-void ModiVibrazionali::calcola(unsigned int primo) {
-    posizioni_equilibrio->calcola(primo);
+void ModiVibrazionali::calculate(unsigned int primo) {
+    posizioni_equilibrio->calculate(primo);
 
     /*calcola, per ogni atomo e per ogni modo normale, il prodotto scalare
      * fra lo spostamento dell'atomo dalla sua posizione d'equilibrio e

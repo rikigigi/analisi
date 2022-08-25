@@ -396,7 +396,7 @@ int main(int argc, char ** argv)
 
                 } else {
 
-                    MediaBlocchiG<ReadLog<>,GreenKuboNComponentIonicFluid<ReadLog<> >,
+                    BlockAverageG<ReadLog<>,GreenKuboNComponentIonicFluid<ReadLog<> >,
                             std::string,
                             unsigned int,
                             std::vector<std::string>,
@@ -478,8 +478,8 @@ int main(int argc, char ** argv)
                 Traiettoria test(input);
 #define MSD_(fpe_)\
                 {using MSD=MSD<Traiettoria,fpe_>;\
-                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
-                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
+                BlockAverage<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
+                Msd.calculate(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
                 for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {\
                     for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)\
                         std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<\
@@ -500,9 +500,9 @@ int main(int argc, char ** argv)
                 Traiettoria tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
+                BlockAverage<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
                         gofr(&tr,blocknumber);
-                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
+                gofr.calculate(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
 
                 unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
                 unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
@@ -541,11 +541,11 @@ int main(int argc, char ** argv)
                    rminmax.push_back({factors_input[i*2],factors_input[i*2+1]});
                 }
 
-                MediaBlocchi<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int,
+                BlockAverage<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int,
                         unsigned int,unsigned int,bool,typename SHC::NeighListSpec>
                         sh(&tr,blocknumber);
 
-                sh.calcola(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK,{});
+                sh.calculate(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK,{});
 
                 auto shape= sh.media()->get_shape();
 
@@ -573,7 +573,7 @@ int main(int argc, char ** argv)
                 for (unsigned int i=0;i<blocknumber;i++){
                     unsigned int t=s*i;
                     test.set_access_at(t);
-                    h.calcola(t);
+                    h.calculate(t);
                 }
                 std::map<unsigned int, unsigned int> *hist=h.get_hist();
                 for (unsigned int i=0;i<test.get_ntypes();i++){
@@ -588,8 +588,8 @@ int main(int argc, char ** argv)
             }else if (nbins_vel>0) {
                 std::cerr << "Velocity histogram...\n";
                 Traiettoria test(input);
-                MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
-                istogramma_vel.calcola(nbins_vel,vmax_h);
+                BlockAverage<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
+                istogramma_vel.calculate(nbins_vel,vmax_h);
 
                 //stampa i risultati
                 unsigned int lungh_sing_h=istogramma_vel.media()->lunghezza()/(3*test.get_ntypes());
@@ -607,16 +607,16 @@ int main(int argc, char ** argv)
 		blocksize = test.get_ntimesteps()/blocknumber;
                 ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
                 test_normali.reset(stop_acf);
-                test_normali.calcola(0);
+                test_normali.calculate(0);
 
                 return 1;
             } else if (spettro_vibraz) {
                 std::cerr << "Vibrational spectrum...\n";
                 Traiettoria test(input);
                 //            SpettroVibrazionale test_spettro(&test);
-                MediaBlocchi<SpettroVibrazionale<Traiettoria>,bool> test_spettro_blocchi(&test,blocknumber);
+                BlockAverage<SpettroVibrazionale<Traiettoria>,bool> test_spettro_blocchi(&test,blocknumber);
 
-                test_spettro_blocchi.calcola(dumpGK);
+                test_spettro_blocchi.calculate(dumpGK);
                 for (unsigned int i=0;i<test_spettro_blocchi.media()->lunghezza()/(3*test.get_ntypes());i++) {
                     std::cout << i << " ";
                     for (unsigned int itipo=0;itipo<test.get_ntypes();itipo++)
@@ -653,7 +653,7 @@ int main(int argc, char ** argv)
                 for (unsigned int i=0;i<blocknumber;++i) {
                     unsigned int ts=s*i;
                     t.set_access_at(ts);
-                    corr.calcola(ts);
+                    corr.calculate(ts);
                     corr.print(std::cout);
                 }
             }

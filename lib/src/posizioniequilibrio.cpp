@@ -110,7 +110,7 @@ void PosizioniEquilibrio::reset(const unsigned int numeroTimestepsPerBlocco){
     lunghezza_media=numeroTimestepsPerBlocco;
 }
 
-void PosizioniEquilibrio::calcola(unsigned int primo) {
+void PosizioniEquilibrio::calculate(unsigned int primo) {
 
 
     azzera();

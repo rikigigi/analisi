@@ -57,7 +57,7 @@ void IstogrammaVelocita::reset(const unsigned int numeroTimestepsPerBlocco) {
 
 }
 
-void IstogrammaVelocita::calcola(unsigned int primo) {
+void IstogrammaVelocita::calculate(unsigned int primo) {
 
     for (unsigned int itimestep=primo;itimestep<primo+ntimestep;itimestep++)
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
@@ -72,4 +72,4 @@ void IstogrammaVelocita::calcola(unsigned int primo) {
 
 
 
-//template class MediaBlocchi<IstogrammaVelocita,unsigned int,double>;
+//template class BlockAverage<IstogrammaVelocita,unsigned int,double>;

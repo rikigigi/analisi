@@ -32,7 +32,7 @@ class SpettroVibrazionale : public VectorOp<SpettroVibrazionale<T> >
 public:
     unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
     SpettroVibrazionale(T* t,bool dump=false);
     ~SpettroVibrazionale();
     std::vector<ssize_t> get_shape() const { return {static_cast<ssize_t> (tipi_atomi),static_cast<ssize_t>(size/2+1),static_cast<ssize_t>(3)} ; }
@@ -58,6 +58,6 @@ private:
 };
 
 //per fare anche le varie medie a blocchi
-//template class MediaBlocchi<SpettroVibrazionale>;
+//template class BlockAverage<SpettroVibrazionale>;
 
 #endif // SPETTROVIBRAZIONALE_H
