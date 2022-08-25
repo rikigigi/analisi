@@ -39,7 +39,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIoni
                                                              unsigned int n_seg,
                                                              bool do_bench,
                                                              unsigned int n_seg_start,
-                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>(),
+                                                             unsigned int n_seg_stop) : VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),subtract_mean(subtract_mean),
     start_mean(start_mean),n_seg(n_seg),bench(false),
@@ -111,11 +111,11 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIoni
 #ifdef DEBUG2
     std::cerr << "Chiamato GreenKuboNComponentIonicFluid<TFLOAT>::operator =\n";
 #endif
-    OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG, TFLOAT,TFLOAT_READ>,TFLOAT >::operator =( destra);
+    VectorOp<GreenKuboNComponentIonicFluid<READLOG, TFLOAT,TFLOAT_READ>,TFLOAT >::operator =( destra);
     return *this;
 }
 
-template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::nExtraTimesteps(unsigned int n_b) {
     return (traiettoria->n_timestep()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->n_timestep()/(n_b+1)+1 : lmax;
 }
 

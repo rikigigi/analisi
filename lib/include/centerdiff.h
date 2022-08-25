@@ -5,11 +5,11 @@
 #include "operazionisulista.h"
 #include <array>
 
-class CenterDiff : public CalcolaMultiThread<CenterDiff>, public OperazioniSuLista<CenterDiff,double>
+class CenterDiff : public CalcolaMultiThread<CenterDiff>, public VectorOp<CenterDiff,double>
 {
 public:
     CenterDiff(Traiettoria *t, unsigned int nthreads=0, unsigned int skip=1, unsigned int nit=1,bool sum_first_two_and_ignore_vz=false,bool sum_1=false);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 0;}
+    unsigned int nExtraTimesteps(unsigned int n_b) {return 0;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith) noexcept;
     std::vector<ssize_t> get_shape() const {return {lunghezza_lista/3/nit/3,nit,3,3}; }
@@ -19,8 +19,8 @@ public:
     ~CenterDiff();
 private:
     Traiettoria *t;
-    using OperazioniSuLista<CenterDiff,double>::lista;
-    using OperazioniSuLista<CenterDiff,double>::lunghezza_lista;
+    using VectorOp<CenterDiff,double>::lista;
+    using VectorOp<CenterDiff,double>::lunghezza_lista;
     unsigned int nit,lista_alloc;
     bool sum_first_two_and_ignore_vz,sum_1;
     std::array<double,3*3> starting_center;

@@ -624,10 +624,10 @@ int main(int argc, char ** argv)
                 unsigned int nt=test.get_ntimesteps(),
                         s=(nt-1)/blocknumber;
                 h.reset(s);
-                test.imposta_dimensione_finestra_accesso(s);
+                test.set_data_access_block_size(s);
                 for (unsigned int i=0;i<blocknumber;i++){
                     unsigned int t=s*i;
-                    test.imposta_inizio_accesso(t);
+                    test.set_access_at(t);
                     h.calcola(t);
                 }
                 std::map<unsigned int, unsigned int> *hist=h.get_hist();
@@ -700,14 +700,14 @@ int main(int argc, char ** argv)
                 unsigned int nt=t.get_ntimesteps(),
                         s=(nt-1)/blocknumber;
                 corr.reset(s);
-                t.imposta_dimensione_finestra_accesso(s+corr.numeroTimestepsOltreFineBlocco(blocknumber));
+                t.set_data_access_block_size(s+corr.nExtraTimesteps(blocknumber));
                 //print stuff
                 std::cout << "#kdir= "<<kdir[0]<<" "<<kdir[1]<<" "<<kdir[2]<<std::endl
                           << "#dk= "<<nk.second<<std::endl
                           << "#nk= "<<nk.first<<std::endl;
                 for (unsigned int i=0;i<blocknumber;++i) {
                     unsigned int ts=s*i;
-                    t.imposta_inizio_accesso(ts);
+                    t.set_access_at(ts);
                     corr.calcola(ts);
                     corr.print(std::cout);
                 }

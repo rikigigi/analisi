@@ -27,7 +27,7 @@ double k;
 
 }
 
-IstogrammaVelocita::IstogrammaVelocita(Traiettoria *t, unsigned int nbins,double vminmax_) : OperazioniSuLista<IstogrammaVelocita> ()
+IstogrammaVelocita::IstogrammaVelocita(Traiettoria *t, unsigned int nbins,double vminmax_) : VectorOp<IstogrammaVelocita> ()
 {
 
     traiettoria=t;
@@ -40,12 +40,12 @@ IstogrammaVelocita::IstogrammaVelocita(Traiettoria *t, unsigned int nbins,double
 
 }
 
-unsigned int IstogrammaVelocita::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+unsigned int IstogrammaVelocita::nExtraTimesteps(unsigned int n_b) {
     return 0;
 }
 
 IstogrammaVelocita & IstogrammaVelocita::operator = (const IstogrammaVelocita & destra) {
-    OperazioniSuLista<IstogrammaVelocita>::operator =(destra);
+    VectorOp<IstogrammaVelocita>::operator =(destra);
     return *this;
 }
 

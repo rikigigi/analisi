@@ -18,12 +18,12 @@
 #include <string>
 #include <complex>
 
-class ModiVibrazionali : public OperazioniSuLista<ModiVibrazionali>
+class ModiVibrazionali : public VectorOp<ModiVibrazionali>
 {
 public:
     ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads, unsigned int timestep_blocco=0);
     void read_force_file(std::string f);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void azzera();
     void reset(unsigned int s);
     void calcola(unsigned int primo);

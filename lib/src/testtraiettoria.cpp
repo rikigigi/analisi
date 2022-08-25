@@ -31,10 +31,10 @@ TestTraiettoria::TestTraiettoria(std::string filename) : Traiettoria(filename)
 
     unsigned int ts_b=n_timesteps/(n_b+1);
 
-    imposta_dimensione_finestra_accesso(ts_b*2);
+    set_data_access_block_size(ts_b*2);
     for (unsigned int ib=0;ib<n_b;ib++) {
         std::cout << "Blocco "<<ib<<"\n";
-        imposta_inizio_accesso(ts_b*ib);
+        set_access_at(ts_b*ib);
         for (unsigned int ts=ts_b*ib;ts<ts_b*(ib+2);ts++) {
             out << ts <<" " <<posizioni(ts,iatom)[icoord] << " " << coord[ts] << " "<<posizioni_cm(ts,0)[icoord]<< " " << coord_cm[ts] <<"\n";
             coord[ts]=posizioni(ts,iatom)[icoord];

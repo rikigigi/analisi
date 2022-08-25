@@ -31,18 +31,18 @@
 
 template <class TR> class TraiettoriaF {
 public:
-    static void imposta_dimensione_finestra_accesso(unsigned int s_,TR* traiettoria ){}
-    static void imposta_inizio_accesso(unsigned int s_,TR* traiettoria  ){}
+    static void set_data_access_block_size(unsigned int s_,TR* traiettoria ){}
+    static void set_access_at(unsigned int s_,TR* traiettoria  ){}
     static unsigned int get_ntimesteps(TR* traiettoria ){abort();return 0;}
 };
 
 template <> class TraiettoriaF<Traiettoria> {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,Traiettoria* traiettoria ){
-    traiettoria->imposta_dimensione_finestra_accesso(s_);
+static void set_data_access_block_size(unsigned int s_,Traiettoria* traiettoria ){
+    traiettoria->set_data_access_block_size(s_);
 }
-static void imposta_inizio_accesso(unsigned int s_,Traiettoria* traiettoria  ){
-    traiettoria->imposta_inizio_accesso(s_);
+static void set_access_at(unsigned int s_,Traiettoria* traiettoria  ){
+    traiettoria->set_access_at(s_);
 }
 static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
     return traiettoria->get_ntimesteps();
@@ -53,10 +53,10 @@ static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
 
 template <> class TraiettoriaF<ReadLog<> > {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog<>* traiettoria ){
+static void set_data_access_block_size(unsigned int s_,ReadLog<>* traiettoria ){
 
 }
-static void imposta_inizio_accesso(unsigned int s_,ReadLog<>* traiettoria  ){
+static void set_access_at(unsigned int s_,ReadLog<>* traiettoria  ){
 
 }
 static unsigned int get_ntimesteps(ReadLog<>* traiettoria ){
@@ -67,10 +67,10 @@ static unsigned int get_ntimesteps(ReadLog<>* traiettoria ){
 
 template <> class TraiettoriaF<ReadLog<long double> > {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog<long double>* traiettoria ){
+static void set_data_access_block_size(unsigned int s_,ReadLog<long double>* traiettoria ){
 
 }
-static void imposta_inizio_accesso(unsigned int s_,ReadLog<long double>* traiettoria  ){
+static void set_access_at(unsigned int s_,ReadLog<long double>* traiettoria  ){
 
 }
 static unsigned int get_ntimesteps(ReadLog<long double>* traiettoria ){
@@ -113,7 +113,7 @@ public:
 
 
         calcolo = new T (traiettoria,arg...);
-        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->numeroTimestepsOltreFineBlocco(n_b))/n_b;
+        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->nExtraTimesteps(n_b))/n_b;
         if(timestepsPerBlocco>0){
             s=timestepsPerBlocco;
             ok=true;
@@ -124,7 +124,7 @@ public:
         calcolo->reset(s);
         calc->calcola_begin(s,calcolo);
 
-        TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
+        TraiettoriaF<TR>::set_data_access_block_size(s+calcolo->nExtraTimesteps(n_b),traiettoria);
         cronometro cron;
 #ifndef USE_MPI
         cron.set_expected(1.0/double(n_b));
@@ -136,7 +136,7 @@ public:
 #endif
 
             calcolo->reset(s);
-            TraiettoriaF<TR>::imposta_inizio_accesso(iblock*s,traiettoria);
+            TraiettoriaF<TR>::set_access_at(iblock*s,traiettoria);
             calcolo->calcola(iblock*s);
 
             calc->calcola(calcolo);
@@ -162,7 +162,7 @@ public:
                 break;
             }
             calcolo->reset(s);
-            TraiettoriaF<TR>::imposta_inizio_accesso(ib*s,traiettoria);
+            TraiettoriaF<TR>::set_access_at(ib*s,traiettoria);
             calcolo->calcola(ib*s);
             cronometro cronmpi;
             unsigned int mpirecv=1;

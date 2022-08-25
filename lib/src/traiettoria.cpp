@@ -329,7 +329,7 @@ size_t Traiettoria::leggi_pezzo_intestazione(const size_t &partenza /// offset d
 }
 
 
-Traiettoria::Errori Traiettoria::imposta_dimensione_finestra_accesso(const size_t &Ntimesteps){
+Traiettoria::Errori Traiettoria::set_data_access_block_size(const size_t &Ntimesteps){
     if (!ok) {
         std::cerr << "mmap not correctly initialized!\n";
         return non_inizializzato;
@@ -430,7 +430,7 @@ void Traiettoria::index_all() {
 #endif
 }
 
-Traiettoria::Errori Traiettoria::imposta_inizio_accesso(const size_t &timestep) {
+Traiettoria::Errori Traiettoria::set_access_at(const size_t &timestep) {
 
     cronometro cron;
     cron.start();

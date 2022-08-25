@@ -17,10 +17,10 @@ constexpr int FLAGS =
 template <int l, class TFLOAT, class T>
 class Steinhardt : public SphericalBase<l,TFLOAT,T>,
         public CalcolaMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >,
-        public OperazioniSuLista<Steinhardt<l,TFLOAT,T>,TFLOAT>
+        public VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>
 {
 public:
-    using LISTA = OperazioniSuLista<Steinhardt<l,TFLOAT,T>,TFLOAT>;
+    using LISTA = VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>;
     using SPB = SphericalBase<l,TFLOAT,T>;
     using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
     using CMT::calcola;
@@ -40,7 +40,7 @@ public:
                const bool averaged_order = false
             );
 
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int nb) {return 0;}
+    unsigned int nExtraTimesteps(unsigned int nb) {return 0;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calc_init(int primo);
     void calc_single_th(int,//average index, begin

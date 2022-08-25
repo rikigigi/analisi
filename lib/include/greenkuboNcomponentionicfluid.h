@@ -21,7 +21,7 @@
 #include <string>
 
 template <class READLOG,class TFLOAT=double, class TFLOAT_READ=double >
-class GreenKuboNComponentIonicFluid : public OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>
+class GreenKuboNComponentIonicFluid : public VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>
 {
 public:
     GreenKuboNComponentIonicFluid(READLOG * traiettoria,
@@ -39,7 +39,7 @@ public:
                                   unsigned int n_seg_stop=100
             );
     ~GreenKuboNComponentIonicFluid();
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ> & operator =(const GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ> &);
@@ -52,8 +52,8 @@ public:
     std::vector<ssize_t> get_stride();
 
     private:
-    using OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::lista;
-    using OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::lunghezza_lista;
+    using VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::lista;
+    using VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>::lunghezza_lista;
     static bool benchmarked;
     unsigned int narr,N_corr,start_mean,n_seg,n_seg_start,n_seg_stop;
     bool scrivi_file,subtract_mean,bench;

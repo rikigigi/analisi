@@ -18,7 +18,7 @@
 #include <array>
 
 
-class GreenKubo2ComponentIonicFluid : public OperazioniSuLista<GreenKubo2ComponentIonicFluid>
+class GreenKubo2ComponentIonicFluid : public VectorOp<GreenKubo2ComponentIonicFluid>
 {
 public:
     GreenKubo2ComponentIonicFluid(ReadLog<> * traiettoria,
@@ -31,7 +31,7 @@ public:
 				  unsigned int n_ris=100
             );
     ~GreenKubo2ComponentIonicFluid();
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     GreenKubo2ComponentIonicFluid & operator =(const GreenKubo2ComponentIonicFluid &);

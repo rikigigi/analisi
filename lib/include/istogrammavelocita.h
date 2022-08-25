@@ -16,11 +16,11 @@
 #include "operazionisulista.h"
 #include "traiettoria.h"
 
-class IstogrammaVelocita : public OperazioniSuLista<IstogrammaVelocita>
+class IstogrammaVelocita : public VectorOp<IstogrammaVelocita>
 {
 public:
     IstogrammaVelocita(Traiettoria *t,unsigned int nbins,double vminmax_);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     IstogrammaVelocita & operator =(const IstogrammaVelocita & destra);

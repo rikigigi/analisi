@@ -16,8 +16,8 @@ struct TestPath{
 struct TrajSetup{
     explicit TrajSetup(bool pbc=false,bool f2020=false): traj{f2020? path.path+"data/lammps2020.bin" : path.path+"data/lammps.bin"}{
     traj.set_pbc_wrap(pbc);
-	traj.imposta_dimensione_finestra_accesso(150);
-	traj.imposta_inizio_accesso(0);
+	traj.set_data_access_block_size(150);
+	traj.set_access_at(0);
     }
     const TestPath path;
     Traiettoria traj;

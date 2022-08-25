@@ -21,7 +21,7 @@
 #include <string>
 #include <mpi.h>
 
-template <class T,class TFLOAT> class OperazioniSuLista;
+template <class T,class TFLOAT> class VectorOp;
 
 class Mp
 {
@@ -32,11 +32,11 @@ public:
     bool ionode();
     std::string outname(std::string s);
 
-     template <class T,class T2> void send_to_root(OperazioniSuLista<T,T2> * l) {
+     template <class T,class T2> void send_to_root(VectorOp<T,T2> * l) {
         MPI_Send( l->accesso_lista(),l->lunghezza(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
 
-     template <class T,class T2> void recv_root(OperazioniSuLista<T,T2> * l,int source){
+     template <class T,class T2> void recv_root(VectorOp<T,T2> * l,int source){
     MPI_Recv(l->accesso_lista(),l->lunghezza(),MPI_DOUBLE,source,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 }
 

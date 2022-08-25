@@ -16,14 +16,14 @@
 
 class Traiettoria;
 
-class HeatC: public OperazioniSuLista<HeatC, double>
+class HeatC: public VectorOp<HeatC, double>
 {
 public:
     HeatC(Traiettoria *t,
           double sigma,
           unsigned int nthreads=0,
           unsigned int skip=1);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 1;}
+    unsigned int nExtraTimesteps(unsigned int n_b) {return 1;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     HeatC & operator = (const HeatC &);

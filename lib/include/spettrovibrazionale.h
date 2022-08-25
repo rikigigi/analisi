@@ -29,10 +29,10 @@ class Traiettoria;
 
 
 template <class T>
-class SpettroVibrazionale : public OperazioniSuLista<SpettroVibrazionale<T> >
+class SpettroVibrazionale : public VectorOp<SpettroVibrazionale<T> >
 {
 public:
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     SpettroVibrazionale(T* t,bool dump=false);
@@ -48,8 +48,8 @@ private:
     T * traiettoria;
     unsigned int size;
     int tipi_atomi;
-    using OperazioniSuLista<SpettroVibrazionale<T> >::lista;
-    using OperazioniSuLista<SpettroVibrazionale<T> >::lunghezza_lista;
+    using VectorOp<SpettroVibrazionale<T> >::lista;
+    using VectorOp<SpettroVibrazionale<T> >::lunghezza_lista;
     unsigned int trasformata_size;
     fftw_complex * trasformata;
     static fftw_plan fftw3;

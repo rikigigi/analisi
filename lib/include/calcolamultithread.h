@@ -181,7 +181,7 @@ public:
     /*
      * those must be implemented to interface with block averages stuff. Anyway, there are useful
     */
-    //unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b)=0;
+    //unsigned int nExtraTimesteps(unsigned int n_b)=0;
     /*
      * This function must allocate all the memory:  The argument is the number of timesteps to be calculated.
      * remember to set ntimesteps here, so the division of the work can be done correctly

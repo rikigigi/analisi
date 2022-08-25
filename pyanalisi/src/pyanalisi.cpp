@@ -72,7 +72,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                                                                                                           calculates g(r) and, in general, g(r,t). Interesting dynamical property
                                                                                                           Parameters                                                                                                          ----------                                                                                                         Trajectory instance                                                                                                          rmin                                                                                                          rmax                                                                                                          nbin                                                                                                          maximum time lag                                                                                                          number of threads                                                                                                          time skip                                                    every time                                         debug flag                                                                                                          )begend")
             .def("reset",& Gofrt<double,T>::reset,R"begend()begend")
-            .def("getNumberOfExtraTimestepsNeeded",&Gofrt<double,T>::numeroTimestepsOltreFineBlocco ,R"begend()begend")
+            .def("getNumberOfExtraTimestepsNeeded",&Gofrt<double,T>::nExtraTimesteps ,R"begend()begend")
             .def("calculate", & Gofrt<double,T>::calcola,R"begend()begend")
             .def_buffer([](Gofrt<double,T> & g) -> py::buffer_info {
         return py::buffer_info(
@@ -133,7 +133,7 @@ void define_atomic_traj(py::module & m, std::string typestr){
                  debug flag
                  )begend")
             .def("reset",&MSD::reset)
-            .def("getNumberOfExtraTimestepsNeeded",&MSD::numeroTimestepsOltreFineBlocco)
+            .def("getNumberOfExtraTimestepsNeeded",&MSD::nExtraTimesteps)
             .def("calculate", &MSD::calcola)
             .def_buffer([](MSD & m) -> py::buffer_info {
                 return py::buffer_info(
@@ -258,7 +258,7 @@ void gk(py::module & m, std::string typestr){
                  unsigned int -> benchmark parameter start
                  unsigned int -> benchmark parameter stop
                  )begend")
-            .def("getNumberOfExtraTimestepsNeeded",&GK::numeroTimestepsOltreFineBlocco,R"begend(
+            .def("getNumberOfExtraTimestepsNeeded",&GK::nExtraTimesteps,R"begend(
                 perform an efficient, multithreaded Green-Kubo calculations of the transport coefficient of a condensed matter system, given the currents.
 )begend")
             .def("reset",&GK::reset,R"begend()begend")
@@ -384,7 +384,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                  ----------
                  True/False
 )begend")
-            .def("setAccessWindowSize",[](Traiettoria & t,int ts) {return (int) t.imposta_dimensione_finestra_accesso(ts);},R"begend(
+            .def("setAccessWindowSize",[](Traiettoria & t,int ts) {return (int) t.set_data_access_block_size(ts);},R"begend(
                  sets the size of the read block. Must fit in memory
                  
                  Parameters
@@ -396,7 +396,7 @@ PYBIND11_MODULE(pyanalisi,m) {
                  1 -> success
                  0/-1 -> failure
 )begend")
-            .def("setAccessStart",[](Traiettoria & t,int ts) {return (int) t.imposta_inizio_accesso(ts);},R"begend(
+            .def("setAccessStart",[](Traiettoria & t,int ts) {return (int) t.set_access_at(ts);},R"begend(
                  sets the first timestep to read, and read the full block
 
                  Parameters

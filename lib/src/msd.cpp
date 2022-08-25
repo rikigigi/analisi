@@ -34,7 +34,7 @@ MSD<T,FPE>::MSD(T *t, unsigned int skip, unsigned int tmax, unsigned int nthread
         f_cm=1;
 }
 template <class T,bool FPE>
-unsigned int MSD<T,FPE>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int MSD<T,FPE>::nExtraTimesteps(unsigned int n_b){
     return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
 template <class T,bool FPE>
@@ -148,7 +148,7 @@ void MSD<T,FPE>::calc_end() {
 
 template <class T,bool FPE>
 MSD<T,FPE> & MSD<T,FPE>::operator=(const MSD<T,FPE> &destra) {
-    OperazioniSuLista<MSD<T,FPE> >::operator =( destra);
+    VectorOp<MSD<T,FPE> >::operator =( destra);
     return *this;
 }
 

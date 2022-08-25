@@ -103,7 +103,7 @@ PosizioniEquilibrio::~PosizioniEquilibrio(){
     delete [] traslation;
 }
 
-unsigned int PosizioniEquilibrio::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int PosizioniEquilibrio::nExtraTimesteps(unsigned int n_b){
     return 0;
 }
 
@@ -117,11 +117,11 @@ void PosizioniEquilibrio::calcola(unsigned int primo) {
     azzera();
 
     if (timestepSottoblocco>0)
-        traiettoria->imposta_dimensione_finestra_accesso(timestepSottoblocco);
+        traiettoria->set_data_access_block_size(timestepSottoblocco);
 
     for (unsigned int i=0;i<lunghezza_media;i++){
         if (timestepSottoblocco>0 && i%timestepSottoblocco==0){
-            traiettoria->imposta_inizio_accesso(primo+i);
+            traiettoria->set_access_at(primo+i);
         }
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++){
             for (unsigned int icoord=0;icoord<3;icoord++){

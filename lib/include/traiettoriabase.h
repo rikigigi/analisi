@@ -76,8 +76,8 @@ public:
         }
     }
     enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
-    Errori imposta_dimensione_finestra_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
-    Errori imposta_inizio_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
+    Errori set_data_access_block_size(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
+    Errori set_access_at(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
     //void index_all();
 
     //I have to set this before loading the trajectory

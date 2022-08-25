@@ -15,7 +15,7 @@
 #include <fstream>
 
 template <class T>
-SpettroVibrazionale<T>::SpettroVibrazionale(T * t, bool dump_):OperazioniSuLista<SpettroVibrazionale>()
+SpettroVibrazionale<T>::SpettroVibrazionale(T * t, bool dump_):VectorOp<SpettroVibrazionale>()
 {
     traiettoria=t;
     dump=dump_;
@@ -48,7 +48,7 @@ void SpettroVibrazionale<T>::deallocate_plan(){
 }
 
 template <class T>
-unsigned int SpettroVibrazionale<T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int SpettroVibrazionale<T>::nExtraTimesteps(unsigned int n_b){
     return 0;
 }
 
@@ -186,7 +186,7 @@ SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibraz
 #ifdef DEBUG
     std::cerr << "called SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
 #endif
-    OperazioniSuLista<SpettroVibrazionale<T>>::operator =(destra);
+    VectorOp<SpettroVibrazionale<T>>::operator =(destra);
 
     //TODO: cos'è sta roba?????
     fftw_free(trasformata);

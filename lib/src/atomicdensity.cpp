@@ -13,7 +13,7 @@ AtomicDensity<T,Hist>::AtomicDensity(T *t, std::array<ssize_t, 3> nbin, unsigned
 
 template <class T, class Hist>
 AtomicDensity<T,Hist>::~AtomicDensity() {
-    delete [] hist; // lista deleted in OperazioniSuLista
+    delete [] hist; // lista deleted in VectorOp
 }
 
 template <class T, class Hist>
@@ -50,7 +50,7 @@ void AtomicDensity<T,Hist>::join_data() {
 }
 
 template <class T, class Hist>
-unsigned int  AtomicDensity<T,Hist>::numeroTimestepsOltreFineBlocco(unsigned int n_b)  {return 0;}
+unsigned int  AtomicDensity<T,Hist>::nExtraTimesteps(unsigned int n_b)  {return 0;}
 template <class T, class Hist>
 void  AtomicDensity<T,Hist>::reset(const unsigned int numeroTimestepsPerBlocco) {
     ntimesteps=numeroTimestepsPerBlocco;

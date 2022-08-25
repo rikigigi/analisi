@@ -20,12 +20,12 @@
 #include <vector>
 #include "eigen_include.h"
 
-class PosizioniEquilibrio : public OperazioniSuLista<PosizioniEquilibrio>
+class PosizioniEquilibrio : public VectorOp<PosizioniEquilibrio>
 {
 public:
     PosizioniEquilibrio(Traiettoria *, unsigned int timesteps_sottoblocco=0);
     ~PosizioniEquilibrio();
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int primo);
     void fit_nacl();

@@ -20,7 +20,7 @@
 class Traiettoria;
 
 
-class CorrelatoreSpaziale : public CalcolaMultiThread<CorrelatoreSpaziale>, public OperazioniSuLista<CorrelatoreSpaziale,double>
+class CorrelatoreSpaziale : public CalcolaMultiThread<CorrelatoreSpaziale>, public VectorOp<CorrelatoreSpaziale,double>
 {
 public:
     CorrelatoreSpaziale(Traiettoria *t,
@@ -30,7 +30,7 @@ public:
                         unsigned int skip=1,
                         bool debug=false
             );
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 1;}
+    unsigned int nExtraTimesteps(unsigned int n_b) {return 1;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith) noexcept;
     void s_fac_k(const double  k[3], const unsigned int i_t,double * out ) const;
@@ -43,8 +43,8 @@ public:
     void join_data(){}
 
 private:
-    using OperazioniSuLista<CorrelatoreSpaziale,double>::lista;
-    using OperazioniSuLista<CorrelatoreSpaziale,double>::lunghezza_lista;
+    using VectorOp<CorrelatoreSpaziale,double>::lista;
+    using VectorOp<CorrelatoreSpaziale,double>::lunghezza_lista;
     Traiettoria *t;
     double * sfac;
     std::vector< std::array<double,3> > klist;

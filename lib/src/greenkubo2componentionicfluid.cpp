@@ -19,7 +19,7 @@
 
 //const unsigned int GreenKubo2ComponentIonicFluid::narr=14;
 
-GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog<> *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads,unsigned int n_ris) : OperazioniSuLista<GreenKubo2ComponentIonicFluid>(),
+GreenKubo2ComponentIonicFluid::GreenKubo2ComponentIonicFluid(ReadLog<> *traiettoria, std::string log, double * cariche, unsigned int skip, bool dump, unsigned int lunghezza_funzione_max, unsigned int nthreads,unsigned int n_ris) : VectorOp<GreenKubo2ComponentIonicFluid>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),lmax(lunghezza_funzione_max),nthread(nthreads),n_ris(n_ris)
 {
     carica[0]=cariche[0];
@@ -54,11 +54,11 @@ GreenKubo2ComponentIonicFluid & GreenKubo2ComponentIonicFluid::operator =(const 
 #ifdef DEBUG2
     std::cerr << "Chiamato GreenKubo2ComponentIonicFluid::operator =\n";
 #endif
-    OperazioniSuLista<GreenKubo2ComponentIonicFluid>::operator =( destra);
+    VectorOp<GreenKubo2ComponentIonicFluid>::operator =( destra);
     return *this;
 }
 
-unsigned int GreenKubo2ComponentIonicFluid::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+unsigned int GreenKubo2ComponentIonicFluid::nExtraTimesteps(unsigned int n_b) {
     return (traiettoria->n_timestep()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->n_timestep()/(n_b+1)+1 : lmax;
 }
 

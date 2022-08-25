@@ -26,9 +26,9 @@
 #include "lammps_struct.h"
 
 /**
- * Questa classe garantisce un accesso veloce ai timestep caricati con imposta_inizio_accesso
+ * Questa classe garantisce un accesso veloce ai timestep caricati con set_access_at
  * , che carica tutti i timestepa partendo da quello specificato in un numero pari a quello richiesto
- * con la funzione imposta_dimensione_finestra_accesso in precedenza. Caricare nuovi pezzi costa nuove
+ * con la funzione set_data_access_block_size in precedenza. Caricare nuovi pezzi costa nuove
  * allocazioni (e deallocazioni) di memoria e tempo cpu. Il file viene letto tramite la chiamata di sistema mmap.
  * Nel programma vengono allocati con new [] solo degli array dove vengono immagazzinati i dati
  * della finestra (quindi consumando meno memoria che nel caricamento del file in un unico colpo)
@@ -59,7 +59,7 @@ public:
 #ifdef DEBUG
                 std::cerr << "Warning: loading timesteps starting from "<<timestep<<" not requested with the loading routines!\n";
 #endif
-                if(imposta_inizio_accesso(timestep)) {
+                if(set_access_at(timestep)) {
                     t=timestep-timestep_corrente;
                     if (timestep>=timestep_corrente && t< loaded_timesteps){
                         return base + t*stride1+atomo*stride2;
@@ -105,8 +105,8 @@ public:
     }
 
     using TraiettoriaBase<Traiettoria>::Errori;
-    Traiettoria::Errori imposta_dimensione_finestra_accesso(const size_t & timesteps);
-    Traiettoria::Errori imposta_inizio_accesso(const size_t & timesteps);
+    Traiettoria::Errori set_data_access_block_size(const size_t & timesteps);
+    Traiettoria::Errori set_access_at(const size_t & timesteps);
     int64_t get_timestep_lammps(size_t timestep);
     void index_all();
     int * get_lammps_id();

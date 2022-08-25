@@ -6,7 +6,7 @@
 #include "sphericalbase.h"
 
 template <int l,class TFLOAT, class T>
-class SphericalCorrelations : public OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>,
+class SphericalCorrelations : public VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>,
         public SphericalBase<l,TFLOAT,T>
 {
 public:
@@ -27,9 +27,9 @@ public:
     ~SphericalCorrelations();
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calcola(unsigned int);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     SphericalCorrelations<l,TFLOAT,T> & operator =(const SphericalCorrelations<l,TFLOAT,T> & destra){
-        OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);
+        VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::operator = (destra);
         return *this;
     }
     const std::vector<ssize_t> get_shape()const { return {(ssize_t)leff,(ssize_t)ntypes,(ssize_t)ntypes,(ssize_t)nbin,(ssize_t)(l+1)};}
@@ -49,7 +49,7 @@ public:
     inline int index(const int t, const int type1, const int type2,const int ibin=0) const noexcept {
         return (l+1)*(nbin*(ntypes*(ntypes*t + type1) + type2)+ibin);
     }
-    using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
+    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::azzera;
     size_t get_single_type_size() const {
         return SPB::get_single_atom_size();
     }
@@ -63,8 +63,8 @@ public:
 
     using SPB::calc;
 protected:
-    using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
-    using OperazioniSuLista<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
+    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lista;
+    using VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>::lunghezza_lista;
     T & t;
 
     size_t nbin, tmax,nthreads,skip,leff,ntimesteps,buffer_size;

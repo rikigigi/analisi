@@ -269,14 +269,14 @@ template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsi
             throw std::runtime_error("Cannot calculate current: number of coefficients must be equal to the number of atomic types in the trajectory!\n");
         }
     }
-    traiettoria->imposta_dimensione_finestra_accesso(n_data_b);
+    traiettoria->set_data_access_block_size(n_data_b);
     for (unsigned int ib=0;ib<n_b;ib++){
         unsigned int ultimo=(ib+1)*n_data_b;
         if (ib==n_b-1){
             ultimo=timesteps_tot;
-            traiettoria->imposta_dimensione_finestra_accesso(ultimo-ib*n_data_b);
+            traiettoria->set_data_access_block_size(ultimo-ib*n_data_b);
         }
-        traiettoria->imposta_inizio_accesso(n_data_b*ib);
+        traiettoria->set_access_at(n_data_b*ib);
         for (unsigned int ts=ib*n_data_b;ts<ultimo;ts++){
             //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
             for (unsigned int i=0;i<q_current_type.size();i++) {

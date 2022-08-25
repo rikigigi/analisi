@@ -37,7 +37,7 @@ template <class TFLOAT, class T> Gofrt<TFLOAT,T>::~Gofrt() {
 
 }
 
-template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::nExtraTimesteps(unsigned int n_b){
     return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
 
@@ -158,7 +158,7 @@ void Gofrt<TFLOAT,T>::calc_end() {
 }
 
 template <class TFLOAT, class T> Gofrt<TFLOAT,T> & Gofrt<TFLOAT,T>::operator =(const Gofrt<TFLOAT,T> &destra) {
-    OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT >::operator = (destra);
+    VectorOp<Gofrt<TFLOAT,T>,TFLOAT >::operator = (destra);
     return *this;
 }
 

@@ -5,11 +5,11 @@
 #include "operazionisulista.h"
 #include <valarray>
 
-class CenterOfMassDiff : public CalcolaMultiThread<CenterOfMassDiff>, public OperazioniSuLista<CenterOfMassDiff,double>
+class CenterOfMassDiff : public CalcolaMultiThread<CenterOfMassDiff>, public VectorOp<CenterOfMassDiff,double>
 {
 public:
     CenterOfMassDiff(Traiettoria *t, unsigned int nthreads=0, unsigned int skip=1);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 0;}
+    unsigned int nExtraTimesteps(unsigned int n_b) {return 0;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calc_single_th(const unsigned int &start, const unsigned int &stop, const unsigned int &primo, const unsigned int & ith) noexcept;
     std::vector<ssize_t> get_shape() const {return {ntimesteps/skip,ntype,3}; }
@@ -21,8 +21,8 @@ public:
     ~CenterOfMassDiff();
 private:
     Traiettoria *t;
-    using OperazioniSuLista<CenterOfMassDiff,double>::lista;
-    using OperazioniSuLista<CenterOfMassDiff,double>::lunghezza_lista;
+    using VectorOp<CenterOfMassDiff,double>::lista;
+    using VectorOp<CenterOfMassDiff,double>::lunghezza_lista;
     unsigned int lista_alloc;
     int ntype,maxiter;
     std::valarray<double> starting_center;

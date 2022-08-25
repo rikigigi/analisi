@@ -30,7 +30,7 @@ SphericalCorrelations<l,TFLOAT,T>::~SphericalCorrelations() {
 
 
 template <int l, class TFLOAT, class T>
-unsigned int SphericalCorrelations<l,TFLOAT,T>::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+unsigned int SphericalCorrelations<l,TFLOAT,T>::nExtraTimesteps(unsigned int n_b) {
     return (t.get_ntimesteps()/(n_b+1)+1 < tmax || tmax==0)? t.get_ntimesteps()/(n_b+1)+1 : tmax;
 }
 

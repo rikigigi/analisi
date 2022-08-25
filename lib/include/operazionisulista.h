@@ -23,12 +23,12 @@
   * Definisce le operazioni, eseguite membro a membro, con uno scalare.
 **/
 
-template <class T,class TFLOAT=double> class OperazioniSuLista
+template <class T,class TFLOAT=double> class VectorOp
 {
 public:
-    OperazioniSuLista<T,TFLOAT> &operator =(const OperazioniSuLista<T, TFLOAT> &destra) {
+    VectorOp<T,TFLOAT> &operator =(const VectorOp<T, TFLOAT> &destra) {
 #ifdef DEBUG2
-        std::cerr << "chiamato OperazioniSuLista<T, TFLOAT>::operator = " __FILE__ ":"<<__LINE__<<"\n";
+        std::cerr << "chiamato VectorOp<T, TFLOAT>::operator = " __FILE__ ":"<<__LINE__<<"\n";
 #endif
         if (lunghezza_lista!=destra.lunghezza_lista) { //rialloca la memoria
 #ifdef DEBUG2
@@ -51,7 +51,7 @@ public:
 
         return *this;
     }
-    OperazioniSuLista<T,TFLOAT> &operator =(OperazioniSuLista<T,TFLOAT> &&) = default;
+    VectorOp<T,TFLOAT> &operator =(VectorOp<T,TFLOAT> &&) = default;
     T & operator+= (const T&destra){
         if (destra.lunghezza()== lunghezza_lista) {
             for (unsigned int i=0;i<lunghezza_lista;i++) {
@@ -77,7 +77,7 @@ public:
     T & operator*= (const T & destra) {
         if (destra.lunghezza()== lunghezza_lista) {
 #ifdef DEBUG2
-            std::cerr << "chiamato OperazioniSuLista<T>::operator *= " __FILE__ ":"<<__LINE__<<"\n";
+            std::cerr << "chiamato VectorOp<T>::operator *= " __FILE__ ":"<<__LINE__<<"\n";
             std::cerr << "lista = "<<lista<<", destra.lista = " << destra.lista << "\n";
 #endif
             for (unsigned int i=0;i<lunghezza_lista;i++) {
@@ -169,23 +169,23 @@ public:
         }
     }
 protected:
-    OperazioniSuLista<T,TFLOAT> (const OperazioniSuLista<T, TFLOAT> & copiare) {
+    VectorOp<T,TFLOAT> (const VectorOp<T, TFLOAT> & copiare) {
         lista=0;
         lunghezza_lista=0;
         operator=(copiare);
     #ifdef DEBUG
-        std::cerr << "OperazioniSuLista<T, TFLOAT>::OperazioniSuLista(const OperazioniSuLista<T, TFLOAT> & copiare) "<<lista<<"\n";
+        std::cerr << "VectorOp<T, TFLOAT>::VectorOp(const VectorOp<T, TFLOAT> & copiare) "<<lista<<"\n";
     #endif
     }
 
     TFLOAT * lista;
-    OperazioniSuLista(){
+    VectorOp(){
         lista=0;
         lunghezza_lista=0;
     }
-    ~OperazioniSuLista(){
+    ~VectorOp(){
 #ifdef DEBUG2
-    std::cerr << "chiamato OperazioniSuLista<T, TFLOAT>::~OperazioniSuLista " __FILE__ ":"<<__LINE__<<"\n";
+    std::cerr << "chiamato VectorOp<T, TFLOAT>::~VectorOp " __FILE__ ":"<<__LINE__<<"\n";
     std::cerr << "delete [] "<<lista<<"\n";
 #endif
     delete [] lista;

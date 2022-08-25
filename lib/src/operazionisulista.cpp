@@ -29,44 +29,44 @@
 #include "centerofmassdiff.h"
 
 
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator + (const T & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator + (const T & destra) const {
     T res = static_cast<const T&>(*this);
     res+=destra;
     return res;
 }
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator - (const T & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator - (const T & destra) const {
     T res =  static_cast<const T&>(*this);
     res-=destra;
     return res;
 }
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator * (const T & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator * (const T & destra) const {
     T res = static_cast<const T&>(*this);
     res*=destra;
     return res;
 }
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator / (const T & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator / (const T & destra) const {
     T res = static_cast<const T&>(*this);
     res/=destra;
     return res;
 }
 
 
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator + (const TFLOAT & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator + (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res+=destra;
     return res;
 }
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator - (const TFLOAT & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator - (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res-=destra;
     return res;
 }
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator * (const TFLOAT & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator * (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res*=destra;
     return res;
 }
-template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::operator / (const TFLOAT & destra) const {
+template < class T, class TFLOAT > const T  VectorOp < T, TFLOAT >::operator / (const TFLOAT & destra) const {
     T res = static_cast<const T&>(*this);
     res/=destra;
     return res;
@@ -75,20 +75,20 @@ template < class T, class TFLOAT > const T  OperazioniSuLista < T, TFLOAT >::ope
 
 
 
-template class OperazioniSuLista<SpettroVibrazionale>;
-template class OperazioniSuLista<PosizioniEquilibrio>;
-template class OperazioniSuLista<ModiVibrazionali>;
-template class OperazioniSuLista<IstogrammaVelocita>;
-template class OperazioniSuLista<GreenKubo2ComponentIonicFluid>;
-template class OperazioniSuLista<GreenKuboNComponentIonicFluid<> >;
-template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,double>,long double >;
-template class OperazioniSuLista<GreenKuboNComponentIonicFluid<long double,long double>,long double >;
-template class OperazioniSuLista<MSD>;
-template class OperazioniSuLista<Gofrt<double>,double>;
-template class OperazioniSuLista<Gofrt<long double>,long double>;
-template class OperazioniSuLista<HeatC, double>;
-template class OperazioniSuLista<CorrelatoreSpaziale,double>;
-template class OperazioniSuLista<CenterDiff,double>;
-template class OperazioniSuLista<CenterOfMassDiff,double>;
-//template class OperazioniSuLista<CalcolaMultiThread,double>;
+template class VectorOp<SpettroVibrazionale>;
+template class VectorOp<PosizioniEquilibrio>;
+template class VectorOp<ModiVibrazionali>;
+template class VectorOp<IstogrammaVelocita>;
+template class VectorOp<GreenKubo2ComponentIonicFluid>;
+template class VectorOp<GreenKuboNComponentIonicFluid<> >;
+template class VectorOp<GreenKuboNComponentIonicFluid<long double,double>,long double >;
+template class VectorOp<GreenKuboNComponentIonicFluid<long double,long double>,long double >;
+template class VectorOp<MSD>;
+template class VectorOp<Gofrt<double>,double>;
+template class VectorOp<Gofrt<long double>,long double>;
+template class VectorOp<HeatC, double>;
+template class VectorOp<CorrelatoreSpaziale,double>;
+template class VectorOp<CenterDiff,double>;
+template class VectorOp<CenterOfMassDiff,double>;
+//template class VectorOp<CalcolaMultiThread,double>;
 */

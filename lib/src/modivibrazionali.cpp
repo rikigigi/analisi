@@ -37,7 +37,7 @@ void istg(double a,/// estremo inferiore dell'intervallo da istogrammare
 //unità immaginaria
 const std::complex<double> I(0.0,1.0);
 
-ModiVibrazionali::ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads,unsigned int timestep_blocco) : OperazioniSuLista<ModiVibrazionali>()
+ModiVibrazionali::ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads,unsigned int timestep_blocco) : VectorOp<ModiVibrazionali>()
 {
     if (n_threads==0)
         numero_threads=1;
@@ -101,7 +101,7 @@ void ModiVibrazionali::read_force_file(std::string f) {
 
 }
 
-unsigned int ModiVibrazionali::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int ModiVibrazionali::nExtraTimesteps(unsigned int n_b){
     return 0;
 }
 
@@ -386,11 +386,11 @@ fine_calcolo_fononi:
     // se ho una traiettoria troppo lunga, che non sta nella ram in un colpo solo, devo caricare il file a pezzi (compito svolto da traiettoria)
     unsigned int ntimestep_load=timestepBlocco + numero_threads - timestepBlocco%numero_threads;
     if (timestepBlocco!=0)
-        traiettoria->imposta_dimensione_finestra_accesso(ntimestep_load); //quanti dati carico in memoria
+        traiettoria->set_data_access_block_size(ntimestep_load); //quanti dati carico in memoria
 
     for (unsigned int istep=0;istep<numero_timesteps;istep+=numero_threads) {
         if (timestepBlocco!=0 && istep%ntimestep_load==0){
-            traiettoria->imposta_inizio_accesso(istep+primo); // carica il prossimo blocco di dati
+            traiettoria->set_access_at(istep+primo); // carica il prossimo blocco di dati
         }
 
 
@@ -558,7 +558,7 @@ fine_calcolo_fononi:
 
 /* questo probabilmente non serve, basta fare l'analisi a blocchi del risultato finale, senza includere anche le posizioni medie
 ModiVibrazionali & ModiVibrazionali::operator =(const ModiVibrazionali &d){
-    OperazioniSuLista<ModiVibrazionali> operator= (d);
+    VectorOp<ModiVibrazionali> operator= (d);
     posizioni_equilibrio
 }
 

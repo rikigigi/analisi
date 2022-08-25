@@ -26,13 +26,13 @@ constexpr int FLAGS = CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM |
 }
 
 template <class TFLOAT, class T>
-class Gofrt : public OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT>, public CalcolaMultiThread<Gofrt<TFLOAT,T>, Gofrt_Flags::FLAGS  >
+class Gofrt : public VectorOp<Gofrt<TFLOAT,T>,TFLOAT>, public CalcolaMultiThread<Gofrt<TFLOAT,T>, Gofrt_Flags::FLAGS  >
 {
 public:
     using This = Gofrt<TFLOAT,T>;
     using CalcolaMultiThread_T = CalcolaMultiThread<This, Gofrt_Flags::FLAGS>;
     using CalcolaMultiThread_T::FLAGS;
-    using OperazioniSuLista_T = OperazioniSuLista<This,TFLOAT>;
+    using VectorOp_T = VectorOp<This,TFLOAT>;
 
     Gofrt(T *t,
           TFLOAT rmin,
@@ -45,20 +45,20 @@ public:
           bool debug=false);
     ~Gofrt();
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     This & operator =(const This & destra);
     std::vector<ssize_t> get_shape();
     std::vector<ssize_t> get_stride();
     std::string get_columns_description() {return c_descr;}
-    using OperazioniSuLista_T::azzera;
+    using VectorOp_T::azzera;
 
     void calc_init(int);
     void calc_single_th(int,int,int,int,int,int);
     void calc_end();
 
 private:
-    using OperazioniSuLista_T::lista;
-    using OperazioniSuLista_T::lunghezza_lista;
+    using VectorOp_T::lista;
+    using VectorOp_T::lunghezza_lista;
     TFLOAT * th_data;
     TFLOAT rmin,rmax,rmax2,rmin2,dr,incr;
     bool debug;
