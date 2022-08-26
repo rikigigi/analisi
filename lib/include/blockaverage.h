@@ -13,7 +13,7 @@
 #ifndef MEDIABLOCCHI_H
 #define MEDIABLOCCHI_H
 
-#include "traiettoria.h"
+#include "trajectory.h"
 #include "assert.h"
 #include <type_traits>
 #include <iostream>
@@ -31,20 +31,20 @@
 
 template <class TR> class TraiettoriaF {
 public:
-    static void imposta_dimensione_finestra_accesso(unsigned int s_,TR* traiettoria ){}
-    static void imposta_inizio_accesso(unsigned int s_,TR* traiettoria  ){}
+    static void set_data_access_block_size(unsigned int s_,TR* traiettoria ){}
+    static void set_access_at(unsigned int s_,TR* traiettoria  ){}
     static unsigned int get_ntimesteps(TR* traiettoria ){abort();return 0;}
 };
 
-template <> class TraiettoriaF<Traiettoria> {
+template <> class TraiettoriaF<Trajectory> {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,Traiettoria* traiettoria ){
-    traiettoria->imposta_dimensione_finestra_accesso(s_);
+static void set_data_access_block_size(unsigned int s_,Trajectory* traiettoria ){
+    traiettoria->set_data_access_block_size(s_);
 }
-static void imposta_inizio_accesso(unsigned int s_,Traiettoria* traiettoria  ){
-    traiettoria->imposta_inizio_accesso(s_);
+static void set_access_at(unsigned int s_,Trajectory* traiettoria  ){
+    traiettoria->set_access_at(s_);
 }
-static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
+static unsigned int get_ntimesteps(Trajectory* traiettoria ){
     return traiettoria->get_ntimesteps();
 }
 
@@ -53,10 +53,10 @@ static unsigned int get_ntimesteps(Traiettoria* traiettoria ){
 
 template <> class TraiettoriaF<ReadLog<> > {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog<>* traiettoria ){
+static void set_data_access_block_size(unsigned int s_,ReadLog<>* traiettoria ){
 
 }
-static void imposta_inizio_accesso(unsigned int s_,ReadLog<>* traiettoria  ){
+static void set_access_at(unsigned int s_,ReadLog<>* traiettoria  ){
 
 }
 static unsigned int get_ntimesteps(ReadLog<>* traiettoria ){
@@ -67,10 +67,10 @@ static unsigned int get_ntimesteps(ReadLog<>* traiettoria ){
 
 template <> class TraiettoriaF<ReadLog<long double> > {
 public:
-static void imposta_dimensione_finestra_accesso(unsigned int s_,ReadLog<long double>* traiettoria ){
+static void set_data_access_block_size(unsigned int s_,ReadLog<long double>* traiettoria ){
 
 }
-static void imposta_inizio_accesso(unsigned int s_,ReadLog<long double>* traiettoria  ){
+static void set_access_at(unsigned int s_,ReadLog<long double>* traiettoria  ){
 
 }
 static unsigned int get_ntimesteps(ReadLog<long double>* traiettoria ){
@@ -80,13 +80,12 @@ static unsigned int get_ntimesteps(ReadLog<long double>* traiettoria ){
 };
 
 
-template <class TR,class T, typename ... Args > class MediaBlocchiG
+template <class TR,class T, typename ... Args > class BlockAverageG
 {
 public:
-    MediaBlocchiG(TR * t,
+    BlockAverageG(TR * t,
                  const unsigned int & numero_blocchi
                  ) {
-//        static_assert(std::is_base_of<Calcolo,T>::value,"T deve essere derivato da Calcolo!");
         traiettoria=t;
         n_b=numero_blocchi;
         ok=false;
@@ -98,10 +97,7 @@ public:
 
     }
 
-    ~MediaBlocchiG() {
-#ifdef DEBUG
-        std::cerr << "~MediaBlocchiG(): Tmedio="<<Tmedio<<", Tvar="<<Tvar<< ", delta="<<delta<<", tmp="<<tmp<<".\n";
-#endif
+    ~BlockAverageG() {
         delete Tmedio;
         delete Tvar;
         delete delta;
@@ -113,7 +109,7 @@ public:
 
 
         calcolo = new T (traiettoria,arg...);
-        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->numeroTimestepsOltreFineBlocco(n_b))/n_b;
+        int timestepsPerBlocco=(TraiettoriaF<TR>::get_ntimesteps(traiettoria)-calcolo->nExtraTimesteps(n_b))/n_b;
         if(timestepsPerBlocco>0){
             s=timestepsPerBlocco;
             ok=true;
@@ -124,7 +120,7 @@ public:
         calcolo->reset(s);
         calc->calcola_begin(s,calcolo);
 
-        TraiettoriaF<TR>::imposta_dimensione_finestra_accesso(s+calcolo->numeroTimestepsOltreFineBlocco(n_b),traiettoria);
+        TraiettoriaF<TR>::set_data_access_block_size(s+calcolo->nExtraTimesteps(n_b),traiettoria);
         cronometro cron;
 #ifndef USE_MPI
         cron.set_expected(1.0/double(n_b));
@@ -136,10 +132,10 @@ public:
 #endif
 
             calcolo->reset(s);
-            TraiettoriaF<TR>::imposta_inizio_accesso(iblock*s,traiettoria);
-            calcolo->calcola(iblock*s);
+            TraiettoriaF<TR>::set_access_at(iblock*s,traiettoria);
+            calcolo->calculate(iblock*s);
 
-            calc->calcola(calcolo);
+            calc->calculate(calcolo);
             cron.stop();
 #ifdef DEBUG
             std::cerr << "Time for block "<<iblock+1<<" / "<<n_b <<": "<< cron.time_last()<<
@@ -162,13 +158,13 @@ public:
                 break;
             }
             calcolo->reset(s);
-            TraiettoriaF<TR>::imposta_inizio_accesso(ib*s,traiettoria);
-            calcolo->calcola(ib*s);
+            TraiettoriaF<TR>::set_access_at(ib*s,traiettoria);
+            calcolo->calculate(ib*s);
             cronometro cronmpi;
             unsigned int mpirecv=1;
             if (mpime==0){
                 //ricevi i risultati degli altri e calcola ciò che è da calcolare.
-                calc->calcola(calcolo);
+                calc->calculate(calcolo);
                 if (iblock+mpisize<n_b){
                     mpirecv=mpisize;
                 }else{
@@ -179,7 +175,7 @@ public:
                     cronmpi.start();
                     Mp::mpi().recv_root(calcolo,i);
                     cronmpi.stop();
-                    calc->calcola(calcolo);
+                    calc->calculate(calcolo);
                 }
             } else {
                 Mp::mpi().send_to_root(calcolo);
@@ -195,7 +191,7 @@ public:
 
 
 
-    void calcola(Args ... arg) {
+    void calculate(Args ... arg) {
         Tmedio = new T(traiettoria, arg...);
         Tvar = new T(traiettoria,arg...);
         delta = new T(traiettoria,arg...);
@@ -222,7 +218,7 @@ private:
 };
 
 
-template<class T, typename ... Args> using MediaBlocchi = MediaBlocchiG<Traiettoria,T,Args...>;
+template<class T, typename ... Args> using BlockAverage = BlockAverageG<Trajectory,T,Args...>;
 
 
 

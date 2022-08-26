@@ -11,11 +11,11 @@
 
 
 #include "spettrovibrazionale.h"
-#include "traiettoria.h"
 #include <fstream>
+#include <stdexcept>
 
 template <class T>
-SpettroVibrazionale<T>::SpettroVibrazionale(T * t, bool dump_):OperazioniSuLista<SpettroVibrazionale>()
+SpettroVibrazionale<T>::SpettroVibrazionale(T * t, bool dump_):VectorOp<SpettroVibrazionale>()
 {
     traiettoria=t;
     dump=dump_;
@@ -48,28 +48,24 @@ void SpettroVibrazionale<T>::deallocate_plan(){
 }
 
 template <class T>
-unsigned int SpettroVibrazionale<T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int SpettroVibrazionale<T>::nExtraTimesteps(unsigned int n_b){
     return 0;
 }
 
 template <class T>
 void SpettroVibrazionale<T>::reset(const unsigned int numeroTimestepsPerBlocco) {
 //inizializzo la memoria per i moduli quadri e basta, se necessario!
-// size è la lunghezza della trasformata. La lista che contiene i moduli quadri sarà size/2+1 (trasformata reale).
+// size è la lunghezza della trasformata. La vdata che contiene i moduli quadri sarà size/2+1 (trasformata reale).
     if (numeroTimestepsPerBlocco!=size) {
         size=numeroTimestepsPerBlocco;
-        delete [] lista;
+        delete [] vdata;
         tipi_atomi=traiettoria->get_ntypes();
         if (tipi_atomi<=0) {
+	    throw std::runtime_error("Number of types in the trajectory must be > 0");
             tipi_atomi=1;
-            std::cerr << "Attenzione: non ho letto il numero di tipi diversi di atomi (non hai caricato la traiettoria prima di iniziare l'analisi?\n";
         }
-        lunghezza_lista=(size/2+1)*3*tipi_atomi; // uno per ogni direzione dello spazio, per testare l'isotropia, e per tipo di atomo
-        lista = new double[lunghezza_lista];
-#ifdef DEBUG
-        std::cerr << "called SpettroVibrazionale::reset " __FILE__ ":"<<__LINE__<<"\n";
-        std::cerr << "new double [] "<<lista<<"\n";
-#endif
+        data_length=(size/2+1)*3*tipi_atomi; // uno per ogni direzione dello spazio, per testare l'isotropia, e per tipo di atomo
+        vdata = new double[data_length];
 
     }
 
@@ -77,7 +73,7 @@ void SpettroVibrazionale<T>::reset(const unsigned int numeroTimestepsPerBlocco) 
 
 //prima di chiamare questa la traiettoria deve essere impostata correttamente sulla finestra giusta (la funzione non sa qual'è lo timestep corrente.
 template <class T>
-void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'inizio di quello che c'è in memoria (attenzione a caricare bene i dati!)
+void SpettroVibrazionale<T>::calculate(unsigned int primo  ///ignorato: prendo l'inizio di quello che c'è in memoria (attenzione a caricare bene i dati!)
                                   ) {
     //alloca se necessario con fftw_malloc (che alloca la memoria in modo che sia allineata correttaemente per poter sfruttare le istruzioni SIMD del processore
     // e prepara il piano della trasformata. Trasformata_size è la dimensione della trasformata. Deve essere uguale a size, la dimensione dell'array dei moduli quadri.
@@ -92,7 +88,7 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
                                    (int*)&size, // lunghezza di ciascuna trasformata
                                    3*traiettoria->get_natoms(), // numero di trasformate
                                    /*  ****** input ******  */
-                                   dummy,//traiettoria->velocita_inizio(), // puntatore ai dati
+                                   dummy,//traiettoria->velocity_data(), // puntatore ai dati
                                    NULL, // i dati sono tutti compatti, non fanno parte di array più grandi
                                    3*traiettoria->get_natoms(), // la distanza fra due dati successivi
                                    1, // la distanza fra due serie di dati adiacenti
@@ -109,13 +105,13 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
     //devo fare la trasformata della velocità per ogni atomo
     }
 
-    fftw_execute_dft_r2c(fftw3,traiettoria->velocita_inizio(),trasformata);
+    fftw_execute_dft_r2c(fftw3,traiettoria->velocity_data(),trasformata);
     // adesso bisogna fare la media del modulo quadro, una per ogni tipo di atomo
 
     double * media = new double[tipi_atomi];
     unsigned int * cont = new unsigned int [tipi_atomi];
 
-    for (unsigned int iomega=0;iomega<lunghezza_lista/(tipi_atomi*3);iomega++) {
+    for (unsigned int iomega=0;iomega<data_length/(tipi_atomi*3);iomega++) {
         //una media per dimensione
         for (unsigned int idim=0;idim<3;idim++){
             //media sugli atomi
@@ -137,12 +133,10 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
                 double modulo2=x*x+y*y;
                 int itipo=traiettoria->get_type(iatom);
                 if (itipo < 0 ) {
-                    std::cerr << "Errore: tipo dell'atomo fuori dal range! (memoria corrotta?)\n";
-                    abort();
+		    throw std::runtime_error("Type index of the atom out of range (!?)");
                     itipo=0;
                 } else if (itipo >= tipi_atomi) {
-                    std::cerr << "Errore: tipo dell'atomo fuori dal range! (numerazione dei tipi non consecutiva?)\n";
-                    abort();
+		    throw std::runtime_error("Type index of the atom out of range (non consecutive indexes?!)");
                     itipo=tipi_atomi-1;
                 }
                 double delta = modulo2-media[itipo];
@@ -151,7 +145,7 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
 
             }
             for (unsigned int itipo=0;itipo < tipi_atomi;itipo++){
-                lista[itipo*lunghezza_lista/tipi_atomi+ iomega*3+idim]=media[itipo];
+                vdata[itipo*data_length/tipi_atomi+ iomega*3+idim]=media[itipo];
             }
         }
     }
@@ -160,7 +154,7 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
 
     if (dump) {
        std::ofstream out("analisi_vibr.debug",std::fstream::app);
-       for (unsigned int iomega=0;iomega<lunghezza_lista/(tipi_atomi*3);iomega++){
+       for (unsigned int iomega=0;iomega<data_length/(tipi_atomi*3);iomega++){
            out << iomega;
            for (unsigned int itype=0;itype<tipi_atomi;itype++) {
                for (unsigned int idim=0;idim<3;idim++)
@@ -174,8 +168,8 @@ void SpettroVibrazionale<T>::calcola(unsigned int primo  ///ignorato: prendo l'i
 
 template <class T>
 double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,unsigned int tipo_atomo) {
-    if (frequenza<lunghezza_lista/(3*tipi_atomi) && dim<3 && tipo_atomo < tipi_atomi) {
-        return lista[tipo_atomo*lunghezza_lista/tipi_atomi+ frequenza*3+dim];
+    if (frequenza<data_length/(3*tipi_atomi) && dim<3 && tipo_atomo < tipi_atomi) {
+        return vdata[tipo_atomo*data_length/tipi_atomi+ frequenza*3+dim];
     } else {
         throw std::runtime_error("Error: index out of range!\n");
     }
@@ -183,12 +177,8 @@ double SpettroVibrazionale<T>::spettro(unsigned int frequenza, unsigned int dim,
 
 template <class T>
 SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibrazionale<T> & destra) {
-#ifdef DEBUG
-    std::cerr << "called SpettroVibrazionale::operator =" __FILE__ ":"<<__LINE__<<"\n";
-#endif
-    OperazioniSuLista<SpettroVibrazionale<T>>::operator =(destra);
+    VectorOp<SpettroVibrazionale<T>>::operator =(destra);
 
-    //TODO: cos'è sta roba?????
     fftw_free(trasformata);
 //    deallocate_plan();
     trasformata=0;
@@ -196,10 +186,11 @@ SpettroVibrazionale<T> & SpettroVibrazionale<T>::operator = (const SpettroVibraz
 }
 
 #ifdef BUILD_MMAP
-template class SpettroVibrazionale<Traiettoria>;
+#include "trajectory.h"
+template class SpettroVibrazionale<Trajectory>;
 #endif
 
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class SpettroVibrazionale<Traiettoria_numpy>;
+#include "trajectory_numpy.h"
+template class SpettroVibrazionale<Trajectory_numpy>;
 #endif

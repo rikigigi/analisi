@@ -11,11 +11,11 @@ struct MsdFixture {
         msd{&traj.traj, 1,0,NTH,true}
     {}
     TrajSetup traj;
-    MSD<Traiettoria> msd;
+    MSD<Trajectory> msd;
     DataRegression<double> data;
-    MSD<Traiettoria> & calc(int primo) {
+    MSD<Trajectory> & calc(int primo) {
         msd.reset(75-primo);
-        msd.calcola(primo);
+        msd.calculate(primo);
         return msd;
     }
     size_t size(){auto s= msd.get_shape(); return s[0]*s[1]*s[2];}
@@ -37,11 +37,11 @@ struct GofrFixture {
 }
     {}
     TrajSetup traj;
-    Gofrt<double, Traiettoria> gofr;
+    Gofrt<double, Trajectory> gofr;
     DataRegression<double> data;
-    Gofrt<double, Traiettoria> & calc(int primo) {
+    Gofrt<double, Trajectory> & calc(int primo) {
         gofr.reset(75-primo);
-        gofr.calcola(primo);
+        gofr.calculate(primo);
         return gofr;
     }
     size_t size(){auto s= gofr.get_shape(); return s[0]*s[1]*s[2];}
@@ -50,8 +50,8 @@ struct GofrFixture {
 BOOST_AUTO_TEST_CASE(test_cell_permutator){
     double d[6]={1,2,3,4,5,6};
     double e[6]={1,2,3,4,5,6};
-    Traiettoria::lammps_to_internal(d);
-    Traiettoria::internal_to_lammps(d);
+    Trajectory::lammps_to_internal(d);
+    Trajectory::internal_to_lammps(d);
     for (int i=0;i<6;++i){
         BOOST_TEST(d[i]==e[i]);
     }
@@ -62,9 +62,9 @@ using MsdFixture_ ## N = MsdFixture<N>;\
 BOOST_FIXTURE_TEST_SUITE(test_msd##N, MsdFixture_ ## N)\
 BOOST_AUTO_TEST_CASE(test_msd_##N){\
     calc(0);\
-    BOOST_TEST(data.test_regression("msd_"#N"a",msd.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("msd_"#N"a",msd.access_vdata(),size()));\
     calc(13);\
-    BOOST_TEST(data.test_regression("msd_"#N"b",msd.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("msd_"#N"b",msd.access_vdata(),size()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 
@@ -78,9 +78,9 @@ using GofrFixture_ ## N ## _ ## T = GofrFixture<N,T>;\
 BOOST_FIXTURE_TEST_SUITE(test_gofr##N ## _ ## T, GofrFixture_ ## N ## _ ## T)\
 BOOST_AUTO_TEST_CASE(test_gofr_##N ## _ ## T){\
     calc(0);\
-    BOOST_TEST(data.test_regression("gofr_"#N"a"#T,gofr.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("gofr_"#N"a"#T,gofr.access_vdata(),size()));\
     calc(13);\
-    BOOST_TEST(data.test_regression("gofr_"#N"b"#T,gofr.accesso_lista(),size()));\
+    BOOST_TEST(data.test_regression("gofr_"#N"b"#T,gofr.access_vdata(),size()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 

@@ -33,7 +33,7 @@ struct Intestazione_timestep {
     bigint natoms;
     int triclinic;
     int condizioni_al_contorno[6];
-    double scatola[6]; //xlo,xhi,ylo,yhi,zlo,zhi
+    double box[6]; //xlo,xhi,ylo,yhi,zlo,zhi
     int dimensioni_riga_output;
     int nchunk;
     char * read(char * file) {
@@ -41,7 +41,7 @@ struct Intestazione_timestep {
         file=read_and_advance(file, &natoms);
         file=read_and_advance(file,&triclinic);
         file=read_and_advance(file, condizioni_al_contorno,6);
-        file=read_and_advance(file,scatola,6);
+        file=read_and_advance(file,box,6);
         file=read_and_advance(file,&dimensioni_riga_output);
         file=read_and_advance(file,&nchunk);
         return file;
@@ -51,7 +51,7 @@ struct Intestazione_timestep {
         out.write((char*) &natoms, sizeof(bigint));
         out.write((char*) &triclinic, sizeof(int));
         out.write((char*) condizioni_al_contorno, sizeof(int)*6);
-        out.write((char*) scatola, sizeof(double)*6);
+        out.write((char*) box, sizeof(double)*6);
         out.write((char*)&dimensioni_riga_output, sizeof(int));
         out.write((char*)&nchunk, sizeof(int));
     }
@@ -68,7 +68,7 @@ struct Intestazione_timestep_triclinic {
     bigint natoms;
     int triclinic=1;
     int condizioni_al_contorno[6];
-    double scatola[6];
+    double box[6];
     double xy_xz_yz[3];
     int dimensioni_riga_output;
     int nchunk;
@@ -77,7 +77,7 @@ struct Intestazione_timestep_triclinic {
         file=read_and_advance(file, &natoms);
         file=read_and_advance(file,&triclinic);
         file=read_and_advance(file, condizioni_al_contorno,6);
-        file=read_and_advance(file,scatola,6);
+        file=read_and_advance(file,box,6);
         if (triclinic) file=read_and_advance(file,xy_xz_yz,3);
         file=read_and_advance(file,&dimensioni_riga_output);
         file=read_and_advance(file,&nchunk);
@@ -88,7 +88,7 @@ struct Intestazione_timestep_triclinic {
         out.write((char*) &natoms, sizeof(bigint));
         out.write((char*) &triclinic, sizeof(int));
         out.write((char*) condizioni_al_contorno, sizeof(int)*6);
-        out.write((char*) scatola, sizeof(double)*6);
+        out.write((char*) box, sizeof(double)*6);
         if (triclinic) out.write((char*) xy_xz_yz, sizeof(double)*3);
         out.write((char*)&dimensioni_riga_output, sizeof(int));
         out.write((char*)&nchunk, sizeof(int));
@@ -110,7 +110,7 @@ struct Atomo {
     double id;
     double tipo;
     double posizione[3];
-    double velocita[3];
+    double velocity[3];
     static_assert (NDOUBLE_ATOMO==8, "You have to modify class Atomo if you change NDOUBLE_ATOMO" );
     static char * read_id_tipo(char * begin, double & id_, double & tipo_) {
         begin = read_and_advance(begin,&id_);
@@ -162,7 +162,7 @@ current_ptr=read_and_advance(current_ptr,what,n);
         READ_ADV(natoms);
         READ_ADV(triclinic);
         READ_ADV_A(condizioni_al_contorno,6);
-        READ_ADV_A(scatola,6);
+        READ_ADV_A(box,6);
         if(triclinic) {
             READ_ADV_A(xy_xz_yz,3);
         }
@@ -243,7 +243,7 @@ public:
     select_var(natoms,int)
     select_var(triclinic,int)
     select_var(timestep,bigint)
-    select_var(scatola, double *)
+    select_var(box, double *)
     select_var(dimensioni_riga_output,int)
 
     double * xy_xz_yz() {

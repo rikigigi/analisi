@@ -15,20 +15,20 @@
 
 #include <map>
 
-class Traiettoria;
+class Trajectory;
 
 class IstogrammaAtomiRaggio
 {
 public:
-    IstogrammaAtomiRaggio(Traiettoria * t,double r,unsigned int skip=1,unsigned int nthreads=0);
+    IstogrammaAtomiRaggio(Trajectory * t,double r,unsigned int skip=1,unsigned int nthreads=0);
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b) {return 0;}
+    void calculate(unsigned int);
+    unsigned int nExtraTimesteps(unsigned int n_b) {return 0;}
     std::map<unsigned int, unsigned int> * get_hist() {return hist;};
 private:
     double r2;
     unsigned int skip,nthreads,ntypes,natoms,numeroTimestepsBlocco;
-    Traiettoria * traiettoria;
+    Trajectory * traiettoria;
     std::map<unsigned int, unsigned int> * hist;
 };
 

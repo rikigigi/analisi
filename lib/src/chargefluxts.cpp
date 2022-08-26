@@ -12,7 +12,7 @@
 #include "chargefluxts.h"
 
 
-ChargeFluxTs::ChargeFluxTs(Traiettoria *t) :
+ChargeFluxTs::ChargeFluxTs(Trajectory *t) :
     traiettoria(t),J(0),timestep_finestra(0),calcolato(false)
 {
 
@@ -31,7 +31,7 @@ void ChargeFluxTs::reset(unsigned int numeroTimestepPerBlocco) {
     }
 }
 
-void ChargeFluxTs::calcola(unsigned int timestep) {
+void ChargeFluxTs::calculate(unsigned int timestep) {
 
 
 
@@ -39,7 +39,7 @@ void ChargeFluxTs::calcola(unsigned int timestep) {
 
     int     timestep_copy_tstart=0,timestep_copy_tend=0,
             timestep_read_start=0, timestep_read_end=timestep_finestra,
-            finestra_differenza=timestep_corrente-timestep;
+            finestra_differenza=current_timestep-timestep;
     if (calcolato) {
         if (abs(finestra_differenza)<timestep_finestra) { // si sovrappongono
             if (finestra_differenza>0){
@@ -76,21 +76,21 @@ void ChargeFluxTs::calcola(unsigned int timestep) {
 
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
             for (unsigned int i=0;i<3;i++){
-                J[istep*3+i]+=traiettoria->velocita(t,iatom)[i]
+                J[istep*3+i]+=traiettoria->velocity(t,iatom)[i]
                         *traiettoria->get_charge(traiettoria->get_type(iatom));
             }
         }
         for (unsigned int i=0;i<3;i++)
             J[istep*3+i]/=double(traiettoria->get_natoms());
     }
-    timestep_corrente=timestep;
+    current_timestep=timestep;
     calcolato=true;
 }
 
 double * ChargeFluxTs::J_z(const unsigned int & timestep) {
 
-    if (timestep >= timestep_corrente && timestep <timestep_corrente+timestep_finestra) {
-        return & J[(timestep-timestep_corrente)*3];
+    if (timestep >= current_timestep && timestep <current_timestep+timestep_finestra) {
+        return & J[(timestep-current_timestep)*3];
     } else {
         std::cerr << "Errore: richiesta la corrente di carica per un timestep fuori dall'intervallo per cui la corrente è stata calcolata!\n";
         abort();

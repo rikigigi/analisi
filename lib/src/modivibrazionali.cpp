@@ -11,12 +11,12 @@
 
 
 #include "modivibrazionali.h"
-#include "traiettoria.h"
 #include <fstream>
 #include <complex>
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <iostream>
 
 
 const double evjoules  = 1.60217733e-19, // from eV to Joules
@@ -37,7 +37,7 @@ void istg(double a,/// estremo inferiore dell'intervallo da istogrammare
 //unità immaginaria
 const std::complex<double> I(0.0,1.0);
 
-ModiVibrazionali::ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads,unsigned int timestep_blocco) : OperazioniSuLista<ModiVibrazionali>()
+ModiVibrazionali::ModiVibrazionali(Trajectory * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads,unsigned int timestep_blocco) : VectorOp<ModiVibrazionali>()
 {
     if (n_threads==0)
         numero_threads=1;
@@ -74,7 +74,7 @@ void ModiVibrazionali::read_force_file(std::string f) {
         abort();
     }
 
-    // legge anche le masse degli atomi
+    // legge anche le mass degli atomi
     for (unsigned int i=0;i<nat_f;i++) {
         int tipo;
         double m,x,y,z;
@@ -101,26 +101,26 @@ void ModiVibrazionali::read_force_file(std::string f) {
 
 }
 
-unsigned int ModiVibrazionali::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int ModiVibrazionali::nExtraTimesteps(unsigned int n_b){
     return 0;
 }
 
 void ModiVibrazionali::reset(unsigned int s) {
     numero_timesteps=s;
-    lunghezza_lista=traiettoria->get_natoms()*3;
-    delete [] lista;
-    lista=new double[lunghezza_lista];
+    data_length=traiettoria->get_natoms()*3;
+    delete [] vdata;
+    vdata=new double[data_length];
     posizioni_equilibrio->reset(s);
 }
 
 void ModiVibrazionali::azzera() {
-    for (unsigned int i=0;i<lunghezza_lista;i++) {
-        lista[i]=0;
+    for (unsigned int i=0;i<data_length;i++) {
+        vdata[i]=0;
     }
 }
 
-void ModiVibrazionali::calcola(unsigned int primo) {
-    posizioni_equilibrio->calcola(primo);
+void ModiVibrazionali::calculate(unsigned int primo) {
+    posizioni_equilibrio->calculate(primo);
 
     /*calcola, per ogni atomo e per ogni modo normale, il prodotto scalare
      * fra lo spostamento dell'atomo dalla sua posizione d'equilibrio e
@@ -236,7 +236,7 @@ void ModiVibrazionali::calcola(unsigned int primo) {
                                 }
 
 
-                    // la radice delle masse è già inserica nel file ifc
+                    // la radice delle mass è già inserica nel file ifc
 /*
                     //moltiplica per il coefficiente 1/sqrt(m_i m_j) le comoponenti della matrice
                     for (unsigned int iatom=0;iatom<posizioni_equilibrio->get_atoms_cell();iatom++)
@@ -386,11 +386,11 @@ fine_calcolo_fononi:
     // se ho una traiettoria troppo lunga, che non sta nella ram in un colpo solo, devo caricare il file a pezzi (compito svolto da traiettoria)
     unsigned int ntimestep_load=timestepBlocco + numero_threads - timestepBlocco%numero_threads;
     if (timestepBlocco!=0)
-        traiettoria->imposta_dimensione_finestra_accesso(ntimestep_load); //quanti dati carico in memoria
+        traiettoria->set_data_access_block_size(ntimestep_load); //quanti dati carico in memoria
 
     for (unsigned int istep=0;istep<numero_timesteps;istep+=numero_threads) {
         if (timestepBlocco!=0 && istep%ntimestep_load==0){
-            traiettoria->imposta_inizio_accesso(istep+primo); // carica il prossimo blocco di dati
+            traiettoria->set_access_at(istep+primo); // carica il prossimo blocco di dati
         }
 
 
@@ -436,7 +436,7 @@ fine_calcolo_fononi:
                         q_punto += sqrt(traiettoria->get_mass( traiettoria->get_type(iatom) ))
                                 *exp(I*vettori_onda.col(imodo/(3*posizioni_equilibrio->get_atoms_cell())).dot(       Eigen::Map<Eigen::Vector3d>(posizioni_equilibrio->get_fitted_pos(iatom)) - Eigen::Map<Eigen::Vector3d>(posizioni_equilibrio->get_atom_position_origin_cell(posizioni_equilibrio->get_atom_base_index(iatom)))   )    )*
                                 (autovettori.block<3,1>(0+3*posizioni_equilibrio->get_atom_base_index(iatom),imodo).dot(
-                                 Eigen::Map<Eigen::Vector3d>(traiettoria->velocita(ith+primo,iatom))) );
+                                 Eigen::Map<Eigen::Vector3d>(traiettoria->velocity(ith+primo,iatom))) );
                         //        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                         //                           velocity of iatom, current timestep
                     }
@@ -556,9 +556,9 @@ fine_calcolo_fononi:
 
 
 
-/* questo probabilmente non serve, basta fare l'analisi a blocchi del risultato finale, senza includere anche le posizioni medie
+/* questo probabilmente non serve, basta fare l'analisi a blocchi del risultato finale, senza includere anche le positions medie
 ModiVibrazionali & ModiVibrazionali::operator =(const ModiVibrazionali &d){
-    OperazioniSuLista<ModiVibrazionali> operator= (d);
+    VectorOp<ModiVibrazionali> operator= (d);
     posizioni_equilibrio
 }
 

@@ -39,7 +39,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIoni
                                                              unsigned int n_seg,
                                                              bool do_bench,
                                                              unsigned int n_seg_start,
-                                                             unsigned int n_seg_stop) : OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>(),
+                                                             unsigned int n_seg_stop) : VectorOp<GreenKuboNComponentIonicFluid<READLOG,TFLOAT,TFLOAT_READ>,TFLOAT>(),
     traiettoria (traiettoria), log(log), ntimesteps(0),skip(skip), scrivi_file(dump),
     lmax(lunghezza_funzione_max),nthread(nthreads),subtract_mean(subtract_mean),
     start_mean(start_mean),n_seg(n_seg),bench(false),
@@ -111,22 +111,22 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> GreenKuboNComponentIoni
 #ifdef DEBUG2
     std::cerr << "Chiamato GreenKuboNComponentIonicFluid<TFLOAT>::operator =\n";
 #endif
-    OperazioniSuLista<GreenKuboNComponentIonicFluid<READLOG, TFLOAT,TFLOAT_READ>,TFLOAT >::operator =( destra);
+    VectorOp<GreenKuboNComponentIonicFluid<READLOG, TFLOAT,TFLOAT_READ>,TFLOAT >::operator =( destra);
     return *this;
 }
 
-template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::numeroTimestepsOltreFineBlocco(unsigned int n_b) {
+template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::nExtraTimesteps(unsigned int n_b) {
     return (traiettoria->n_timestep()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->n_timestep()/(n_b+1)+1 : lmax;
 }
 
 template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::reset(unsigned int numeroTimestepsPerBlocco) {
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
-    lunghezza_lista=(leff)*narr;
+    data_length=(leff)*narr;
     ntimesteps=numeroTimestepsPerBlocco;
-    delete [] lista;
-    lista=new TFLOAT [lunghezza_lista];
-    for (unsigned int i=0;i<lunghezza_lista;i++){
-        lista[i]=0.0;
+    delete [] vdata;
+    vdata=new TFLOAT [data_length];
+    for (unsigned int i=0;i<data_length;i++){
+        vdata[i]=0.0;
     }
 }
 template<class READLOG, class TFLOAT, class TFLOAT_READ>
@@ -153,7 +153,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboN
     return 3*N_corr;
 }
 
-template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::calcola(unsigned int primo) {
+template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponentIonicFluid<READLOG, TFLOAT, TFLOAT_READ>::calculate(unsigned int primo) {
 
 
     if(!benchmarked)
@@ -231,8 +231,8 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
                     {
                         //questa diventa la media della media nei pezzettini (devo aggiungere un contatore e usare la formula della media)
                         //possibile perdita di precisione(?)
-                        TFLOAT delta_JJ=JJ[j1]-lista[(itimestep)*narr+j1];
-                        lista[(itimestep)*narr+j1]+=delta_JJ/cont_JJ;
+                        TFLOAT delta_JJ=JJ[j1]-vdata[(itimestep)*narr+j1];
+                        vdata[(itimestep)*narr+j1]+=delta_JJ/cont_JJ;
                     }
 
                     //N_corr (funzioni di correlazione), N_corr (integrali,integrali di einstein), 1 (kappa), 1 (kappa_einstein)
@@ -261,7 +261,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
         for (unsigned int itimestep=start_mean;itimestep<leff;itimestep++){
             cont_JJm_T++;
             for (unsigned int j1=0;j1<N_corr;j1++)  {
-                TFLOAT delta=lista[(itimestep)*narr+j1]-JJm_T[j1];
+                TFLOAT delta=vdata[(itimestep)*narr+j1]-JJm_T[j1];
                 JJm_T[j1]+=delta/cont_JJm_T;
             }
         }
@@ -273,7 +273,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
         if (subtract_mean) { //toglie la media a tutte le funzioni di correlazione prima di fare gli integrali
             for (unsigned int itimestep=0;itimestep<leff;itimestep++)
                 for (unsigned int j=0;j<N_corr;j++)
-                    lista[(itimestep)*narr+j]-=JJm_T[j];
+                    vdata[(itimestep)*narr+j]-=JJm_T[j];
         }
 
         for (unsigned int itimestep=1;itimestep<leff;itimestep++) {
@@ -282,8 +282,8 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
         // I[i] = I[i-1]+ f[i-1]/2.0 + f[i]/2.0
             for (unsigned int j=0;j<N_corr;j++){
 
-            lista[(itimestep)*narr+N_corr+2*j]  = lista[(itimestep-1)*narr+N_corr+2*j]    +lista[(itimestep-1)*narr+j]/2.0 +          lista[(itimestep)*narr+j]/2.0;
-                lista[(itimestep)*narr+N_corr+2*j+1]= lista[(itimestep-1)*narr+N_corr+2*j+1]  +lista[(itimestep-1)*narr+j]*itimestep/2.0 +lista[(itimestep)*narr+j]*itimestep/2.0  ;
+            vdata[(itimestep)*narr+N_corr+2*j]  = vdata[(itimestep-1)*narr+N_corr+2*j]    +vdata[(itimestep-1)*narr+j]/2.0 +          vdata[(itimestep)*narr+j]/2.0;
+                vdata[(itimestep)*narr+N_corr+2*j+1]= vdata[(itimestep-1)*narr+N_corr+2*j+1]  +vdata[(itimestep-1)*narr+j]*itimestep/2.0 +vdata[(itimestep)*narr+j]*itimestep/2.0  ;
 
             }
             //calcola il coefficiente di conducibilità come 1/(inversa della matrice(0,0))
@@ -294,14 +294,14 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
             for (unsigned int j1=0;j1<idx_j.size();j1++)
 #ifdef HALF_CORR
                 for (unsigned int j2=j1;j2<idx_j.size();j2++) {
-                    matr[j2*idx_j.size()+j1]=lista[(itimestep)*narr+N_corr+2*idxj];
-                    matr[j1*idx_j.size()+j2]=lista[(itimestep)*narr+N_corr+2*idxj];
+                    matr[j2*idx_j.size()+j1]=vdata[(itimestep)*narr+N_corr+2*idxj];
+                    matr[j1*idx_j.size()+j2]=vdata[(itimestep)*narr+N_corr+2*idxj];
                     idxj++;
                 }
 #else
                 for (unsigned int j2=0;j2<idx_j.size();j2++) {
-                    matr[j2*idx_j.size()+j1]+=lista[(itimestep)*narr+N_corr+2*idxj]/2.0;
-                    matr[j1*idx_j.size()+j2]+=lista[(itimestep)*narr+N_corr+2*idxj]/2.0;
+                    matr[j2*idx_j.size()+j1]+=vdata[(itimestep)*narr+N_corr+2*idxj]/2.0;
+                    matr[j1*idx_j.size()+j2]+=vdata[(itimestep)*narr+N_corr+2*idxj]/2.0;
                     idxj++;
                 }
 #endif
@@ -315,7 +315,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
                 k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
             else
                 k=coeff(0,0);
-            lista[(itimestep)*narr+3*N_corr+0]=k;
+            vdata[(itimestep)*narr+3*N_corr+0]=k;
 
             //stessa cosa con la formula di einstein
             for (unsigned int j=0;j<idx_j.size()*idx_j.size();j++){
@@ -325,14 +325,14 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
             for (unsigned int j1=0;j1<idx_j.size();j1++)
 #ifdef HALF_CORR
                 for (unsigned int j2=j1;j2<idx_j.size();j2++) {
-                    matr[j2*idx_j.size()+j1]=lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep;
-                    matr[j1*idx_j.size()+j2]=lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep;
+                    matr[j2*idx_j.size()+j1]=vdata[(itimestep)*narr+N_corr+2*idxj]-vdata[(itimestep)*narr+N_corr+2*idxj+1]/itimestep;
+                    matr[j1*idx_j.size()+j2]=vdata[(itimestep)*narr+N_corr+2*idxj]-vdata[(itimestep)*narr+N_corr+2*idxj+1]/itimestep;
                     idxj++;
                 }
 #else
                 for (unsigned int j2=0;j2<idx_j.size();j2++) {
-                    matr[j2*idx_j.size()+j1]+=(lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep)/2.0;
-                    matr[j1*idx_j.size()+j2]+=(lista[(itimestep)*narr+N_corr+2*idxj]-lista[(itimestep)*narr+N_corr+2*idxj+1]/itimestep)/2.0;
+                    matr[j2*idx_j.size()+j1]+=(vdata[(itimestep)*narr+N_corr+2*idxj]-vdata[(itimestep)*narr+N_corr+2*idxj+1]/itimestep)/2.0;
+                    matr[j1*idx_j.size()+j2]+=(vdata[(itimestep)*narr+N_corr+2*idxj]-vdata[(itimestep)*narr+N_corr+2*idxj+1]/itimestep)/2.0;
                     idxj++;
                 }
 #endif
@@ -343,7 +343,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
                 k= (coeff.block(0,0,1,1) - coeff.block(0,1,1,idx_j.size()-1)*coeff.block(1,1,idx_j.size()-1,idx_j.size()-1).inverse()*coeff.block(1,0,idx_j.size()-1,1))(0,0);
             else
                 k=coeff(0,0);
-            lista[(itimestep)*narr+3*N_corr+1]=k;
+            vdata[(itimestep)*narr+3*N_corr+1]=k;
 
 
         }
@@ -351,7 +351,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
     //divide per itimestep tutti gli integrali einsteniani
     for (unsigned int itimestep=1;itimestep<leff;itimestep++) {
         for (unsigned int ieinst=0;ieinst<N_corr;ieinst++){
-            lista[(itimestep)*narr+N_corr+2*ieinst+1]/=itimestep;
+            vdata[(itimestep)*narr+N_corr+2*ieinst+1]/=itimestep;
         }
     }
 
@@ -364,7 +364,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> void GreenKuboNComponen
 #endif
         for (unsigned int itimestep=0;itimestep<leff;itimestep++) {
             for (unsigned int j=0;j<narr;j++){
-                outfile << lista[(itimestep)*narr+j] << " ";
+                outfile << vdata[(itimestep)*narr+j] << " ";
             }
             outfile << "\n";
         }
@@ -394,7 +394,7 @@ template<class READLOG, class TFLOAT, class TFLOAT_READ> unsigned int GreenKuboN
         cronometro cron;
 
         cron.start();
-        calcola(0);
+        calculate(0);
         cron.stop();
         std::cerr << i<<" "<<cron.time()*i<<"\n";
         if (cron.time()*i<min){

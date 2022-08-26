@@ -15,26 +15,24 @@
 
 #include "config.h"
 
-#include "mediablocchi.h"
 #include "operazionisulista.h"
 #ifdef HAVEfftw3
 #include <fftw3.h>
 #else
 #include <fftw.h>
 #endif
-#include "mediablocchi.h"
-//#include <memory>
+#include <vector>
 
-class Traiettoria;
+class Trajectory;
 
 
 template <class T>
-class SpettroVibrazionale : public OperazioniSuLista<SpettroVibrazionale<T> >
+class SpettroVibrazionale : public VectorOp<SpettroVibrazionale<T> >
 {
 public:
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
     SpettroVibrazionale(T* t,bool dump=false);
     ~SpettroVibrazionale();
     std::vector<ssize_t> get_shape() const { return {static_cast<ssize_t> (tipi_atomi),static_cast<ssize_t>(size/2+1),static_cast<ssize_t>(3)} ; }
@@ -48,8 +46,8 @@ private:
     T * traiettoria;
     unsigned int size;
     int tipi_atomi;
-    using OperazioniSuLista<SpettroVibrazionale<T> >::lista;
-    using OperazioniSuLista<SpettroVibrazionale<T> >::lunghezza_lista;
+    using VectorOp<SpettroVibrazionale<T> >::vdata;
+    using VectorOp<SpettroVibrazionale<T> >::data_length;
     unsigned int trasformata_size;
     fftw_complex * trasformata;
     static fftw_plan fftw3;
@@ -60,6 +58,6 @@ private:
 };
 
 //per fare anche le varie medie a blocchi
-//template class MediaBlocchi<SpettroVibrazionale>;
+//template class BlockAverage<SpettroVibrazionale>;
 
 #endif // SPETTROVIBRAZIONALE_H

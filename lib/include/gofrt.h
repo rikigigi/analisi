@@ -14,25 +14,25 @@
 #define GOFRT_H
 
 #include "operazionisulista.h"
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 
 
 namespace Gofrt_Flags {
-constexpr int FLAGS = CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM |
-        CalcolaMultiThread_Flags::SERIAL_LOOP_TIME |
-        CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE |
-        CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE |
-        CalcolaMultiThread_Flags::CALL_CALC_INIT;
+constexpr int FLAGS = CalculateMultiThread_Flags::PARALLEL_SPLIT_ATOM |
+        CalculateMultiThread_Flags::SERIAL_LOOP_TIME |
+        CalculateMultiThread_Flags::SERIAL_LOOP_AVERAGE |
+        CalculateMultiThread_Flags::CALL_DEBUG_ROUTINE |
+        CalculateMultiThread_Flags::CALL_CALC_INIT;
 }
 
 template <class TFLOAT, class T>
-class Gofrt : public OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT>, public CalcolaMultiThread<Gofrt<TFLOAT,T>, Gofrt_Flags::FLAGS  >
+class Gofrt : public VectorOp<Gofrt<TFLOAT,T>,TFLOAT>, public CalculateMultiThread<Gofrt<TFLOAT,T>, Gofrt_Flags::FLAGS  >
 {
 public:
     using This = Gofrt<TFLOAT,T>;
-    using CalcolaMultiThread_T = CalcolaMultiThread<This, Gofrt_Flags::FLAGS>;
-    using CalcolaMultiThread_T::FLAGS;
-    using OperazioniSuLista_T = OperazioniSuLista<This,TFLOAT>;
+    using CalculateMultiThread_T = CalculateMultiThread<This, Gofrt_Flags::FLAGS>;
+    using CalculateMultiThread_T::FLAGS;
+    using VectorOp_T = VectorOp<This,TFLOAT>;
 
     Gofrt(T *t,
           TFLOAT rmin,
@@ -45,29 +45,29 @@ public:
           bool debug=false);
     ~Gofrt();
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     This & operator =(const This & destra);
     std::vector<ssize_t> get_shape();
     std::vector<ssize_t> get_stride();
     std::string get_columns_description() {return c_descr;}
-    using OperazioniSuLista_T::azzera;
+    using VectorOp_T::azzera;
 
     void calc_init(int);
     void calc_single_th(int,int,int,int,int,int);
     void calc_end();
 
 private:
-    using OperazioniSuLista_T::lista;
-    using OperazioniSuLista_T::lunghezza_lista;
+    using VectorOp_T::vdata;
+    using VectorOp_T::data_length;
     TFLOAT * th_data;
     TFLOAT rmin,rmax,rmax2,rmin2,dr,incr;
     bool debug;
     T * traiettoria;
     unsigned int nbin,lmax;
-    using CalcolaMultiThread_T::ntimesteps;
-    using CalcolaMultiThread_T::skip;
-    using CalcolaMultiThread_T::nthreads;
-    using CalcolaMultiThread_T::leff;
+    using CalculateMultiThread_T::ntimesteps;
+    using CalculateMultiThread_T::skip;
+    using CalculateMultiThread_T::nthreads;
+    using CalculateMultiThread_T::leff;
     int gofr_idx(unsigned int ts, unsigned int itype=0, unsigned int r=0) {
         unsigned int idx= ts   * traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin
                          +nbin * itype
@@ -76,11 +76,11 @@ private:
     }
     TFLOAT * gofr(unsigned int ts, unsigned int itype=0, unsigned int r=0){
     unsigned int idx= gofr_idx(ts,itype,r);
-    if (idx >= lunghezza_lista) {
+    if (idx >= data_length) {
         std::cerr << "Errore: indice fuori dal range!\n";
         abort();
     }
-    return &lista[idx];
+    return &vdata[idx];
 }
     std::string c_descr;
     unsigned int get_itype(unsigned int & type1,unsigned int & type2) const {

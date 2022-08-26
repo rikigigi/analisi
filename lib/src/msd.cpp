@@ -17,7 +17,6 @@
 #include <sstream>
 #include "msd.h"
 #include "config.h"
-#include "traiettoria.h"
 #include "floating_exceptions.h"
 
 #ifdef USE_MPI
@@ -34,7 +33,7 @@ MSD<T,FPE>::MSD(T *t, unsigned int skip, unsigned int tmax, unsigned int nthread
         f_cm=1;
 }
 template <class T,bool FPE>
-unsigned int MSD<T,FPE>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int MSD<T,FPE>::nExtraTimesteps(unsigned int n_b){
     return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
 template <class T,bool FPE>
@@ -42,11 +41,11 @@ void MSD<T,FPE>::reset(const unsigned int numeroTimestepsPerBlocco) {
 
     leff=(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     ntypes=traiettoria->get_ntypes();
-    lunghezza_lista=leff*ntypes*f_cm;
+    data_length=leff*ntypes*f_cm;
 
     ntimesteps=numeroTimestepsPerBlocco;
-    delete [] lista;
-    lista=new double [lunghezza_lista];
+    delete [] vdata;
+    vdata=new double [data_length];
 }
 
 template <class T, bool FPE>
@@ -67,7 +66,7 @@ void MSD<T,FPE>::calc_single_th(size_t begin, size_t ultimo, size_t primo, unsig
 
     for (size_t t=begin;t<ultimo;t++) {
         for (size_t i=0;i<ntypes*f_cm;i++){
-            lista[ntypes*t*f_cm+i]=0.0;
+            vdata[ntypes*t*f_cm+i]=0.0;
             cont[i]=0;
         }
         for (size_t imedia=0;imedia<ntimesteps;imedia+=skip){
@@ -79,45 +78,45 @@ void MSD<T,FPE>::calc_single_th(size_t begin, size_t ultimo, size_t primo, unsig
                 for (size_t iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                     size_t itype=traiettoria->get_type(iatom);
                     double delta=(pow(
-                                   traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0]
-                                  -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[0]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[0])
+                                   traiettoria->template positions<false>(primo+imedia,iatom)[0]-traiettoria->template positions<false>(primo+imedia+t,iatom)[0]
+                                  -(traiettoria->template positions_cm<false>(primo+imedia,itype)[0]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[0])
                             ,2)+
                             pow(
-                                traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1]
-                                -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[1]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[1])
+                                traiettoria->template positions<false>(primo+imedia,iatom)[1]-traiettoria->template positions<false>(primo+imedia+t,iatom)[1]
+                                -(traiettoria->template positions_cm<false>(primo+imedia,itype)[1]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[1])
                             ,2)+
                             pow(
-                                traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2]
-                                -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2])
+                                traiettoria->template positions<false>(primo+imedia,iatom)[2]-traiettoria->template positions<false>(primo+imedia+t,iatom)[2]
+                                -(traiettoria->template positions_cm<false>(primo+imedia,itype)[2]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[2])
                             ,2))
-                            -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
-                    lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                            -vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)];
+                    vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
 
                 }
             }else{
                 for (size_t iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                    double delta=(pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0],2)+
-                            pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1],2)+
-                            pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2],2))
-                            -lista[ntypes*t*f_cm+traiettoria->get_type(iatom)];
-                    lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
-                    if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
+                    double delta=(pow(traiettoria->template positions<false>(primo+imedia,iatom)[0]-traiettoria->template positions<false>(primo+imedia+t,iatom)[0],2)+
+                            pow(traiettoria->template positions<false>(primo+imedia,iatom)[1]-traiettoria->template positions<false>(primo+imedia+t,iatom)[1],2)+
+                            pow(traiettoria->template positions<false>(primo+imedia,iatom)[2]-traiettoria->template positions<false>(primo+imedia+t,iatom)[2],2))
+                            -vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)];
+                    vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
+                    if constexpr (FPE) fpem.check_nan(vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
 
                 }
             }
             if constexpr (FPE) {
                 for (size_t itype=0;itype<ntypes;++itype){
-                    fpem.check_nan(lista[ntypes*t*f_cm+itype]);
+                    fpem.check_nan(vdata[ntypes*t*f_cm+itype]);
                 }
             }
             if (cm_msd) {
                 for (size_t itype=0; itype < ntypes; itype++) {
-                double delta=(pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[0]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[0],2)+
-                        pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[1]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[1],2)+
-                        pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2],2))
-                        -lista[ntypes*t*f_cm+ntypes+itype];
-                    lista[ntypes*t*f_cm+ntypes+itype]+=delta/(++cont[ntypes+itype]);
-                    if constexpr (FPE) fpem.check_nan(lista[ntypes*t*f_cm+ntypes+itype]);
+                double delta=(pow(traiettoria->template positions_cm<false>(primo+imedia,itype)[0]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[0],2)+
+                        pow(traiettoria->template positions_cm<false>(primo+imedia,itype)[1]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[1],2)+
+                        pow(traiettoria->template positions_cm<false>(primo+imedia,itype)[2]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[2],2))
+                        -vdata[ntypes*t*f_cm+ntypes+itype];
+                    vdata[ntypes*t*f_cm+ntypes+itype]+=delta/(++cont[ntypes+itype]);
+                    if constexpr (FPE) fpem.check_nan(vdata[ntypes*t*f_cm+ntypes+itype]);
                }
             }
         }
@@ -138,7 +137,7 @@ void MSD<T,FPE>::calc_end() {
         for (size_t ts=0;ts<leff;ts++) {
             out << ts;
             for (unsigned int itype=0;itype<ntypes*f_cm;itype++){
-                out <<" "<<lista[ntypes*ts*f_cm+itype];
+                out <<" "<<vdata[ntypes*ts*f_cm+itype];
             }
             out << "\n";
         }
@@ -148,16 +147,17 @@ void MSD<T,FPE>::calc_end() {
 
 template <class T,bool FPE>
 MSD<T,FPE> & MSD<T,FPE>::operator=(const MSD<T,FPE> &destra) {
-    OperazioniSuLista<MSD<T,FPE> >::operator =( destra);
+    VectorOp<MSD<T,FPE> >::operator =( destra);
     return *this;
 }
 
 #ifdef BUILD_MMAP
-template class MSD<Traiettoria,true>;
-template class MSD<Traiettoria,false>;
+#include "trajectory.h"
+template class MSD<Trajectory,true>;
+template class MSD<Trajectory,false>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class MSD<Traiettoria_numpy,true>;
-template class MSD<Traiettoria_numpy,false>;
+#include "trajectory_numpy.h"
+template class MSD<Trajectory_numpy,true>;
+template class MSD<Trajectory_numpy,false>;
 #endif

@@ -22,7 +22,6 @@
 #include <boost/lexical_cast.hpp>
 #include "config.h"
 #include "istogrammavelocita.h"
-#include "greenkubo2componentionicfluid.h"
 #include "greenkuboNcomponentionicfluid.h"
 #include "convolution.h"
 #include "heatfluxts.h"
@@ -48,6 +47,8 @@
 #include "mp.h"
 #endif
 #include <cstdlib>
+
+#include "blockaverage.h"
 
 namespace std{
 
@@ -160,7 +161,7 @@ int main(int argc, char ** argv)
     int sub_mean_start=0,numero_frame=0,every=1,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0,buffer_size=10;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false,fpe=false;
-    double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
+    double vmax_h=0,charge[2],dt=5e-3,vicini_r=0.0;
     std::pair<int,double> nk;
     std::array<double,3> kdir;
     std::vector<unsigned int > cvar_list,kk_l;
@@ -187,8 +188,8 @@ int main(int argc, char ** argv)
             ("skip,s",boost::program_options::value<int>(&skip)->default_value(1),"when an average over the trajectory is performed, consecutive steps have a distance specified with this option")
             ("every,e",boost::program_options::value<int>(&every)->default_value(1),"For sums over time lags every steps have a difference multiple of every. So far implemented only for g(r,t) and give the number of steps between two consecutive t.")
 #ifdef EXPERIMENTAL
-            ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"charge of type 1 (used in a particular case)")
-            ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"charge of type 2 (used in a particular case)")
+            ("charge1",boost::program_options::value<double>(&charge[0])->default_value(1.0),"charge of type 1 (used in a particular case)")
+            ("charge2",boost::program_options::value<double>(&charge[1])->default_value(-1.0),"charge of type 2 (used in a particular case)")
             ("conv_n,C",boost::program_options::value<int>(&conv_n)->default_value(10),"sigma of the gaussian that may be used to compute a convolution with the green-kubo integrals, to smooth out some noise. Number of points units.")
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"number of points to use to extract the final value of gk integral (used in a particular case)")
 #endif
@@ -301,9 +302,9 @@ int main(int argc, char ** argv)
         if (debug2){
 
             ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
-            Traiettoria * binary_traj=NULL;
+            Trajectory * binary_traj=NULL;
             if (test.need_binary(headers)>0) {
-                binary_traj=new Traiettoria(input);
+                binary_traj=new Trajectory(input);
                 test.calc_currents(binary_traj,blocknumber);
             }
             for (unsigned int i=0;i<test.n_timestep();i++){
@@ -320,10 +321,10 @@ int main(int argc, char ** argv)
             if (heat_coeff) {
                 std::cerr << "Green-Kubo heat transport coefficient calculation is beginning...\n";
                 ReadLog<> test(log_input,0,1,numero_thread,read_lines_thread,headers);
-                Traiettoria * binary_traj=NULL;
+                Trajectory * binary_traj=NULL;
                 //qui devo aggiungere la traiettoria binaria a ReadLog, qualora ReadLog ne constati la necessità
                 if (test.need_binary(headers)>0) {
-                    binary_traj=new Traiettoria(input);
+                    binary_traj=new Trajectory(input);
                     test.calc_currents(binary_traj,blocknumber);
                 }
 
@@ -390,68 +391,12 @@ int main(int argc, char ** argv)
 
 
                 if (headers.size()==0){
-
-                    MediaBlocchiG<ReadLog<>,GreenKubo2ComponentIonicFluid,std::string,double*,unsigned int,bool,unsigned int,unsigned int>
-                            greenK_c(&test,blocknumber);
-
-                    MediaVarCovar<GreenKubo2ComponentIonicFluid> greenK(GreenKubo2ComponentIonicFluid::narr,cvar);
-
-                    greenK_c.calcola_custom(&greenK,log_input,cariche,skip,dumpGK,stop_acf,numero_thread);
-
-                    double factors[GreenKubo2ComponentIonicFluid::narr]={
-                        factor_conv*factor_intToCorr, //Jee
-                        factor_conv2*factor_intToCorr, //Jzz
-                        factor_conv*factor_intToCorr, //Jez
-                        factor_conv, //intee
-                        factor_conv2, //intzz
-                        factor_conv, //intez
-                        factor_conv, //lambda
-                        factor_conv*factor_intToCorr, //Jze
-                        factor_conv, //intze
-                        factor_conv, //int_ein_ee
-                        factor_conv, //int_ein_ez
-                        factor_conv, //int_ein_ze
-                        factor_conv2, //int_ein_zz
-                        factor_conv //lambda_einst
-                    };
-                    double *lambda_conv=new double[greenK.size()];
-                    double *lambda_conv_var=new double[greenK.size()];
-
-                    if (final>=greenK.size()) final=greenK.size()-1;
-                    if (final <0) final=0;
-
-                    Convolution<double> convoluzione( std::function<double (const double  &)> ([&conv_n](const double & x)->double{
-                        return exp(-x*x/(2*conv_n*conv_n));
-                    }),(conv_n*6+1),-3*conv_n,3*conv_n,3*conv_n);
-                    convoluzione.calcola(greenK.media(6),lambda_conv,greenK.size(),1);
-                    convoluzione.calcola(greenK.varianza(6),lambda_conv_var,greenK.size(),1);
-                    if (factors_input.size()==0)
-                        std::cout << "# T T1sigma  factor1 factor2\n#"
-                              <<media_ << " " << sqrt(var_) << " "
-                              << factor_conv<<" "<<factor_intToCorr<< "\n";
-                    std::cout <<"#valore di kappa a "<<final<< " frame: "<<lambda_conv[final]*factor_conv << " "<< sqrt(lambda_conv_var[final])*factor_conv<<"\n";
-
-                    std::cout << "#Jee,Jzz,Jez,Jintee,Jintzz,Jintez,lambda,jze,Jintze,einst_ee,einst_ez,einst_ze,einst_zz,lambda_einst,lambda_conv,lambda' [,covarianze indicate...]; ciascuno seguito dalla sua varianza\n";
-                    for (unsigned int i=0;i<greenK.size();i++) {
-                        for (unsigned int j=0;j<GreenKubo2ComponentIonicFluid::narr;j++) {
-                            std::cout << greenK.media(j)[i]*factors[j] << " "
-                                      << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
-                        }
-
-                        std::cout << lambda_conv[i]*factor_conv<< " "<<lambda_conv_var[i]*factor_conv*factor_conv<<" "
-                                  << factor_conv*(greenK.media(3)[i]-pow(greenK.media(5)[i],2)/greenK.media(4)[i])<<" ";
-                        for (unsigned int j=0;j<greenK.n_cvar();j++){
-                            std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
-                        }
-                        std::cout  << "\n";
-
-                    }
-                    delete [] lambda_conv;
-                    delete [] lambda_conv_var;
+                    std::cerr << "You must specify the headers for the GK calculation";
+		    abort();
 
                 } else {
 
-                    MediaBlocchiG<ReadLog<>,GreenKuboNComponentIonicFluid<ReadLog<> >,
+                    BlockAverageG<ReadLog<>,GreenKuboNComponentIonicFluid<ReadLog<> >,
                             std::string,
                             unsigned int,
                             std::vector<std::string>,
@@ -530,11 +475,11 @@ int main(int argc, char ** argv)
                      }
                 }
 
-                Traiettoria test(input);
+                Trajectory test(input);
 #define MSD_(fpe_)\
-                {using MSD=MSD<Traiettoria,fpe_>;\
-                MediaBlocchi<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
-                Msd.calcola(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
+                {using MSD=MSD<Trajectory,fpe_>;\
+                BlockAverage<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
+                Msd.calculate(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
                 for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {\
                     for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)\
                         std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<\
@@ -552,12 +497,12 @@ int main(int argc, char ** argv)
                     throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
                 std::cerr << "Calculation of g(r,t) -- distinctive and non distinctive part of the van Hove function...\n";
-                Traiettoria tr(input);
+                Trajectory tr(input);
                 tr.set_pbc_wrap(true); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                MediaBlocchi<Gofrt<double,Traiettoria>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
+                BlockAverage<Gofrt<double,Trajectory>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
                         gofr(&tr,blocknumber);
-                gofr.calcola(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
+                gofr.calculate(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
 
                 unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
                 unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
@@ -587,20 +532,20 @@ int main(int argc, char ** argv)
                     throw std::runtime_error("You have to specify the distance range with the option -F.\n");
                 }
                 std::cerr << "Calculation of spherical harmonic density correlation function is beginning (this can take a lot of time)...\n";
-                Traiettoria tr(input);
+                Trajectory tr(input);
                 tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
 
-                using SHC=SphericalCorrelations<10,double,Traiettoria>;
+                using SHC=SphericalCorrelations<10,double,Trajectory>;
                 SHC::rminmax_t rminmax;
                 for (unsigned int i=0; i<factors_input.size()/2;++i){
                    rminmax.push_back({factors_input[i*2],factors_input[i*2+1]});
                 }
 
-                MediaBlocchi<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int,
+                BlockAverage<SHC,SHC::rminmax_t,unsigned int,unsigned int,unsigned int,
                         unsigned int,unsigned int,bool,typename SHC::NeighListSpec>
                         sh(&tr,blocknumber);
 
-                sh.calcola(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK,{});
+                sh.calculate(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK,{});
 
                 auto shape= sh.media()->get_shape();
 
@@ -617,18 +562,18 @@ int main(int argc, char ** argv)
 
             }else if (vicini_r>0){
                 std::cerr << "Beginning of calculation of neighbour histogram\n";
-                Traiettoria test(input);
+                Trajectory test(input);
                 test.set_pbc_wrap(true);
 
                 IstogrammaAtomiRaggio h(&test,vicini_r,skip,numero_thread);
                 unsigned int nt=test.get_ntimesteps(),
                         s=(nt-1)/blocknumber;
                 h.reset(s);
-                test.imposta_dimensione_finestra_accesso(s);
+                test.set_data_access_block_size(s);
                 for (unsigned int i=0;i<blocknumber;i++){
                     unsigned int t=s*i;
-                    test.imposta_inizio_accesso(t);
-                    h.calcola(t);
+                    test.set_access_at(t);
+                    h.calculate(t);
                 }
                 std::map<unsigned int, unsigned int> *hist=h.get_hist();
                 for (unsigned int i=0;i<test.get_ntypes();i++){
@@ -642,9 +587,9 @@ int main(int argc, char ** argv)
 
             }else if (nbins_vel>0) {
                 std::cerr << "Velocity histogram...\n";
-                Traiettoria test(input);
-                MediaBlocchi<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
-                istogramma_vel.calcola(nbins_vel,vmax_h);
+                Trajectory test(input);
+                BlockAverage<IstogrammaVelocita,unsigned int,double> istogramma_vel(&test,blocknumber);
+                istogramma_vel.calculate(nbins_vel,vmax_h);
 
                 //stampa i risultati
                 unsigned int lungh_sing_h=istogramma_vel.media()->lunghezza()/(3*test.get_ntypes());
@@ -658,20 +603,20 @@ int main(int argc, char ** argv)
 
             } else if (fononefile != "") {
                 std::cerr << "Normal mode coordinate transformation...\n";
-                Traiettoria test(input);
+                Trajectory test(input);
 		blocksize = test.get_ntimesteps()/blocknumber;
                 ModiVibrazionali test_normali(&test,ifcfile,fononefile,numero_thread,blocksize);
                 test_normali.reset(stop_acf);
-                test_normali.calcola(0);
+                test_normali.calculate(0);
 
                 return 1;
             } else if (spettro_vibraz) {
                 std::cerr << "Vibrational spectrum...\n";
-                Traiettoria test(input);
+                Trajectory test(input);
                 //            SpettroVibrazionale test_spettro(&test);
-                MediaBlocchi<SpettroVibrazionale<Traiettoria>,bool> test_spettro_blocchi(&test,blocknumber);
+                BlockAverage<SpettroVibrazionale<Trajectory>,bool> test_spettro_blocchi(&test,blocknumber);
 
-                test_spettro_blocchi.calcola(dumpGK);
+                test_spettro_blocchi.calculate(dumpGK);
                 for (unsigned int i=0;i<test_spettro_blocchi.media()->lunghezza()/(3*test.get_ntypes());i++) {
                     std::cout << i << " ";
                     for (unsigned int itipo=0;itipo<test.get_ntypes();itipo++)
@@ -693,22 +638,22 @@ int main(int argc, char ** argv)
                     }
                     klist.push_back(k);
                 }
-                Traiettoria t(input);
+                Trajectory t(input);
                 t.set_pbc_wrap(true);
 
                 CorrelatoreSpaziale corr(&t,klist,0.0,numero_thread,skip,false);
                 unsigned int nt=t.get_ntimesteps(),
                         s=(nt-1)/blocknumber;
                 corr.reset(s);
-                t.imposta_dimensione_finestra_accesso(s+corr.numeroTimestepsOltreFineBlocco(blocknumber));
+                t.set_data_access_block_size(s+corr.nExtraTimesteps(blocknumber));
                 //print stuff
                 std::cout << "#kdir= "<<kdir[0]<<" "<<kdir[1]<<" "<<kdir[2]<<std::endl
                           << "#dk= "<<nk.second<<std::endl
                           << "#nk= "<<nk.first<<std::endl;
                 for (unsigned int i=0;i<blocknumber;++i) {
                     unsigned int ts=s*i;
-                    t.imposta_inizio_accesso(ts);
-                    corr.calcola(ts);
+                    t.set_access_at(ts);
+                    corr.calculate(ts);
                     corr.print(std::cout);
                 }
             }

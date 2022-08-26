@@ -14,19 +14,20 @@
 #define MODIVIBRAZIONALI_H
 
 #include "operazionisulista.h"
-#include "posizioniequilibrio.h"
 #include <string>
 #include <complex>
+#include "trajectory.h"
+#include "posizioniequilibrio.h"
 
-class ModiVibrazionali : public OperazioniSuLista<ModiVibrazionali>
+class ModiVibrazionali : public VectorOp<ModiVibrazionali>
 {
 public:
-    ModiVibrazionali(Traiettoria * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads, unsigned int timestep_blocco=0);
+    ModiVibrazionali(Trajectory * tr, std::string ifcfile, std::string fononefile, unsigned int n_threads, unsigned int timestep_blocco=0);
     void read_force_file(std::string f);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void azzera();
     void reset(unsigned int s);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
 
     /*
     ModiVibrazionali &operator =(const ModiVibrazionali &);
@@ -42,7 +43,7 @@ private:
     Eigen::Matrix3Xd vettori_onda;
     std::string fileFononi;
     unsigned int numero_timesteps,numero_threads,timestepBlocco;
-    Traiettoria * traiettoria;
+    Trajectory * traiettoria;
     PosizioniEquilibrio * posizioni_equilibrio;
     Eigen::MatrixXd ifc;
 };

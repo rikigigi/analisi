@@ -23,7 +23,7 @@
 
 #include "chargefluxts.h"
 
-template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettoria *t, unsigned int skip, unsigned int nthreads, unsigned int nbatch, std::vector<std::string> req_headers):
+template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Trajectory *t, unsigned int skip, unsigned int nthreads, unsigned int nbatch, std::vector<std::string> req_headers):
     traiettoria(t),skip(skip),nthreads(nthreads),nbatch(nbatch)
 {
     cronometro cron;
@@ -84,7 +84,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
      }
 #endif
 
-     //determina il numero di colonne da allocare, e comprende le eventuali cariche
+     //determina il numero di colonne da allocare, e comprende le eventuali charge
      unsigned int n_columns_from_binary=0;
      data_size_from_binary=0;
      if (req_headers.size()>0){
@@ -94,7 +94,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Traiettor
              }
              auto Qs=qs(*it);
              if (Qs.first !=""){
-                 n_columns_from_binary++; //aggiungi i valori delle cariche letti
+                 n_columns_from_binary++; //aggiungi i valori delle charge letti
                  q_current_type.push_back(Qs);
              }
          }
@@ -220,7 +220,7 @@ template <class TFLOAT> unsigned int ReadLog<TFLOAT>::get_calc_j_index(std::stri
 }
 
 
-//questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
+//questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le charge
 template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLOAT>::qs(std::string header) {
     if (header.size()==0 || header[0] != '#')
         return std::pair<std::string,std::vector<TFLOAT> >();
@@ -257,7 +257,7 @@ template <class TFLOAT> int ReadLog<TFLOAT>::need_binary(std::vector<std::string
 
 }
 
-template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsigned int n_b){
+template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Trajectory * t,unsigned int n_b){
     traiettoria=t;
     //calcola e legge la corrente partendo dal file binario (nella classe traiettoria sono già presenti le velocità dei centri di massa)
     unsigned int timesteps_tot=data.size()/data_size;
@@ -269,18 +269,18 @@ template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Traiettoria * t,unsi
             throw std::runtime_error("Cannot calculate current: number of coefficients must be equal to the number of atomic types in the trajectory!\n");
         }
     }
-    traiettoria->imposta_dimensione_finestra_accesso(n_data_b);
+    traiettoria->set_data_access_block_size(n_data_b);
     for (unsigned int ib=0;ib<n_b;ib++){
         unsigned int ultimo=(ib+1)*n_data_b;
         if (ib==n_b-1){
             ultimo=timesteps_tot;
-            traiettoria->imposta_dimensione_finestra_accesso(ultimo-ib*n_data_b);
+            traiettoria->set_data_access_block_size(ultimo-ib*n_data_b);
         }
-        traiettoria->imposta_inizio_accesso(n_data_b*ib);
+        traiettoria->set_access_at(n_data_b*ib);
         for (unsigned int ts=ib*n_data_b;ts<ultimo;ts++){
             //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
             for (unsigned int i=0;i<q_current_type.size();i++) {
-                double * v_cm=t->velocita_cm(ts,0);
+                double * v_cm=t->velocity_cm(ts,0);
                 for (unsigned int icoord=0;icoord<3;icoord++)
                     data[ts*data_size+(data_size-data_size_from_binary)+i*3+icoord]=0.0;
                 for (unsigned int icm=0;icm<ntypes;icm++) {

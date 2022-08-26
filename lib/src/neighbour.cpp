@@ -99,10 +99,10 @@ size_t Neighbours<T,TType>::get_sann_n(const size_t iatom, const size_t jtype) c
 }
 
 #ifdef BUILD_MMAP
-#include "traiettoria.h"
-template class Neighbours<Traiettoria,double>;
+#include "trajectory.h"
+template class Neighbours<Trajectory,double>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class Neighbours<Traiettoria_numpy,double>;
+#include "trajectory_numpy.h"
+template class Neighbours<Trajectory_numpy,double>;
 #endif

@@ -32,7 +32,7 @@ public:
         iblock=0;
     }
 
-    void calcola(T* calcolo) {
+    void calculate(T* calcolo) {
 #ifdef DEBUG2
         std::cerr << "*delta = *calcolo - *Tmedio;\n";
 #endif
@@ -133,7 +133,7 @@ public:
         delete [] dx2;
     }
 
-    void calcola(T* calcolo) {
+    void calculate(T* calcolo) {
         assert(dx2!=0 && dx!=0);
         assert(calcolo->lunghezza()%n_columns==0);
         assert(size_block==calcolo->lunghezza()/n_columns);

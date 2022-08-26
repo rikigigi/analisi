@@ -22,8 +22,8 @@ public:
     **/
     Convolution(std::function<double(const double &)> f, int n, double start, double stop, int center);
     ~Convolution();
-    void calcola(T* in , T *out,int n,int skip);
-    void calcola(T* in , T *out,int n);
+    void calculate(T* in , T *out,int n,int skip);
+    void calculate(T* in , T *out,int n);
 private:
     T * fc;
     unsigned int n_fc,centro;

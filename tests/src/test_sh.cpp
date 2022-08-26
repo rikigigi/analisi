@@ -18,7 +18,7 @@ struct ShFixture{
     const unsigned int nbin;
     const size_t natoms;
     const size_t ntypes;
-    SphericalCorrelations<l,double,Traiettoria> sh;
+    SphericalCorrelations<l,double,Trajectory> sh;
     DataRegression<double> data;
     double  workspace[(l+1)*(l+1)], cheby[(l+1)*2];
     void calc(int timestep, double * res){
@@ -43,7 +43,7 @@ struct SteinhardtFixture{
     const unsigned int nbin;
     const size_t natoms;
     const size_t ntypes;
-    Steinhardt<l,double,Traiettoria> sh;
+    Steinhardt<l,double,Trajectory> sh;
     DataRegression<double> data;
 };
 template<int l,int NTH>
@@ -57,7 +57,7 @@ struct SteinhardtFixtureNeigh{
     const unsigned int nbin;
     const size_t natoms;
     const size_t ntypes;
-    Steinhardt<l,double,Traiettoria> sh;
+    Steinhardt<l,double,Trajectory> sh;
     DataRegression<double> data;
 };
 
@@ -80,8 +80,8 @@ typedef SteinhardtFixtureNeigh<6,3> StFix6_tr_3;
 BOOST_FIXTURE_TEST_SUITE(sh ## T, T )\
 BOOST_AUTO_TEST_CASE(test_calcola)\
 {\
-    sh.calcola(0);\
-    BOOST_TEST(data.test_regression("test_calcola" # suff ,sh.accesso_lista(),sh.lunghezza()));\
+    sh.calculate(0);\
+    BOOST_TEST(data.test_regression("test_calcola" # suff ,sh.access_vdata(),sh.lunghezza()));\
 }\
 BOOST_AUTO_TEST_SUITE_END()
 

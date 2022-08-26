@@ -14,7 +14,7 @@ struct NeighTest{
     NeighTest(bool l2020=true):t{true,l2020},n{&t.traj,{{99,1.0,1.0},{67,1.0,1.0}}} {};
         TrajSetup t;
         DataRegression<double> data;
-        Neighbours<Traiettoria,double> n;
+        Neighbours<Trajectory,double> n;
 };
 
 
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(min_image){
         for (size_t j=0;j<n_atoms;++j) {
             distances[i*4*n_atoms+j*4+3]=t.traj.d2_minImage(i,j,0,0,distances+i*4*n_atoms+j*4);
             for (size_t idim=0;idim<3;idim++) {
-                BOOST_TEST (fabs(distances[i*4*n_atoms+j*4+idim])<=t.traj.scatola(0)[3+idim]);
+                BOOST_TEST (fabs(distances[i*4*n_atoms+j*4+idim])<=t.traj.box(0)[3+idim]);
             }
         }
     }
@@ -47,12 +47,12 @@ BOOST_AUTO_TEST_CASE(pbc){
     {
         auto tt=TrajTest(true,false);
         size_t n_atoms=tt.t.traj.get_natoms();
-        BOOST_TEST(tt.data.test_regression("pbc_1",tt.t.traj.posizioni(0,0),3*n_atoms));
+        BOOST_TEST(tt.data.test_regression("pbc_1",tt.t.traj.positions(0,0),3*n_atoms));
     }
     {
         auto tt=TrajTest(true,true);
         size_t n_atoms=tt.t.traj.get_natoms();
-        BOOST_TEST(tt.data.test_regression("pbc_2",tt.t.traj.posizioni(0,0),3*n_atoms));
+        BOOST_TEST(tt.data.test_regression("pbc_2",tt.t.traj.positions(0,0),3*n_atoms));
     }
 
 

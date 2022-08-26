@@ -13,7 +13,7 @@
 #ifndef READLOG_H
 #define READLOG_H
 #include <string>
-#include "traiettoria.h"
+#include "trajectory.h"
 #include <vector>
 
 template <class TFLOAT=double>
@@ -21,7 +21,7 @@ class ReadLog
 {
 public:
     ReadLog(std::string filename,
-            Traiettoria * t=nullptr,
+            Trajectory * t=nullptr,
             unsigned int skip=1,
             unsigned int nthreads=0,
             unsigned int nbatch=200,
@@ -35,13 +35,13 @@ public:
 
     /**
      *  introduco una sintassi strana per calcolare al volo la corrente di carica dal file binario della traiettoria:
-     * "#traj:JZ N q1 ... qN" --> calcola la corrente dalla traiettoria utilizzando le N cariche per gli atomi q1 ... qN
+     * "#traj:JZ N q1 ... qN" --> calcola la corrente dalla traiettoria utilizzando le N charge per gli atomi q1 ... qN
     **/
     std::pair<unsigned int,bool> get_index_of(std::string header); //
     int need_binary(std::vector<std::string> headers);
-    void calc_currents(Traiettoria * t,unsigned int blocks);
+    void calc_currents(Trajectory * t,unsigned int blocks);
 private:
-    Traiettoria * traiettoria;
+    Trajectory * traiettoria;
     std::vector<std::string> headers;
     std::vector<TFLOAT > data;
     std::vector<unsigned int > timesteps;
@@ -50,7 +50,7 @@ private:
     bool if_only_numbers(std::string str);
     unsigned int natoms,nthreads;
 
-    ///qui vengono memorizzati le stringhe delle correnti da calcolare e le cariche da utilizzare per calcolarle
+    ///qui vengono memorizzati le stringhe delle correnti da calcolare e le charge da utilizzare per calcolarle
     std::vector< std::pair<std::string,std::vector<TFLOAT> > > q_current_type;
     /// analizza la stringa che definisce la corrente da calcolare
     std::pair<std::string,std::vector<TFLOAT> >qs(std::string header);

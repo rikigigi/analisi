@@ -43,26 +43,26 @@ struct Cell<false> : public Cell_ {
 };
 
 template <class T>
-class TraiettoriaBase {
+class BaseTrajectory {
 
 
 public:
     enum class BoxFormat{Lammps_ortho,Lammps_triclinic,Cell_vectors, Invalid};
 
-    TraiettoriaBase() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},timestep_corrente{0},
-    wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
-    buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
-    buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
-    buffer_tipi{nullptr},buffer_tipi_id{nullptr}, serve_pos{true},
+    BaseTrajectory() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},current_timestep{0},
+    wrap_pbc{true}, buffer_positions{nullptr}, buffer_velocity{nullptr},
+    buffer_boxes{nullptr}, buffer_positions_cm{nullptr},
+    buffer_velocity_cm{nullptr}, mass{nullptr}, charge{nullptr},
+    buffer_type{nullptr},buffer_type_id{nullptr}, serve_pos{true},
     box_format{BoxFormat::Invalid}{}
 
-    //double * posizioni (const int & timestep, const int & atomo) { return static_cast<T*>(this)->posizioni(timestep,atomo);}
-    DECL_CALL_BASE_2(double *, posizioni, (const int &, timestep), (const int &, atomo))
-    DECL_CALL_BASE_2(double *, velocita,(const int &, timestep), (const int &, atomo) )
-    DECL_CALL_BASE_1(double *, scatola, (const int &, timestep))
-    DECL_CALL_BASE_2(double *, posizioni_cm,(const int &, timestep), (const int &, tipo))
-    DECL_CALL_BASE_2(double *, velocita_cm,(const int &, timestep), (const int &, tipo))
-    DECL_CALL_BASE_0(double *,scatola_last)
+    //double * positions (const int & timestep, const int & atomo) { return static_cast<T*>(this)->positions(timestep,atomo);}
+    DECL_CALL_BASE_2(double *, positions, (const int &, timestep), (const int &, atomo))
+    DECL_CALL_BASE_2(double *, velocity,(const int &, timestep), (const int &, atomo) )
+    DECL_CALL_BASE_1(double *, box, (const int &, timestep))
+    DECL_CALL_BASE_2(double *, positions_cm,(const int &, timestep), (const int &, tipo))
+    DECL_CALL_BASE_2(double *, velocity_cm,(const int &, timestep), (const int &, tipo))
+    DECL_CALL_BASE_0(double *,box_last)
     std::vector<unsigned int> get_types(){
         get_ntypes();
         return types;
@@ -70,15 +70,14 @@ public:
     }
     unsigned int get_type(const unsigned int &atomo){
         if (atomo < natoms) {
-            return buffer_tipi_id[atomo];
+            return buffer_type_id[atomo];
         } else {
             throw std::runtime_error("Atom index out of range\n");
         }
     }
     enum Errori {non_inizializzato=0,oltre_fine_file=2,Ok=1};
-    Errori imposta_dimensione_finestra_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
-    Errori imposta_inizio_accesso(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
-    //void index_all();
+    Errori set_data_access_block_size(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl; return Errori::Ok;}
+    Errori set_access_at(const size_t & timesteps){std::cerr << "Warning: doing nothing (not reading in blocks)"<<std::endl;return Errori::Ok;}
 
     //I have to set this before loading the trajectory
     void set_pbc_wrap(bool p){
@@ -89,6 +88,9 @@ public:
         return wrap_pbc;
     }
 
+    /**
+     * Convert lammps format to internal format
+     * **/
     static void lammps_to_internal(double * c) {
         // xlo,  xhi,   ylo,   yhi,     zlo,     zhi
         // becomes:
@@ -101,6 +103,9 @@ public:
         c[1]=c[2];
         c[2]=t; //c[4]
     }
+    /**
+     * Convert internal format to lammps format
+     * **/
     static void internal_to_lammps(double * c) {
         //first low coords and then high-low coordinates
         // xlo,  ylo,   zlo,   (xhi-xlo) / 2, (yhi-ylo) / 2, (zhi-zlo) / 2
@@ -114,17 +119,23 @@ public:
         c[1]=c[0]+t*2;
     }
 
-    double * posizioni_inizio(){return buffer_posizioni;}
-    double * velocita_inizio(){return buffer_velocita;}
+    /**
+     * return a pointer to the beginning of the stored positions
+     * **/
+    double * positions_data(){return buffer_positions;}
+    /**
+     * return a pointer to the beginning of the stored velocities
+     * **/
+    double * velocity_data(){return buffer_velocity;}
     int get_type_min() {return min_type;}
     int get_type_max() {return max_type;}
     size_t get_natoms()const {return natoms;}
     size_t get_ntimesteps() const{return n_timesteps;}
-    ssize_t get_current_timestep() const {return timestep_corrente;}
-    double get_mass(unsigned int i) {if (i<get_ntypes()) return masse[i]; throw std::runtime_error("Cannot get mass for a type that does not exists!\n");}
-    void set_mass(unsigned int i,double m) {if (i<get_ntypes()) masse[i]=m;}
-    void set_charge(unsigned int i, double c){if (i<get_ntypes()) cariche[i]=c;}
-    double get_charge(unsigned int  i){if (i<get_ntypes()) return cariche[i]; throw std::runtime_error("Cannot get charge for a type that does not exists!\n");}
+    ssize_t get_current_timestep() const {return current_timestep;}
+    double get_mass(unsigned int i) {if (i<get_ntypes()) return mass[i]; throw std::runtime_error("Cannot get mass for a type that does not exists!\n");}
+    void set_mass(unsigned int i,double m) {if (i<get_ntypes()) mass[i]=m;}
+    void set_charge(unsigned int i, double c){if (i<get_ntypes()) charge[i]=c;}
+    double get_charge(unsigned int  i){if (i<get_ntypes()) return charge[i]; throw std::runtime_error("Cannot get charge for a type that does not exists!\n");}
 
 
     /**
@@ -133,12 +144,12 @@ public:
     **/
     template<bool TRICLINIC>
     void pbc_wrap(ssize_t idx) {
-        double * c = buffer_scatola+buffer_scatola_stride*idx;
+        double * c = buffer_boxes+buffer_boxes_stride*idx;
         Cell<TRICLINIC> s(c);
         double x0[3];
         s.middle(x0);
         for (size_t iatom=0;iatom<natoms;++iatom) {
-            double *xa=buffer_posizioni+idx*natoms*3+iatom*3;
+            double *xa=buffer_positions+idx*natoms*3+iatom*3;
             for (int icoord=0;icoord<3;++icoord){
                 xa[icoord]=xa[icoord]-x0[icoord];
             }
@@ -150,6 +161,10 @@ public:
     }
 
 
+    /**
+     * This returns the square of the minimum image distance between the specified timesteps and atom
+     * using the box data of timestep itimestep
+     * **/
     double d2_minImage(size_t i,
                        size_t j,
                        size_t itimestep,
@@ -159,7 +174,10 @@ public:
         return d2_minImage(i,j,itimestep,jtimestep,x);
     }
 
-    /// x  <-- x(i)-x(j)
+    /**
+     * This returns the square of the minimum image distance between the specified timesteps and atom
+     * using the box data of timestep itimestep. Sets x(i) - x(j) in memory located at x
+     * **/
     double d2_minImage(size_t i,
                        size_t j,
                        size_t itimestep,
@@ -167,13 +185,18 @@ public:
                        double *x
                        ) {
         double d2=0.0;
-        double *xi=posizioni<false>(itimestep,i);
-        double *xj=posizioni<false>(jtimestep,j);
-        const double *l=scatola<false>(itimestep)+3;
-        const double *xy_xz_yz = scatola<false>(itimestep)+6;
+        double *xi=positions<false>(itimestep,i);
+        double *xj=positions<false>(jtimestep,j);
+        const double *l=box<false>(itimestep)+3;
+        const double *xy_xz_yz = box<false>(itimestep)+6;
         d2=d2_minImage_triclinic(xi,xj,l,x,xy_xz_yz);
         return d2;
     }
+    /**
+     * This returns the square of the minimum image distance between the specified timesteps and atom
+     * using the box data specified in the arguments (if not triclinc the last argument is not used)
+     * Sets x(i) - x(j) in memory located at x
+     * **/
     double d2_minImage_triclinic(double * xi, ///position of first atom
                                  double *xj, ///position of second atom
                                  const double *l, /// half orthorombic edges
@@ -194,6 +217,10 @@ public:
         }
         return d2;
     }
+    /**
+     * apply the minimum image convention in the triclinic and not triclinc case.
+     * Must provide box data as in the internal format used by the code.
+     * **/
     template <bool TRICLINIC>
     static void minImage_triclinic(double * __restrict delta,
                                    const double * __restrict l_half,
@@ -241,7 +268,7 @@ public:
     }
 
 
-    size_t get_size_posizioni() const { return buffer_posizioni_size; }
+    size_t get_positions_size() const { return buffer_positions_size; }
     size_t get_size_cm() const {return buffer_cm_size;}
     std::vector<ssize_t> get_shape() {
         return {static_cast<ssize_t>(loaded_timesteps),
@@ -270,7 +297,7 @@ public:
         return triclinic;
     }
 
-    size_t get_box_stride() const {return buffer_scatola_stride;}
+    size_t get_box_stride() const {return buffer_boxes_stride;}
 
     //functions that are compiled in cpp file
     void dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts);
@@ -280,19 +307,19 @@ public:
 
 protected:
 
-    double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
-    double * buffer_velocita;
-    double * masse;
-    double * cariche;
-    double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
-    size_t buffer_scatola_stride; // 6 for orthorombic, 9 for triclinic
+    double * buffer_positions; //positions and velocities may need a copy because in the lammps format they are not ordered
+    double * buffer_velocity;
+    double * mass; //used almost nowhere
+    double * charge;
+    double * buffer_boxes; //box data in specified format
+    size_t buffer_boxes_stride; // 6 for orthorombic, 9 for triclinic
     BoxFormat box_format; //format used to store box information
-    double * buffer_posizioni_cm; // posizioni del centro di massa
-    double * buffer_velocita_cm; // velocità del centro di massa
-    size_t buffer_posizioni_size, buffer_cm_size; //sizes of allocated buffers
+    double * buffer_positions_cm; // center of mass position for each atomic type
+    double * buffer_velocity_cm; // center of mass velocity for each atomic type
+    size_t buffer_positions_size, buffer_cm_size; //sizes of allocated buffers
 
-    int * buffer_tipi,*buffer_tipi_id;
-    ssize_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps,timestep_corrente;
+    int * buffer_type,*buffer_type_id;
+    ssize_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps,current_timestep;
     bool wrap_pbc, triclinic;
 
 

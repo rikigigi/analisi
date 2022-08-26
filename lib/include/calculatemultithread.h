@@ -15,7 +15,7 @@
 
 #include <thread>
 
-namespace CalcolaMultiThread_Flags {
+namespace CalculateMultiThread_Flags {
 //mutually exclusive SPLITS:
 constexpr int PARALLEL_SPLIT_AVERAGE =  0b00000001; // assign to the single thread worker different averages range
 constexpr int PARALLEL_SPLIT_TIME =     0b00000010; // assigne to the single thread worker different time differences ranges
@@ -34,15 +34,15 @@ constexpr int CALL_CALC_INIT    =      0b100000000;
 }
 
 
-template <class T, int FLAGS_T = CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE | CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA>
-class CalcolaMultiThread
+template <class T, int FLAGS_T = CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE | CalculateMultiThread_Flags::CALL_INNER_JOIN_DATA>
+class CalculateMultiThread
 {
 public:
-    CalcolaMultiThread(const ssize_t nthreads=0, const ssize_t skip=0, const size_t natoms=0, const ssize_t every=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms},every{every}
+    CalculateMultiThread(const ssize_t nthreads=0, const ssize_t skip=0, const size_t natoms=0, const ssize_t every=0) : nthreads{nthreads},skip{skip},ntimesteps{0},natoms{natoms},every{every}
 {
-    if (nthreads==0) CalcolaMultiThread::nthreads=1;
-    if (skip==0) CalcolaMultiThread::skip=1;
-    if (every==0) CalcolaMultiThread::every=1 ; 
+    if (nthreads==0) CalculateMultiThread::nthreads=1;
+    if (skip==0) CalculateMultiThread::skip=1;
+    if (every==0) CalculateMultiThread::every=1 ; 
 
 }
     static constexpr int FLAGS=FLAGS_T;
@@ -52,24 +52,24 @@ public:
         res.first=ith*npassith;
         if (ith==nthreads-1) {
             res.second=end;
-            if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)){
+            if constexpr ( !!(FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)){
                 //align the last timestep so it is a multiple of skip and the total number of points is ntimestep/skip
                 res.second = end - end%skip;
             }
-            if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME)) {
+            if constexpr ( !!(FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_TIME)) {
                 //align the last timestep so it is a multiple of every and the total number of points is leff/every
                 res.second= end - end%every;
             }
         } else {
             res.second=(ith+1)*npassith;
         }
-        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)) {
+        if constexpr ( !!(FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)) {
             if (skip > 1 && res.first % skip > 0) { 
                 //align the first timestep so it is a multiple of skip
                 res.first = res.first - res.first % skip + skip;
             }
         }
-        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME)) {
+        if constexpr ( !!(FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_TIME)) {
             if (every > 1 && res.first % every > 0 ) {
                 res.first = res.first - res.first % every + every ;
             }
@@ -78,34 +78,34 @@ public:
     }
 
     void init_split() {
-        if constexpr ( !! (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)){
+        if constexpr ( !! (FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE)){
             npassith=ntimesteps/nthreads;
             end=ntimesteps;
-        } else if (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME) {
+        } else if (FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_TIME) {
             npassith=leff/nthreads;
             end=leff;
-        } else if (FLAGS & CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM) {
+        } else if (FLAGS & CalculateMultiThread_Flags::PARALLEL_SPLIT_ATOM) {
             npassith=natoms/nthreads;
             end=natoms;
         } else {
-            static_assert (FLAGS & (CalcolaMultiThread_Flags::PARALLEL_SPLIT_ATOM | CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME | CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE),
-                    "YOU MUST SPECIFY ONE OF CalcolaMultiThread_Flags" );
+            static_assert (FLAGS & (CalculateMultiThread_Flags::PARALLEL_SPLIT_ATOM | CalculateMultiThread_Flags::PARALLEL_SPLIT_TIME | CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE),
+                    "YOU MUST SPECIFY ONE OF CalculateMultiThread_Flags" );
         }
         t0=0;t1=1;
         i0=0;i1=1;
-        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE)) {
+        if constexpr ( !!(FLAGS & CalculateMultiThread_Flags::SERIAL_LOOP_AVERAGE)) {
             i0=0;
             i1=ntimesteps;
         }
-        if constexpr ( !!(FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME)) {
+        if constexpr ( !!(FLAGS & CalculateMultiThread_Flags::SERIAL_LOOP_TIME)) {
             t0=0;
             t1=leff;
         }
     }
 
-    void calcola(size_t primo){
+    void calculate(size_t primo){
         init_split();
-        if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_CALC_INIT)) {
+        if constexpr (!!(FLAGS & CalculateMultiThread_Flags::CALL_CALC_INIT)) {
             static_cast<T*>(this)->calc_init(primo);
         }
         std::exception_ptr * thread_exception = new std::exception_ptr[nthreads];
@@ -120,11 +120,11 @@ public:
                             // calculate given start and stop timestep. note that & captures everything, user must take care of multithread safety of calc_single_th function
                             // select a different signature of the calculation function depending on where the loops (if present) are parallelized
                             // rangeA and rangeB are passed to each thread and their meaning depends on what PARALLEL_SPLIT_* option you choose
-                            if constexpr ( !! (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME))) {
+                            if constexpr ( !! (FLAGS & CalculateMultiThread_Flags::SERIAL_LOOP_AVERAGE && (FLAGS & CalculateMultiThread_Flags::SERIAL_LOOP_TIME))) {
                                 static_cast<T*>(this)->calc_single_th(t,i,range.first,range.second,primo,ith); // time, average, rangeA, rangeB, primo, thread id
-                            } else if constexpr( !! (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_AVERAGE) ) {
+                            } else if constexpr( !! (FLAGS & CalculateMultiThread_Flags::SERIAL_LOOP_AVERAGE) ) {
                                 static_cast<T*>(this)->calc_single_th(i,range.first,range.second,primo,ith); // average, rangeA, rangeB, primo, thread id
-                            } else if constexpr( !! (FLAGS & CalcolaMultiThread_Flags::SERIAL_LOOP_TIME) ) {
+                            } else if constexpr( !! (FLAGS & CalculateMultiThread_Flags::SERIAL_LOOP_TIME) ) {
                                 static_cast<T*>(this)->calc_single_th(t,range.first,range.second,primo,ith); // time, rangeA, rangeB, primo, thread id
                             } else {
                                 static_cast<T*>(this)->calc_single_th(range.first,range.second,primo,ith); // rangeA, rangeB, primo, thread id
@@ -149,12 +149,12 @@ public:
                     }
                 }
                 threads.clear();
-                if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA))
+                if constexpr (!!(FLAGS & CalculateMultiThread_Flags::CALL_INNER_JOIN_DATA))
                     static_cast<T*>(this)->join_data();
             }
         }
 
-        if constexpr (!!(FLAGS & CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE)) {
+        if constexpr (!!(FLAGS & CalculateMultiThread_Flags::CALL_DEBUG_ROUTINE)) {
             static_cast<T*>(this)->calc_end();
         }
         delete [] thread_exception;
@@ -181,7 +181,7 @@ public:
     /*
      * those must be implemented to interface with block averages stuff. Anyway, there are useful
     */
-    //unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b)=0;
+    //unsigned int nExtraTimesteps(unsigned int n_b)=0;
     /*
      * This function must allocate all the memory:  The argument is the number of timesteps to be calculated.
      * remember to set ntimesteps here, so the division of the work can be done correctly

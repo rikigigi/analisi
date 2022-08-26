@@ -37,7 +37,7 @@ template <typename T> Convolution<T>::Convolution(std::function<double (const do
 
 }
 
-template <typename T> void Convolution<T>::calcola(T *in, T*out, int n, int skip) {
+template <typename T> void Convolution<T>::calculate(T *in, T*out, int n, int skip) {
     for (unsigned int in_index=0;in_index<n;in_index++) {
         out[in_index]=0;
         for (unsigned int i=0;i<n_fc;i++ ) {
@@ -51,7 +51,7 @@ template <typename T> void Convolution<T>::calcola(T *in, T*out, int n, int skip
     }
 }
 
-template <typename T> void Convolution<T>::calcola(T *in, T*out, int n) {
+template <typename T> void Convolution<T>::calculate(T *in, T*out, int n) {
     for (unsigned int in_index=0;in_index<n;in_index++) {
         out[in_index]=0;
         for (unsigned int i=0;i<n_fc;i++ ) {

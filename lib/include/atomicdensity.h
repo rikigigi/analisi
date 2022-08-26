@@ -1,13 +1,13 @@
 #ifndef ATOMICDENSITY_H
 #define ATOMICDENSITY_H
 
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 #include "operazionisulista.h"
 #include <array>
 #include <cmath>
 
 template <class T, class Hist >
-class AtomicDensity : public CalcolaMultiThread<AtomicDensity<T,Hist>>, public OperazioniSuLista<AtomicDensity<T,Hist>,Hist>
+class AtomicDensity : public CalculateMultiThread<AtomicDensity<T,Hist>>, public VectorOp<AtomicDensity<T,Hist>,Hist>
 {
 public:
     AtomicDensity(T *t,
@@ -18,12 +18,12 @@ public:
     ~AtomicDensity();
     void calc_single_th(const unsigned int &start, const unsigned int & stop, const unsigned int & primo, const unsigned int & ith);
     void join_data();
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco) ;
     std::vector<ssize_t> get_shape() const;
     std::vector<ssize_t> get_stride() const;
     using This = AtomicDensity<T,Hist>;
-    using OperazioniSuLista<This,Hist>::azzera;
+    using VectorOp<This,Hist>::azzera;
 
 private:
 
@@ -52,11 +52,11 @@ private:
         return idx(idxs[2],idxs[1],idxs[0],itype);
     }
 
-    using CalcolaMultiThread<This>::ntimesteps;
-    using CalcolaMultiThread<This>::skip;
-    using CalcolaMultiThread<This>::nthreads;
-    using OperazioniSuLista<This,Hist>::lunghezza_lista;
-    using OperazioniSuLista<This,Hist>::lista;
+    using CalculateMultiThread<This>::ntimesteps;
+    using CalculateMultiThread<This>::skip;
+    using CalculateMultiThread<This>::nthreads;
+    using VectorOp<This,Hist>::data_length;
+    using VectorOp<This,Hist>::vdata;
 
 };
 

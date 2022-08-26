@@ -13,11 +13,11 @@
 #ifndef TESTTRAIETTORIA_H
 #define TESTTRAIETTORIA_H
 
-#include "traiettoria.h"
+#include "trajectory.h"
 
-class Traiettoria;
+class Trajectory;
 
-class TestTraiettoria : public Traiettoria
+class TestTraiettoria : public Trajectory
 {
 public:
     TestTraiettoria(std::string filename);

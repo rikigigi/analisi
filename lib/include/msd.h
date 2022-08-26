@@ -14,17 +14,17 @@
 #define MSD_H
 
 #include "operazionisulista.h"
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 #include <vector>
 
 namespace MSD_Flags {
-constexpr int FLAGS = CalcolaMultiThread_Flags::PARALLEL_SPLIT_TIME |
-         CalcolaMultiThread_Flags::CALL_DEBUG_ROUTINE |
-         CalcolaMultiThread_Flags::CALL_CALC_INIT;
+constexpr int FLAGS = CalculateMultiThread_Flags::PARALLEL_SPLIT_TIME |
+         CalculateMultiThread_Flags::CALL_DEBUG_ROUTINE |
+         CalculateMultiThread_Flags::CALL_CALC_INIT;
 }
 
 template <class T,bool FPE=false>
-class MSD : public OperazioniSuLista<MSD<T,FPE> >, public CalcolaMultiThread<MSD<T,FPE>, MSD_Flags::FLAGS >
+class MSD : public VectorOp<MSD<T,FPE> >, public CalculateMultiThread<MSD<T,FPE>, MSD_Flags::FLAGS >
 {
 public:
     MSD(T *t,
@@ -44,12 +44,12 @@ public:
     void calc_end();
 
     MSD<T,FPE> & operator =(const MSD<T,FPE> & destra);
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     using This = MSD<T, FPE>;
-    using CMT = CalcolaMultiThread<This,MSD_Flags::FLAGS>;
+    using CMT = CalculateMultiThread<This,MSD_Flags::FLAGS>;
 private:
-    using OperazioniSuLista<MSD<T,FPE> >::lista;
-    using OperazioniSuLista<MSD<T,FPE> >::lunghezza_lista;
+    using VectorOp<MSD<T,FPE> >::vdata;
+    using VectorOp<MSD<T,FPE> >::data_length;
     T * traiettoria;
     size_t lmax,f_cm,ntypes;
     using CMT::nthreads;

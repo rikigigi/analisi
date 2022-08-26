@@ -98,7 +98,7 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
 
 
         if (tipo==natoms_box_xyz_vxvyvz){
-            in >> head.natoms >> head.scatola[0] >> head.scatola[1] >> head.scatola[2] >> head.scatola[3] >> head.scatola[4] >> head.scatola[5];
+            in >> head.natoms >> head.box[0] >> head.box[1] >> head.box[2] >> head.box[3] >> head.box[4] >> head.box[5];
             head.timestep=itim;
             if (!in.good()){
                 if (in.eof()) {
@@ -116,20 +116,20 @@ ConvertiBinario::ConvertiBinario(const std::string filein, const std::string fil
                 std::cerr << "Fine del file raggiunta dopo "<<itim-1<<" frames.\n";
                 break;
             }
-            //controlla che la scatola sia un parallelepipedo
+            //controlla che la box sia un parallelepipedo
             for (unsigned int i=0;i<3;i++)
                 for (unsigned int j=0;j<3;j++)
                     if (first_message && i!=j && box[i][j]!=0) {
                         first_message=false;
-                        std::cerr << "!!Attenzione!! NON HO IMPLEMENTATO LA LETTURA DI SCATOLE DI SIMULAZIONI NON A FORMA DI PARALLELEPIPEDO: le dimensioni della scatola saranno sbagliate, assicurarsi che i comandi successivi non utilizzino questo dato.\n";
+                        std::cerr << "!!Attenzione!! NON HO IMPLEMENTATO LA LETTURA DI SCATOLE DI SIMULAZIONI NON A FORMA DI PARALLELEPIPEDO: le dimensioni della box saranno sbagliate, assicurarsi che i comandi successivi non utilizzino questo dato.\n";
                     }
             head.natoms=natoms_xdr;
-            head.scatola[0]=0.0;
-            head.scatola[2]=0.0;
-            head.scatola[4]=0.0;
-            head.scatola[1]=box[0][0];
-            head.scatola[3]=box[1][1];
-            head.scatola[5]=box[2][2];
+            head.box[0]=0.0;
+            head.box[2]=0.0;
+            head.box[4]=0.0;
+            head.box[1]=box[0][0];
+            head.box[3]=box[1][1];
+            head.box[5]=box[2][2];
             head.timestep=step;
 
 

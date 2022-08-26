@@ -1,10 +1,10 @@
 #include "testtraiettoria.h"
-#include "traiettoria.h"
-#include "traiettoria_numpy.h"
+#include "trajectory.h"
+#include "trajectory_numpy.h"
 #include "config.h"
 
 template <class T>
-void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts){
+void BaseTrajectory<T>::dump_lammps_bin_traj(const std::string &fname, int start_ts, int stop_ts){
     if (start_ts<0 || start_ts>=n_timesteps){
         throw std::runtime_error("You must provide a starting timestep between 0 and the number of timesteps!");
     }
@@ -15,13 +15,13 @@ void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int star
         Intestazione_timestep_triclinic head;
         head.natoms=natoms;
         for (unsigned int i=0;i<6;++i)
-            head.scatola[i]=scatola(t)[i];
-        internal_to_lammps(head.scatola);
+            head.box[i]=box(t)[i];
+        internal_to_lammps(head.box);
         head.timestep=t;
         head.triclinic=triclinic;
         if (triclinic) {
             for (unsigned int i=0;i<3;++i)
-                head.xy_xz_yz[i]=scatola(t)[6+i];
+                head.xy_xz_yz[i]=box(t)[6+i];
         }
         head.condizioni_al_contorno[0]=0;
         head.condizioni_al_contorno[1]=0;
@@ -41,8 +41,8 @@ void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int star
             data[0]=iatom;
             data[1]=get_type(iatom);
             for (int i=0;i<3;++i){
-                data[2+i]=posizioni(t,iatom)[i];
-                data[5+i]=velocita(t,iatom)[i];
+                data[2+i]=positions(t,iatom)[i];
+                data[5+i]=velocity(t,iatom)[i];
             }
             static_assert (NDOUBLE_ATOMO==8, "You have to change the file writing (what do I have to write?) this if you change NDOUBLE_ATOMO" );
             out.write((char*) data,sizeof(double)*NDOUBLE_ATOMO);
@@ -51,26 +51,26 @@ void TraiettoriaBase<T>::dump_lammps_bin_traj(const std::string &fname, int star
 }
 
 template <class T>
-size_t TraiettoriaBase<T>::get_ntypes (){
+size_t BaseTrajectory<T>::get_ntypes (){
     if (ntypes==0) {
         types.clear();
-        min_type=buffer_tipi[0];
-        max_type=buffer_tipi[0];
+        min_type=buffer_type[0];
+        max_type=buffer_type[0];
         bool *duplicati = new bool[natoms];
         for (size_t i=0;i<natoms;i++)
             duplicati[i]=false;
         for (size_t i=0;i<natoms;i++) {
             if (!duplicati[i]) {
-                if (buffer_tipi[i]>max_type)
-                    max_type=buffer_tipi[i];
-                if (buffer_tipi[i]<min_type)
-                    min_type=buffer_tipi[i];
+                if (buffer_type[i]>max_type)
+                    max_type=buffer_type[i];
+                if (buffer_type[i]<min_type)
+                    min_type=buffer_type[i];
                 for (size_t j=i+1;j<natoms;j++){
-                    if (buffer_tipi[j]==buffer_tipi[i]){
+                    if (buffer_type[j]==buffer_type[i]){
                         duplicati[j]=true;
                     }
                 }
-                types.push_back(buffer_tipi[i]);
+                types.push_back(buffer_type[i]);
                 ntypes++;
             }
         }
@@ -80,20 +80,20 @@ size_t TraiettoriaBase<T>::get_ntypes (){
             type_map[types[i]]=i;
         }
         delete [] duplicati;
-        masse = new double [ntypes];
-        cariche = new double [ntypes];
+        mass = new double [ntypes];
+        charge = new double [ntypes];
 
         for (size_t i=0;i<natoms;i++) {
-            buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
+            buffer_type_id[i]=type_map.at(buffer_type[i]);
         }
     }
     return ntypes;
 }
 
 #ifdef PYTHON_SUPPORT
-template class TraiettoriaBase<Traiettoria_numpy>;
+template class BaseTrajectory<Trajectory_numpy>;
 #endif
 
 #ifdef BUILD_MMAP
-template class TraiettoriaBase<Traiettoria>;
+template class BaseTrajectory<Trajectory>;
 #endif

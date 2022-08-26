@@ -2,28 +2,28 @@
 #define STEINHARDT_H
 
 #include "sphericalbase.h"
-#include "calcolamultithread.h"
+#include "calculatemultithread.h"
 #include "operazionisulista.h"
 
 namespace Steinhardt_Flags {
 
 constexpr int FLAGS =
-        CalcolaMultiThread_Flags::PARALLEL_SPLIT_AVERAGE |
-        CalcolaMultiThread_Flags::CALL_INNER_JOIN_DATA |
-        CalcolaMultiThread_Flags::CALL_CALC_INIT;
+        CalculateMultiThread_Flags::PARALLEL_SPLIT_AVERAGE |
+        CalculateMultiThread_Flags::CALL_INNER_JOIN_DATA |
+        CalculateMultiThread_Flags::CALL_CALC_INIT;
 
 }
 
 template <int l, class TFLOAT, class T>
 class Steinhardt : public SphericalBase<l,TFLOAT,T>,
-        public CalcolaMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >,
-        public OperazioniSuLista<Steinhardt<l,TFLOAT,T>,TFLOAT>
+        public CalculateMultiThread< Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >,
+        public VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>
 {
 public:
-    using LISTA = OperazioniSuLista<Steinhardt<l,TFLOAT,T>,TFLOAT>;
+    using LISTA = VectorOp<Steinhardt<l,TFLOAT,T>,TFLOAT>;
     using SPB = SphericalBase<l,TFLOAT,T>;
-    using CMT = CalcolaMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
-    using CMT::calcola;
+    using CMT = CalculateMultiThread<Steinhardt<l,TFLOAT,T>, Steinhardt_Flags::FLAGS >;
+    using CMT::calculate;
     using SPB::calc;
     using typename SPB::Rminmax_t;
     using typename SPB::Neighbours_T;
@@ -40,7 +40,7 @@ public:
                const bool averaged_order = false
             );
 
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int nb) {return 0;}
+    unsigned int nExtraTimesteps(unsigned int nb) {return 0;}
     void reset(const unsigned int numeroTimestepsPerBlocco);
     void calc_init(int primo);
     void calc_single_th(int,//average index, begin
@@ -110,8 +110,8 @@ private:
     const size_t nbin;
     std::string c_descr;
     T & t;
-    using LISTA::lunghezza_lista;
-    using LISTA::lista;
+    using LISTA::data_length;
+    using LISTA::vdata;
     const std::vector<unsigned int> steinhardt_l_histogram;
     size_t nbin_steinhardt,steinhardt_histogram_size;
     TFLOAT * threadResults;

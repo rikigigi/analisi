@@ -18,12 +18,8 @@
 #include <sstream>
 #include "config.h"
 
-#ifdef USE_MPI
-#include "mp.h"
-#endif
-
 template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip,unsigned int every, bool debug) :
-    CalcolaMultiThread_T {nthreads, skip, t->get_natoms(), every},
+    CalculateMultiThread_T {nthreads, skip, t->get_natoms(), every},
     traiettoria(t),rmin(rmin),rmax(rmax),nbin(nbin), lmax(tmax), debug(debug)
 {
 
@@ -37,7 +33,7 @@ template <class TFLOAT, class T> Gofrt<TFLOAT,T>::~Gofrt() {
 
 }
 
-template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+template <class TFLOAT, class T> unsigned int Gofrt<TFLOAT,T>::nExtraTimesteps(unsigned int n_b){
     return (traiettoria->get_ntimesteps()/(n_b+1)+1 < lmax || lmax==0)? traiettoria->get_ntimesteps()/(n_b+1)+1 : lmax;
 }
 
@@ -59,10 +55,10 @@ template <class TFLOAT, class T> void Gofrt<TFLOAT,T>::reset(const unsigned int 
     leff =(numeroTimestepsPerBlocco<lmax || lmax==0)? numeroTimestepsPerBlocco : lmax;
     //numero di timestep su cui fare la media
     ntimesteps=numeroTimestepsPerBlocco;
-    lunghezza_lista=leff*traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin;
+    data_length=leff*traiettoria->get_ntypes()*(traiettoria->get_ntypes()+1)*nbin;
 
-    delete [] lista;
-    lista=new TFLOAT [lunghezza_lista];
+    delete [] vdata;
+    vdata=new TFLOAT [data_length];
 }
 
 template <class TFLOAT, class T> std::vector<ssize_t> Gofrt<TFLOAT,T>::get_shape(){
@@ -86,9 +82,9 @@ void Gofrt<TFLOAT,T>::calc_init(int primo) {
     }
 
     //init
-    th_data = new TFLOAT[lunghezza_lista*(nthreads-1)];
+    th_data = new TFLOAT[data_length*(nthreads-1)];
     azzera();
-    for (unsigned int i=0;i<lunghezza_lista*(nthreads-1);++i){
+    for (unsigned int i=0;i<data_length*(nthreads-1);++i){
         th_data[i]=0;
     }
     if (ntimesteps/skip>0) incr=1.0/int(ntimesteps/skip);
@@ -97,9 +93,9 @@ void Gofrt<TFLOAT,T>::calc_init(int primo) {
 
 template <class TFLOAT, class T>
 void Gofrt<TFLOAT,T>::calc_single_th(int t, int imedia, int atom_start, int atom_stop,int primo, int ith) {
-    TFLOAT * th_data_ = th_data + (ith-1)*lunghezza_lista;
+    TFLOAT * th_data_ = th_data + (ith-1)*data_length;
     if (ith==0) {
-        th_data_ = lista;
+        th_data_ = vdata;
     }
     for (unsigned int iatom=atom_start;iatom<atom_stop;iatom++) {
         for (unsigned int jatom=0;jatom<traiettoria->get_natoms();jatom++) {
@@ -129,8 +125,8 @@ void Gofrt<TFLOAT,T>::calc_single_th(int t, int imedia, int atom_start, int atom
 template <class TFLOAT, class T>
 void Gofrt<TFLOAT,T>::calc_end() {
     for (int ith=0;ith<nthreads-1;ith++) {
-        for (int i=0;i<lunghezza_lista;++i) {
-            lista[i]+=th_data[ith*lunghezza_lista+i];
+        for (int i=0;i<data_length;++i) {
+            vdata[i]+=th_data[ith*data_length+i];
         }
     }
 
@@ -158,14 +154,15 @@ void Gofrt<TFLOAT,T>::calc_end() {
 }
 
 template <class TFLOAT, class T> Gofrt<TFLOAT,T> & Gofrt<TFLOAT,T>::operator =(const Gofrt<TFLOAT,T> &destra) {
-    OperazioniSuLista<Gofrt<TFLOAT,T>,TFLOAT >::operator = (destra);
+    VectorOp<Gofrt<TFLOAT,T>,TFLOAT >::operator = (destra);
     return *this;
 }
 
 #ifdef BUILD_MMAP
-template class Gofrt<double,Traiettoria>;
+#include "trajectory.h"
+template class Gofrt<double,Trajectory>;
 #endif
 #ifdef PYTHON_SUPPORT
-#include "traiettoria_numpy.h"
-template class Gofrt<double, Traiettoria_numpy>;
+#include "trajectory_numpy.h"
+template class Gofrt<double, Trajectory_numpy>;
 #endif

@@ -11,22 +11,21 @@
 
 
 #include "posizioniequilibrio.h"
-#include "traiettoria.h"
 #include <limits>
 #include <cmath>
 #include <cfenv>
 #include <map>
 #include "doubleround.h"
 
-PosizioniEquilibrio::PosizioniEquilibrio(Traiettoria * tr,unsigned int timesteps_sottoblocco)
+PosizioniEquilibrio::PosizioniEquilibrio(Trajectory * tr,unsigned int timesteps_sottoblocco)
 {
     traiettoria=tr;
-    lunghezza_lista=traiettoria->get_natoms()*3;
-    lista = new double [lunghezza_lista];
-    posizioni_fittate_reticolo=new double[lunghezza_lista];
-    for (unsigned int i=0;i<lunghezza_lista;i++){
+    data_length=traiettoria->get_natoms()*3;
+    vdata = new double [data_length];
+    posizioni_fittate_reticolo=new double[data_length];
+    for (unsigned int i=0;i<data_length;i++){
         posizioni_fittate_reticolo[i]=0.0;
-        lista[i]=0.0;
+        vdata[i]=0.0;
     }
     traslation= new std::vector< std::array<double,3> > [traiettoria->get_natoms()];
     calcolato=false;
@@ -103,7 +102,7 @@ PosizioniEquilibrio::~PosizioniEquilibrio(){
     delete [] traslation;
 }
 
-unsigned int PosizioniEquilibrio::numeroTimestepsOltreFineBlocco(unsigned int n_b){
+unsigned int PosizioniEquilibrio::nExtraTimesteps(unsigned int n_b){
     return 0;
 }
 
@@ -111,23 +110,23 @@ void PosizioniEquilibrio::reset(const unsigned int numeroTimestepsPerBlocco){
     lunghezza_media=numeroTimestepsPerBlocco;
 }
 
-void PosizioniEquilibrio::calcola(unsigned int primo) {
+void PosizioniEquilibrio::calculate(unsigned int primo) {
 
 
     azzera();
 
     if (timestepSottoblocco>0)
-        traiettoria->imposta_dimensione_finestra_accesso(timestepSottoblocco);
+        traiettoria->set_data_access_block_size(timestepSottoblocco);
 
     for (unsigned int i=0;i<lunghezza_media;i++){
         if (timestepSottoblocco>0 && i%timestepSottoblocco==0){
-            traiettoria->imposta_inizio_accesso(primo+i);
+            traiettoria->set_access_at(primo+i);
         }
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++){
             for (unsigned int icoord=0;icoord<3;icoord++){
-                double delta = traiettoria->posizioni(primo+i,iatom)[icoord]
-                               - lista[iatom*3+icoord];
-                lista[iatom*3+icoord] += delta/(i+1);
+                double delta = traiettoria->positions(primo+i,iatom)[icoord]
+                               - vdata[iatom*3+icoord];
+                vdata[iatom*3+icoord] += delta/(i+1);
             }
         }
     }
@@ -141,7 +140,7 @@ double * PosizioniEquilibrio::get_atom_position(unsigned int iatom){
         return 0;
     }
 
-    return & lista[iatom*3];
+    return & vdata[iatom*3];
 }
 
 void PosizioniEquilibrio::reticolo_inizializza(double *base_r, double *base,unsigned int *base_type, const unsigned int &nbase) {
@@ -289,13 +288,13 @@ void PosizioniEquilibrio::coord_reticolo(double *xyz, double *uvw_min, double *u
 
 
 
-double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *max, /// limiti della scatola
+double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *max, /// limiti della box
                                         double *spostamento ) {
 
     //obiettivo: voglio assegnare ad ogni atomo il suo indice di cella,
-    //e calcolare esattamente le posizioni degli atomi secondo il reticolo a temperatura zero
+    //e calcolare esattamente le positions degli atomi secondo il reticolo a temperatura zero
 
-    //assumo che il reticolo sia fisso. devo solo trovare come traslarlo per centrare nel migliore dei modi gli atomi, che non si trovano esattamente sulle posizioni di temperatura zero (la temperatura della simulazione è finita)
+    //assumo che il reticolo sia fisso. devo solo trovare come traslarlo per centrare nel migliore dei modi gli atomi, che non si trovano esattamente sulle positions di temperatura zero (la temperatura della simulazione è finita)
 
     //sceglie un atomo di uno spigolo e lo considera come origine. devo controllare di poter costruire una cella con questo atomo
     //gli atomi dello spigolo sono quelli che hanno meno primi vicini.
@@ -311,7 +310,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
             if (iatom!=jatom) {
                 double d2=0.0;
                 for (unsigned int i=0;i<3;i++)
-                    d2+=(lista[iatom*3+i]-lista[jatom*3+i])*(lista[iatom*3+i]-lista[jatom*3+i]);
+                    d2+=(vdata[iatom*3+i]-vdata[jatom*3+i])*(vdata[iatom*3+i]-vdata[jatom*3+i]);
                 distanze.insert(std::pair<double,unsigned int>(d2,jatom));
             }
         }
@@ -343,8 +342,8 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
             for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                 double d2=0.0;
                 for (unsigned int i=0;i<3;i++ )
-                    d2+=(lista[iatom*3+i]-(lista[*iterator *3+i]+base_reticolo(i,ibase)) )*
-                        (lista[iatom*3+i]-(lista[*iterator *3+i]+base_reticolo(i,ibase)) );
+                    d2+=(vdata[iatom*3+i]-(vdata[*iterator *3+i]+base_reticolo(i,ibase)) )*
+                        (vdata[iatom*3+i]-(vdata[*iterator *3+i]+base_reticolo(i,ibase)) );
                 distanze.insert(std::pair<double,unsigned int>(d2,iatom));
             }
             //prendi il più vicino. se la distanza è maggiore di una cerca soglia, scarta questo atomo dell'angolo
@@ -371,7 +370,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
         abort();
     }
 
-    double origin[3]={lista[3* *iterator+0],lista[3* *iterator+1],lista[3* *iterator+2]};
+    double origin[3]={vdata[3* *iterator+0],vdata[3* *iterator+1],vdata[3* *iterator+2]};
 
     //stima molto rozza dei limiti degli indici che coprono completamente la cella di simulazione
     double coord[]={max[0]-origin[0],max[1]-origin[1],max[2]-origin[2]},
@@ -397,7 +396,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
     coord_reticolo(coord,uvw_min,uvw_max); // m,M,M
 
     /*adesso ho i limiti nelle nuove coordinate, genero i punti del reticolo
-     * nella scatola e poi calcolo la distanza da quelli della traiettoria
+     * nella box e poi calcolo la distanza da quelli della traiettoria
     */
 
     spostamento[0]=0.0;
@@ -409,7 +408,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
     for (int u=std::lrint( uvw_min[0]);u<=std::lrint(uvw_max[0]);u++){
         for (int v=std::lrint( uvw_min[1]);v<=std::lrint(uvw_max[1]);v++){
             for (int w=std::lrint( uvw_min[2]);w<=std::lrint(uvw_max[2]);w++){
-                //controlla che l'atomo sia dentro la scatola, se si lo aggiunge
+                //controlla che l'atomo sia dentro la box, se si lo aggiunge
                 //per ogni atomo della base...
                 Eigen::Vector3d uvw;
                 uvw << double(u),double(v),double(w);
@@ -430,7 +429,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
     }
 
     if (reticolo_xyz.size()< traiettoria->get_natoms()) {
-        std::cerr << "La scatola non è abbastanza grande per contenere il reticolo intero ("<<reticolo_xyz.size() <<" atomi contro "<< traiettoria->get_natoms()<<" atomi della traiettoria)!\n";
+        std::cerr << "La box non è abbastanza grande per contenere il reticolo intero ("<<reticolo_xyz.size() <<" atomi contro "<< traiettoria->get_natoms()<<" atomi della traiettoria)!\n";
     }
 
     //guardo la distanza dei punti da quelli della media (da calcolare in precedenza)
@@ -439,12 +438,12 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
         std::array<int,4> uvwi=reticolo_xyz.begin()->first;
             // cerco l'atomo più vicino dello stesso tipo, per restituire comunque un numero sensato
             auto iteratore = reticolo_xyz.begin();
-            Eigen::Vector3d d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&lista[iatom*3]);
+            Eigen::Vector3d d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&vdata[iatom*3]);
             Eigen::Vector3d dmin;
             d2m= d.dot(d)*4;
             for (iteratore++;iteratore != reticolo_xyz.end();iteratore++) {
                 if (base_tipi[iteratore->first[3]]==traiettoria->get_type(iatom) && iteratore->second.second == traiettoria->get_natoms()){
-                    d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&lista[iatom*3]);
+                    d = iteratore->second.first - Eigen::Map<Eigen::Vector3d>(&vdata[iatom*3]);
                     d2t= d.dot(d);
                     if (d2t<d2m) {
                         d2m=d2t;
@@ -454,7 +453,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
                 }
             }
             if (reticolo_xyz[uvwi].second!=traiettoria->get_natoms()) {
-                std::cerr << "Errore: questo punto del reticolo ha già un atomo assegnato (provare ad aumentare le dimensioni della scatola dove si genera il reticolo?)\n";
+                std::cerr << "Errore: questo punto del reticolo ha già un atomo assegnato (provare ad aumentare le dimensioni della box dove si genera il reticolo?)\n";
                 abort();
             }
             reticolo_xyz[uvwi].second=iatom;
@@ -497,7 +496,7 @@ double * PosizioniEquilibrio::get_fitted_pos(unsigned int iatom) {
 void PosizioniEquilibrio::get_displacement(unsigned int iatom, unsigned int tstep,double * displ) {
 
     for (unsigned int i=0;i<3;i++) {
-        displ[i]=traiettoria->posizioni(tstep,iatom)[i]-get_fitted_pos(iatom)[i];
+        displ[i]=traiettoria->positions(tstep,iatom)[i]-get_fitted_pos(iatom)[i];
     }
 }
 
@@ -557,7 +556,7 @@ unsigned int PosizioniEquilibrio::get_number_cells(){
 
 double PosizioniEquilibrio::get_simulation_size(unsigned int icoord) {
     if (icoord <3) {
-        double *b=traiettoria->scatola_last();
+        double *b=traiettoria->box_last();
         return b[icoord*2+1]-b[icoord*2];
     } else {
         std::cerr << "Errore: richiesta una dimensione che non esiste in get_simulation_size()";
@@ -579,13 +578,13 @@ void PosizioniEquilibrio::fit_nacl(){
      * Lo spostamento di prima più questo nuovo sarà lo spostamento effettivo del reticolo rispetto all'origine.
     */
 
-         //trova le dimensioni della scatola, leggendole dalla traiettoria
-        double max[3]={traiettoria->scatola_last()[1],traiettoria->scatola_last()[3],traiettoria->scatola_last()[5]},
-               min[3]={traiettoria->scatola_last()[0],traiettoria->scatola_last()[2],traiettoria->scatola_last()[4]};
+         //trova le dimensioni della box, leggendole dalla traiettoria
+        double max[3]={traiettoria->box_last()[1],traiettoria->box_last()[3],traiettoria->box_last()[5]},
+               min[3]={traiettoria->box_last()[0],traiettoria->box_last()[2],traiettoria->box_last()[4]};
 
 
 #ifdef DEBUG
-        std::cerr << "Limiti della scatola (minxyz),(maxxyz) ("<< min[0]<< ", " << min[1] << ", " << min[2] << "), (" << max[0] << ", " << max[1] << ", " << max[2]<<")\n";
+        std::cerr << "Limiti della box (minxyz),(maxxyz) ("<< min[0]<< ", " << min[1] << ", " << min[2] << "), (" << max[0] << ", " << max[1] << ", " << max[2]<<")\n";
 #endif
 
         /*    ______
@@ -596,7 +595,7 @@ void PosizioniEquilibrio::fit_nacl(){
          *
          */
 
-        //assumo scatola quadrata
+        //assumo box quadrata
         double media_primi_vicini= cbrt( (max[0]-min[0])*(max[1]-min[1])*(max[2]-min[2])/(traiettoria->get_natoms()/8))/2.0;
 
         for (unsigned int i=0;i<3;i++) {

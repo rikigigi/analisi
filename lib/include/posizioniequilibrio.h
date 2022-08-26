@@ -19,15 +19,16 @@
 #include <array>
 #include <vector>
 #include "eigen_include.h"
+#include "trajectory.h"
 
-class PosizioniEquilibrio : public OperazioniSuLista<PosizioniEquilibrio>
+class PosizioniEquilibrio : public VectorOp<PosizioniEquilibrio>
 {
 public:
-    PosizioniEquilibrio(Traiettoria *, unsigned int timesteps_sottoblocco=0);
+    PosizioniEquilibrio(Trajectory *, unsigned int timesteps_sottoblocco=0);
     ~PosizioniEquilibrio();
-    unsigned int numeroTimestepsOltreFineBlocco(unsigned int n_b);
+    unsigned int nExtraTimesteps(unsigned int n_b);
     void reset(const unsigned int numeroTimestepsPerBlocco);
-    void calcola(unsigned int primo);
+    void calculate(unsigned int primo);
     void fit_nacl();
     double d2_reticolo_spostamento_medio(double *min, double *max, double *spostamento);
     bool zona_brillouin(double * k_test);
@@ -60,7 +61,7 @@ private:
     void reticolo_inizializza(double * base_r, double * base, unsigned int *base_type, const unsigned int & nbase);
     void coord_reticolo(double *xyz,double *uvw_min,double *uvw_max);
     bool calcolato;
-    Traiettoria *traiettoria;
+    Trajectory *traiettoria;
     unsigned int lunghezza_media,timestepSottoblocco;
 };
 

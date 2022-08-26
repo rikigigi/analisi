@@ -14,19 +14,19 @@
 #define HEATFLUXTS_H
 
 #include <string>
-#include "traiettoria.h"
+#include "trajectory.h"
 
 class HeatFluxTs
 {
 public:
-    HeatFluxTs(std::string filename,Traiettoria * t,unsigned int skip=1);
+    HeatFluxTs(std::string filename,Trajectory * t,unsigned int skip=1);
     ~HeatFluxTs();
     double * flux(unsigned int ts);
     double * temp(unsigned int ts);
     unsigned int get_skip() {return skip;}
     double get_L(){return L;}
 private:
-    Traiettoria * traiettoria;
+    Trajectory * traiettoria;
     unsigned int skip;
     double * heatflux;
     double * T,L;
