@@ -62,7 +62,7 @@ void IstogrammaVelocita::calculate(unsigned int primo) {
     for (unsigned int itimestep=primo;itimestep<primo+ntimestep;itimestep++)
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
             for (unsigned int icoord=0;icoord<3;icoord++)
-                istg(-vminmax,+vminmax,bins,&vdata[(traiettoria->get_type(iatom)*3+icoord)*bins],traiettoria->velocita(itimestep,iatom)[icoord]);
+                istg(-vminmax,+vminmax,bins,&vdata[(traiettoria->get_type(iatom)*3+icoord)*bins],traiettoria->velocity(itimestep,iatom)[icoord]);
         }
 
 

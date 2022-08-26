@@ -78,16 +78,16 @@ void MSD<T,FPE>::calc_single_th(size_t begin, size_t ultimo, size_t primo, unsig
                 for (size_t iatom=0;iatom<traiettoria->get_natoms();iatom++) {
                     size_t itype=traiettoria->get_type(iatom);
                     double delta=(pow(
-                                   traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0]
-                                  -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[0]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[0])
+                                   traiettoria->template positions<false>(primo+imedia,iatom)[0]-traiettoria->template positions<false>(primo+imedia+t,iatom)[0]
+                                  -(traiettoria->template positions_cm<false>(primo+imedia,itype)[0]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[0])
                             ,2)+
                             pow(
-                                traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1]
-                                -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[1]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[1])
+                                traiettoria->template positions<false>(primo+imedia,iatom)[1]-traiettoria->template positions<false>(primo+imedia+t,iatom)[1]
+                                -(traiettoria->template positions_cm<false>(primo+imedia,itype)[1]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[1])
                             ,2)+
                             pow(
-                                traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2]
-                                -(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2])
+                                traiettoria->template positions<false>(primo+imedia,iatom)[2]-traiettoria->template positions<false>(primo+imedia+t,iatom)[2]
+                                -(traiettoria->template positions_cm<false>(primo+imedia,itype)[2]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[2])
                             ,2))
                             -vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)];
                     vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
@@ -95,9 +95,9 @@ void MSD<T,FPE>::calc_single_th(size_t begin, size_t ultimo, size_t primo, unsig
                 }
             }else{
                 for (size_t iatom=0;iatom<traiettoria->get_natoms();iatom++) {
-                    double delta=(pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[0]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[0],2)+
-                            pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[1]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[1],2)+
-                            pow(traiettoria->template posizioni<false>(primo+imedia,iatom)[2]-traiettoria->template posizioni<false>(primo+imedia+t,iatom)[2],2))
+                    double delta=(pow(traiettoria->template positions<false>(primo+imedia,iatom)[0]-traiettoria->template positions<false>(primo+imedia+t,iatom)[0],2)+
+                            pow(traiettoria->template positions<false>(primo+imedia,iatom)[1]-traiettoria->template positions<false>(primo+imedia+t,iatom)[1],2)+
+                            pow(traiettoria->template positions<false>(primo+imedia,iatom)[2]-traiettoria->template positions<false>(primo+imedia+t,iatom)[2],2))
                             -vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)];
                     vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)]+=delta/(++cont[traiettoria->get_type(iatom)]);
                     if constexpr (FPE) fpem.check_nan(vdata[ntypes*t*f_cm+traiettoria->get_type(iatom)]);
@@ -111,9 +111,9 @@ void MSD<T,FPE>::calc_single_th(size_t begin, size_t ultimo, size_t primo, unsig
             }
             if (cm_msd) {
                 for (size_t itype=0; itype < ntypes; itype++) {
-                double delta=(pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[0]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[0],2)+
-                        pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[1]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[1],2)+
-                        pow(traiettoria->template posizioni_cm<false>(primo+imedia,itype)[2]-traiettoria->template posizioni_cm<false>(primo+imedia+t,itype)[2],2))
+                double delta=(pow(traiettoria->template positions_cm<false>(primo+imedia,itype)[0]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[0],2)+
+                        pow(traiettoria->template positions_cm<false>(primo+imedia,itype)[1]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[1],2)+
+                        pow(traiettoria->template positions_cm<false>(primo+imedia,itype)[2]-traiettoria->template positions_cm<false>(primo+imedia+t,itype)[2],2))
                         -vdata[ntypes*t*f_cm+ntypes+itype];
                     vdata[ntypes*t*f_cm+ntypes+itype]+=delta/(++cont[ntypes+itype]);
                     if constexpr (FPE) fpem.check_nan(vdata[ntypes*t*f_cm+ntypes+itype]);

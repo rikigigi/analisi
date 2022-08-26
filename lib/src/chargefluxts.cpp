@@ -76,7 +76,7 @@ void ChargeFluxTs::calculate(unsigned int timestep) {
 
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++) {
             for (unsigned int i=0;i<3;i++){
-                J[istep*3+i]+=traiettoria->velocita(t,iatom)[i]
+                J[istep*3+i]+=traiettoria->velocity(t,iatom)[i]
                         *traiettoria->get_charge(traiettoria->get_type(iatom));
             }
         }

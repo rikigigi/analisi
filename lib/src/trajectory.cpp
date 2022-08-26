@@ -57,10 +57,10 @@ Trajectory::Trajectory(std::string filename)
     timesteps_lammps=0;
     buffer_tipi=0;
     buffer_tipi_id=0;
-    buffer_posizioni=0;
-    buffer_velocita=0;
+    buffer_positions=0;
+    buffer_velocity=0;
     buffer_scatola=0;
-    buffer_posizioni_size=0;
+    buffer_positions_size=0;
     buffer_cm_size=0;
     ntypes=0;
     ok=false;
@@ -72,8 +72,8 @@ Trajectory::Trajectory(std::string filename)
     cariche=0;
     wrap_pbc=false;
     calculate_center_of_mass=false;
-    buffer_posizioni_cm=0;
-    buffer_velocita_cm=0;
+    buffer_positions_cm=0;
+    buffer_velocity_cm=0;
 
     fd=open(filename.c_str(), O_RDONLY);
     if (fd==-1) {
@@ -242,10 +242,10 @@ Trajectory::~Trajectory(){
     delete [] masse;
     delete [] cariche;
     delete [] buffer_scatola;
-    fftw_free(buffer_posizioni);
-    fftw_free(buffer_posizioni_cm);
-    fftw_free(buffer_velocita_cm);
-    fftw_free(buffer_velocita);
+    fftw_free(buffer_positions);
+    fftw_free(buffer_positions_cm);
+    fftw_free(buffer_velocity_cm);
+    fftw_free(buffer_velocity);
 
     if (file != 0)
         munmap(file,fsize);
@@ -342,16 +342,16 @@ Trajectory::Errori Trajectory::set_data_access_block_size(const size_t &Ntimeste
     if (loaded_timesteps!=Ntimesteps){
 
         //questo alloca la memoria in modo corretto per permettere l'utilizzo delle istruzioni SIMD in fftw3
-        fftw_free(buffer_posizioni);
-        fftw_free(buffer_posizioni_cm);
-        fftw_free(buffer_velocita_cm);
-        fftw_free(buffer_velocita); 
-        buffer_posizioni_size=sizeof(double)*natoms*3*Ntimesteps;
+        fftw_free(buffer_positions);
+        fftw_free(buffer_positions_cm);
+        fftw_free(buffer_velocity_cm);
+        fftw_free(buffer_velocity); 
+        buffer_positions_size=sizeof(double)*natoms*3*Ntimesteps;
         buffer_cm_size=sizeof(double)*3*Ntimesteps*ntypes;
-        buffer_posizioni= (double*) fftw_malloc(buffer_posizioni_size);
-        buffer_posizioni_cm= (double*) fftw_malloc(buffer_cm_size);
-        buffer_velocita_cm= (double*) fftw_malloc(buffer_cm_size);
-        buffer_velocita=(double*) fftw_malloc(buffer_posizioni_size);
+        buffer_positions= (double*) fftw_malloc(buffer_positions_size);
+        buffer_positions_cm= (double*) fftw_malloc(buffer_cm_size);
+        buffer_velocity_cm= (double*) fftw_malloc(buffer_cm_size);
+        buffer_velocity=(double*) fftw_malloc(buffer_positions_size);
 
         delete [] buffer_scatola;
         buffer_scatola= new double [buffer_scatola_stride*Ntimesteps];
@@ -551,20 +551,20 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
     //copia i dati già letti
     for (size_t i=timestep_copy_tstart;i<timestep_copy_tend;i++) {
         for (size_t idata=0;idata<3*natoms;idata++) {
-            buffer_velocita[(finestra_differenza+i)*3*natoms+idata] =
-                    buffer_velocita[i*3*natoms + idata];
-            buffer_posizioni[(finestra_differenza+i)*3*natoms+idata]=
-                    buffer_posizioni[i*3*natoms + idata];
+            buffer_velocity[(finestra_differenza+i)*3*natoms+idata] =
+                    buffer_velocity[i*3*natoms + idata];
+            buffer_positions[(finestra_differenza+i)*3*natoms+idata]=
+                    buffer_positions[i*3*natoms + idata];
         }
 
         //anche la velocità del centro di massa
         for (size_t itype=0;itype<ntypes*3;itype++)
-        buffer_posizioni_cm[(finestra_differenza+i)*3*ntypes+itype]=
-                buffer_posizioni_cm[i*3*ntypes + itype];
+        buffer_positions_cm[(finestra_differenza+i)*3*ntypes+itype]=
+                buffer_positions_cm[i*3*ntypes + itype];
         //anche la velocità del centro di massa
         for (size_t itype=0;itype<ntypes*3;itype++)
-        buffer_velocita_cm[(finestra_differenza+i)*3*ntypes+itype]=
-                buffer_velocita_cm[i*3*ntypes + itype];
+        buffer_velocity_cm[(finestra_differenza+i)*3*ntypes+itype]=
+                buffer_velocity_cm[i*3*ntypes + itype];
 
     }
 
@@ -580,7 +580,7 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
         }
         TimestepManager intestazione;
         Chunk * pezzi=0;
-        //legge i vari pezzi del timestep e copia le posizioni e le velocita' degli atomi nei buffer
+        //legge i vari pezzi del timestep e copia le positions e le velocity' degli atomi nei buffer
 
         size_t offset=0;
         try {
@@ -600,8 +600,8 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
         //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
         for (size_t itype=0;itype<ntypes*3;itype++){
-            buffer_posizioni_cm[t*3*ntypes+itype]=0.0;
-            buffer_velocita_cm[t*3*ntypes+itype]=0.0;
+            buffer_positions_cm[t*3*ntypes+itype]=0.0;
+            buffer_velocity_cm[t*3*ntypes+itype]=0.0;
         }
         for (size_t itype=0;itype<ntypes;itype++){
             cont_cm[itype]=0;
@@ -615,11 +615,11 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
                 char * read_pos=Atomo::read_id_tipo(pezzi[ichunk].atomi + iatomo*sizeof (double)*NDOUBLE_ATOMO,id_,tipo_);
                 size_t id=id_map.at(round(id_));
                 size_t tipo=round(tipo_);
-                read_pos=Atomo::read_pos_vel(read_pos,buffer_posizioni + t*3*natoms+id*3,buffer_velocita+t*3*natoms+id*3);
+                read_pos=Atomo::read_pos_vel(read_pos,buffer_positions + t*3*natoms+id*3,buffer_velocity+t*3*natoms+id*3);
 //                if (wrap_pbc){
 //                    //TODO: here call pbc routine!
 //                    for (size_t icoord=0;icoord<3;icoord++){
-//                        buffer_posizioni[t*3*natoms+id*3+icoord]=buffer_posizioni[t*3*natoms+id*3+icoord]-round(buffer_posizioni[t*3*natoms+id*3+icoord]*2/l[icoord])*2*l[icoord];
+//                        buffer_positions[t*3*natoms+id*3+icoord]=buffer_positions[t*3*natoms+id*3+icoord]-round(buffer_positions[t*3*natoms+id*3+icoord]*2/l[icoord])*2*l[icoord];
 //                    }
 //                }
                 if (buffer_tipi[id]!= tipo) {
@@ -627,16 +627,16 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
                     buffer_tipi[id]=tipo;
                 }
 
-                //aggiorna la media delle posizioni e delle velocità del centro di massa
+                //aggiorna la media delle positions e delle velocità del centro di massa
                 unsigned int tipo_id=buffer_tipi_id[id];
                 cont_cm[tipo_id]++;
                 for (size_t icoord=0;icoord<3;icoord++){
-                    buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord]+=
-                            (buffer_posizioni[t*3*natoms+id*3+icoord]
-                             -buffer_posizioni_cm[t*3*ntypes+3*tipo_id+icoord])   /(cont_cm[tipo_id]);
-                    buffer_velocita_cm[t*3*ntypes+3*tipo_id+icoord]+=
-                            (buffer_velocita[t*3*natoms+id*3+icoord]-
-                             buffer_velocita_cm[t*3*ntypes+3*tipo_id+icoord])     /(cont_cm[tipo_id]);
+                    buffer_positions_cm[t*3*ntypes+3*tipo_id+icoord]+=
+                            (buffer_positions[t*3*natoms+id*3+icoord]
+                             -buffer_positions_cm[t*3*ntypes+3*tipo_id+icoord])   /(cont_cm[tipo_id]);
+                    buffer_velocity_cm[t*3*ntypes+3*tipo_id+icoord]+=
+                            (buffer_velocity[t*3*natoms+id*3+icoord]-
+                             buffer_velocity_cm[t*3*ntypes+3*tipo_id+icoord])     /(cont_cm[tipo_id]);
                 }
             }
         }

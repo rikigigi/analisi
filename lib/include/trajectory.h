@@ -76,25 +76,25 @@ public:
     }
 
     template<bool SAFE=true>
-    double * posizioni (const size_t &timestep, const size_t &atomo){
-        return get_array<SAFE,true>(buffer_posizioni,timestep,atomo,3*natoms,3);
+    double * positions (const size_t &timestep, const size_t &atomo){
+        return get_array<SAFE,true>(buffer_positions,timestep,atomo,3*natoms,3);
     }
     template<bool SAFE=true>
-    double * velocita(const size_t &timestep, const size_t &atomo) {
-        return get_array<SAFE,true>(buffer_velocita,timestep,atomo,3*natoms,3);
+    double * velocity(const size_t &timestep, const size_t &atomo) {
+        return get_array<SAFE,true>(buffer_velocity,timestep,atomo,3*natoms,3);
     }
     template<bool SAFE=true>
     double * scatola(const size_t &timestep) {
         return get_array<SAFE,false>(buffer_scatola,timestep,0,buffer_scatola_stride,0);
     }
     template<bool SAFE=true>
-    double * posizioni_cm(const size_t &timestep, const size_t &tipo){
-        return get_array(buffer_posizioni_cm,timestep,tipo,3*ntypes,3);
+    double * positions_cm(const size_t &timestep, const size_t &tipo){
+        return get_array(buffer_positions_cm,timestep,tipo,3*ntypes,3);
     }
 
     template<bool SAFE=true>
-    double * velocita_cm(const size_t &timestep, const size_t &tipo){
-        return get_array(buffer_velocita_cm,timestep,tipo,3*ntypes,3);
+    double * velocity_cm(const size_t &timestep, const size_t &tipo){
+        return get_array(buffer_velocity_cm,timestep,tipo,3*ntypes,3);
     }
     double *scatola_last(){
         if (loaded_timesteps>0) {

@@ -124,7 +124,7 @@ void PosizioniEquilibrio::calculate(unsigned int primo) {
         }
         for (unsigned int iatom=0;iatom<traiettoria->get_natoms();iatom++){
             for (unsigned int icoord=0;icoord<3;icoord++){
-                double delta = traiettoria->posizioni(primo+i,iatom)[icoord]
+                double delta = traiettoria->positions(primo+i,iatom)[icoord]
                                - vdata[iatom*3+icoord];
                 vdata[iatom*3+icoord] += delta/(i+1);
             }
@@ -292,9 +292,9 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
                                         double *spostamento ) {
 
     //obiettivo: voglio assegnare ad ogni atomo il suo indice di cella,
-    //e calcolare esattamente le posizioni degli atomi secondo il reticolo a temperatura zero
+    //e calcolare esattamente le positions degli atomi secondo il reticolo a temperatura zero
 
-    //assumo che il reticolo sia fisso. devo solo trovare come traslarlo per centrare nel migliore dei modi gli atomi, che non si trovano esattamente sulle posizioni di temperatura zero (la temperatura della simulazione è finita)
+    //assumo che il reticolo sia fisso. devo solo trovare come traslarlo per centrare nel migliore dei modi gli atomi, che non si trovano esattamente sulle positions di temperatura zero (la temperatura della simulazione è finita)
 
     //sceglie un atomo di uno spigolo e lo considera come origine. devo controllare di poter costruire una cella con questo atomo
     //gli atomi dello spigolo sono quelli che hanno meno primi vicini.
@@ -496,7 +496,7 @@ double * PosizioniEquilibrio::get_fitted_pos(unsigned int iatom) {
 void PosizioniEquilibrio::get_displacement(unsigned int iatom, unsigned int tstep,double * displ) {
 
     for (unsigned int i=0;i<3;i++) {
-        displ[i]=traiettoria->posizioni(tstep,iatom)[i]-get_fitted_pos(iatom)[i];
+        displ[i]=traiettoria->positions(tstep,iatom)[i]-get_fitted_pos(iatom)[i];
     }
 }
 

@@ -36,9 +36,9 @@ TestTraiettoria::TestTraiettoria(std::string filename) : Trajectory(filename)
         std::cout << "Blocco "<<ib<<"\n";
         set_access_at(ts_b*ib);
         for (unsigned int ts=ts_b*ib;ts<ts_b*(ib+2);ts++) {
-            out << ts <<" " <<posizioni(ts,iatom)[icoord] << " " << coord[ts] << " "<<posizioni_cm(ts,0)[icoord]<< " " << coord_cm[ts] <<"\n";
-            coord[ts]=posizioni(ts,iatom)[icoord];
-            coord_cm[ts]=posizioni_cm(ts,0)[icoord];
+            out << ts <<" " <<positions(ts,iatom)[icoord] << " " << coord[ts] << " "<<positions_cm(ts,0)[icoord]<< " " << coord_cm[ts] <<"\n";
+            coord[ts]=positions(ts,iatom)[icoord];
+            coord_cm[ts]=positions_cm(ts,0)[icoord];
         }
 
 

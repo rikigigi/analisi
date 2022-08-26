@@ -436,7 +436,7 @@ fine_calcolo_fononi:
                         q_punto += sqrt(traiettoria->get_mass( traiettoria->get_type(iatom) ))
                                 *exp(I*vettori_onda.col(imodo/(3*posizioni_equilibrio->get_atoms_cell())).dot(       Eigen::Map<Eigen::Vector3d>(posizioni_equilibrio->get_fitted_pos(iatom)) - Eigen::Map<Eigen::Vector3d>(posizioni_equilibrio->get_atom_position_origin_cell(posizioni_equilibrio->get_atom_base_index(iatom)))   )    )*
                                 (autovettori.block<3,1>(0+3*posizioni_equilibrio->get_atom_base_index(iatom),imodo).dot(
-                                 Eigen::Map<Eigen::Vector3d>(traiettoria->velocita(ith+primo,iatom))) );
+                                 Eigen::Map<Eigen::Vector3d>(traiettoria->velocity(ith+primo,iatom))) );
                         //        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                         //                           velocity of iatom, current timestep
                     }
@@ -556,7 +556,7 @@ fine_calcolo_fononi:
 
 
 
-/* questo probabilmente non serve, basta fare l'analisi a blocchi del risultato finale, senza includere anche le posizioni medie
+/* questo probabilmente non serve, basta fare l'analisi a blocchi del risultato finale, senza includere anche le positions medie
 ModiVibrazionali & ModiVibrazionali::operator =(const ModiVibrazionali &d){
     VectorOp<ModiVibrazionali> operator= (d);
     posizioni_equilibrio

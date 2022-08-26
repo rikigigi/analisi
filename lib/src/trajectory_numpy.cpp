@@ -116,7 +116,7 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
         if (triclinic){
             std::cerr << "Detected non orthorombic simulation cell. Using triclinic format"<<std::endl;
             velocities_allocated=true;
-            buffer_velocita=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
+            buffer_velocity=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
             if (save_rotation_matrix) rotation_matrix = new double[info_pos.shape[0]*9];
             stride=9;
         } else {
@@ -138,20 +138,20 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
 
     if (!triclinic) { //no need for a copy of the velocities
         velocities_allocated=false;
-        buffer_velocita=static_cast<double*>(info_vel.ptr);
+        buffer_velocity=static_cast<double*>(info_vel.ptr);
         box_format=BoxFormat::Lammps_ortho;
     } else {
         buffer_scatola_stride = 9;
         box_format=BoxFormat::Lammps_triclinic;
     }
     if (wrap_pbc || triclinic){ // when I need also a copy of the positions
-        buffer_posizioni=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
+        buffer_positions=new double[info_pos.shape[0]*info_pos.shape[1]*info_pos.shape[2]];
         posizioni_allocated=true;
     }else {
         posizioni_allocated=false;
-        buffer_posizioni=static_cast<double*>(info_pos.ptr);
+        buffer_positions=static_cast<double*>(info_pos.ptr);
         velocities_allocated=false;
-        buffer_velocita=static_cast<double*>(info_vel.ptr);
+        buffer_velocity=static_cast<double*>(info_vel.ptr);
     }
     //now everything is allocated/moved. Do the work of translation to the lammps (wapped) format
 
@@ -161,8 +161,8 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
         for (ssize_t i=0;i<n_timesteps;++i){
             // rotate velocities and positions
             for (ssize_t n=0;n<natoms;++n){
-                double *pos = buffer_posizioni+i*3*natoms+n*3;
-                double *vel = buffer_velocita+i*3*natoms+n*3;
+                double *pos = buffer_positions+i*3*natoms+n*3;
+                double *vel = buffer_velocity+i*3*natoms+n*3;
                 std::memcpy(pos,&static_cast<double*>(info_pos.ptr)[i*3*natoms+n*3],3*sizeof (double));
                 std::memcpy(vel,&static_cast<double*>(info_vel.ptr)[i*3*natoms+n*3],3*sizeof (double));
                 cells_qr[cur_idx].second.rotate_vec(pos);
@@ -171,7 +171,7 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
             if (cur_idx + 1 < cells_qr.size() && cells_qr[cur_idx+1].first-1 == i) cur_idx++;
         }
     } else if (wrap_pbc) {
-        std::memcpy(buffer_posizioni,info_pos.ptr,sizeof(double)*3*natoms*n_timesteps);
+        std::memcpy(buffer_positions,info_pos.ptr,sizeof(double)*3*natoms*n_timesteps);
     }
     buffer_tipi=static_cast<int*>(info_types.ptr);
     buffer_tipi_id=new int[natoms];
@@ -179,8 +179,8 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
 
     //
     //calculate center of mass velocity and position (without pbc)
-    calc_cm_pos_vel(static_cast<double*>(info_pos.ptr),buffer_posizioni_cm);
-    calc_cm_pos_vel(static_cast<double*>(info_vel.ptr),buffer_velocita_cm);
+    calc_cm_pos_vel(static_cast<double*>(info_pos.ptr),buffer_positions_cm);
+    calc_cm_pos_vel(static_cast<double*>(info_vel.ptr),buffer_velocity_cm);
 
 
     if (wrap_pbc) {
@@ -228,13 +228,13 @@ Trajectory_numpy::~Trajectory_numpy() {
     if (box_allocated)
         delete [] buffer_scatola;
     if (velocities_allocated)
-        delete [] buffer_velocita;
+        delete [] buffer_velocity;
     if (posizioni_allocated)
-        delete [] buffer_posizioni;
+        delete [] buffer_positions;
     delete [] buffer_tipi_id;
     delete [] masse;
     delete [] cariche;
-    delete [] buffer_posizioni_cm;
-    delete [] buffer_velocita_cm;
+    delete [] buffer_positions_cm;
+    delete [] buffer_velocity_cm;
     delete [] rotation_matrix;
 }

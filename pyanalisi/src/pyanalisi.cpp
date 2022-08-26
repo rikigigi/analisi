@@ -284,13 +284,13 @@ R"lol(
 )lol")
      .def("get_positions_copy", [](Tk & t) {
         double * foo=nullptr;
-        if (t.posizioni(t.get_current_timestep(),0) == nullptr) {
+        if (t.positions(t.get_current_timestep(),0) == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
         long nat=t.get_natoms();
         foo = new double[nts*nat*3];
-        std::memcpy(foo,t.posizioni(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
+        std::memcpy(foo,t.positions(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -303,14 +303,14 @@ R"lol(
             free_when_done
          );})
     .def("get_velocities_copy", [](Tk & t) {
-        double * foo=t.velocita(t.get_current_timestep(),0);
+        double * foo=t.velocity(t.get_current_timestep(),0);
         if (foo == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
         long nat=t.get_natoms();
         foo = new double[nts*nat*3];
-        std::memcpy(foo,t.velocita(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
+        std::memcpy(foo,t.velocity(t.get_current_timestep(),0),sizeof (double)*nts*nat*3);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -406,7 +406,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def_buffer([](Trajectory & g) -> py::buffer_info {
 
                 return py::buffer_info(
-                g.serving_pos()? g.posizioni_inizio() : g.velocita_inizio(),                               /* Pointer to buffer */
+                g.serving_pos()? g.posizioni_inizio() : g.velocity_inizio(),                               /* Pointer to buffer */
                 sizeof(double),                          /* Size of one scalar */
                 py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
                 g.get_shape().size(),                                      /* Number of dimensions */

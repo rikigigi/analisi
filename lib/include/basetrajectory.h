@@ -50,18 +50,18 @@ public:
     enum class BoxFormat{Lammps_ortho,Lammps_triclinic,Cell_vectors, Invalid};
 
     BaseTrajectory() : ntypes{0},n_timesteps{0},natoms{0},min_type{0},max_type{0},timestep_corrente{0},
-    wrap_pbc{true}, buffer_posizioni{nullptr}, buffer_velocita{nullptr},
-    buffer_scatola{nullptr}, buffer_posizioni_cm{nullptr},
-    buffer_velocita_cm{nullptr}, masse{nullptr}, cariche{nullptr},
+    wrap_pbc{true}, buffer_positions{nullptr}, buffer_velocity{nullptr},
+    buffer_scatola{nullptr}, buffer_positions_cm{nullptr},
+    buffer_velocity_cm{nullptr}, masse{nullptr}, cariche{nullptr},
     buffer_tipi{nullptr},buffer_tipi_id{nullptr}, serve_pos{true},
     box_format{BoxFormat::Invalid}{}
 
-    //double * posizioni (const int & timestep, const int & atomo) { return static_cast<T*>(this)->posizioni(timestep,atomo);}
-    DECL_CALL_BASE_2(double *, posizioni, (const int &, timestep), (const int &, atomo))
-    DECL_CALL_BASE_2(double *, velocita,(const int &, timestep), (const int &, atomo) )
+    //double * positions (const int & timestep, const int & atomo) { return static_cast<T*>(this)->positions(timestep,atomo);}
+    DECL_CALL_BASE_2(double *, positions, (const int &, timestep), (const int &, atomo))
+    DECL_CALL_BASE_2(double *, velocity,(const int &, timestep), (const int &, atomo) )
     DECL_CALL_BASE_1(double *, scatola, (const int &, timestep))
-    DECL_CALL_BASE_2(double *, posizioni_cm,(const int &, timestep), (const int &, tipo))
-    DECL_CALL_BASE_2(double *, velocita_cm,(const int &, timestep), (const int &, tipo))
+    DECL_CALL_BASE_2(double *, positions_cm,(const int &, timestep), (const int &, tipo))
+    DECL_CALL_BASE_2(double *, velocity_cm,(const int &, timestep), (const int &, tipo))
     DECL_CALL_BASE_0(double *,scatola_last)
     std::vector<unsigned int> get_types(){
         get_ntypes();
@@ -114,8 +114,8 @@ public:
         c[1]=c[0]+t*2;
     }
 
-    double * posizioni_inizio(){return buffer_posizioni;}
-    double * velocita_inizio(){return buffer_velocita;}
+    double * posizioni_inizio(){return buffer_positions;}
+    double * velocity_inizio(){return buffer_velocity;}
     int get_type_min() {return min_type;}
     int get_type_max() {return max_type;}
     size_t get_natoms()const {return natoms;}
@@ -138,7 +138,7 @@ public:
         double x0[3];
         s.middle(x0);
         for (size_t iatom=0;iatom<natoms;++iatom) {
-            double *xa=buffer_posizioni+idx*natoms*3+iatom*3;
+            double *xa=buffer_positions+idx*natoms*3+iatom*3;
             for (int icoord=0;icoord<3;++icoord){
                 xa[icoord]=xa[icoord]-x0[icoord];
             }
@@ -167,8 +167,8 @@ public:
                        double *x
                        ) {
         double d2=0.0;
-        double *xi=posizioni<false>(itimestep,i);
-        double *xj=posizioni<false>(jtimestep,j);
+        double *xi=positions<false>(itimestep,i);
+        double *xj=positions<false>(jtimestep,j);
         const double *l=scatola<false>(itimestep)+3;
         const double *xy_xz_yz = scatola<false>(itimestep)+6;
         d2=d2_minImage_triclinic(xi,xj,l,x,xy_xz_yz);
@@ -241,7 +241,7 @@ public:
     }
 
 
-    size_t get_size_posizioni() const { return buffer_posizioni_size; }
+    size_t get_size_posizioni() const { return buffer_positions_size; }
     size_t get_size_cm() const {return buffer_cm_size;}
     std::vector<ssize_t> get_shape() {
         return {static_cast<ssize_t>(loaded_timesteps),
@@ -280,16 +280,16 @@ public:
 
 protected:
 
-    double * buffer_posizioni; //velocita' e posizioni copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
-    double * buffer_velocita;
+    double * buffer_positions; //velocity' e positions copiate dal file caricato con mmap, in ordine (nela traiettoria di LAMMPS sono disordinate)
+    double * buffer_velocity;
     double * masse;
     double * cariche;
     double * buffer_scatola; //dimensioni della simulazione ad ogni timestep
     size_t buffer_scatola_stride; // 6 for orthorombic, 9 for triclinic
     BoxFormat box_format; //format used to store box information
-    double * buffer_posizioni_cm; // posizioni del centro di massa
-    double * buffer_velocita_cm; // velocità del centro di massa
-    size_t buffer_posizioni_size, buffer_cm_size; //sizes of allocated buffers
+    double * buffer_positions_cm; // positions del centro di massa
+    double * buffer_velocity_cm; // velocità del centro di massa
+    size_t buffer_positions_size, buffer_cm_size; //sizes of allocated buffers
 
     int * buffer_tipi,*buffer_tipi_id;
     ssize_t natoms,ntypes,min_type,max_type,n_timesteps, loaded_timesteps,timestep_corrente;

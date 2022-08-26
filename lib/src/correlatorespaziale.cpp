@@ -70,8 +70,8 @@ void CorrelatoreSpaziale::s_fac_k(const double  k[3],
                                   double *out1 ///size 3*type {(x,y,z)_1, ..., (x,y,z)_ntype}
                                   ) const {
     for (unsigned int i_at=0;i_at<t->get_natoms();i_at++){
-        const double * pos = t->posizioni(i_t,i_at);
-        const double * vel = t->velocita(i_t,i_at);
+        const double * pos = t->positions(i_t,i_at);
+        const double * vel = t->velocity(i_t,i_at);
         unsigned int type=t->get_type(i_at);
         double arg=k[0]*pos[0]+k[1]*pos[1]+k[2]*pos[2];
         double s=sin(arg),c=cos(arg);

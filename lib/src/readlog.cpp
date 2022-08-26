@@ -280,7 +280,7 @@ template <class TFLOAT> void ReadLog<TFLOAT>::calc_currents(Trajectory * t,unsig
         for (unsigned int ts=ib*n_data_b;ts<ultimo;ts++){
             //calcola le varie correnti utilizzando i dati presenti negli header, e copia nello spazio lasciato libero durante la lettura. Poi sono a posto e il resto del codice non cambia
             for (unsigned int i=0;i<q_current_type.size();i++) {
-                double * v_cm=t->velocita_cm(ts,0);
+                double * v_cm=t->velocity_cm(ts,0);
                 for (unsigned int icoord=0;icoord<3;icoord++)
                     data[ts*data_size+(data_size-data_size_from_binary)+i*3+icoord]=0.0;
                 for (unsigned int icm=0;icm<ntypes;icm++) {

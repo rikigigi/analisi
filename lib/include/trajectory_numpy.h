@@ -16,15 +16,15 @@ public:
                       bool save_rotation_matrix=false);
     ~Trajectory_numpy();
     template <bool SAFE=true>
-    double * posizioni (const int & timestep, const int & atomo) {return buffer_posizioni+natoms*3*timestep+atomo*3;}
+    double * positions (const int & timestep, const int & atomo) {return buffer_positions+natoms*3*timestep+atomo*3;}
     template <bool SAFE=true>
-    double * velocita (const int & timestep, const int & atomo){return buffer_velocita+natoms*3*timestep+atomo*3;}
+    double * velocity (const int & timestep, const int & atomo){return buffer_velocity+natoms*3*timestep+atomo*3;}
     template <bool SAFE=true>
     double * scatola (const int & timestep){return buffer_scatola+timestep*buffer_scatola_stride;}
     template <bool SAFE=true>
-    double * posizioni_cm(const int & timestep, const int & tipo){return buffer_posizioni_cm+timestep*ntypes*3 + tipo*3;}
+    double * positions_cm(const int & timestep, const int & tipo){return buffer_positions_cm+timestep*ntypes*3 + tipo*3;}
     template <bool SAFE=true>
-    double * velocita_cm(const int & timestep, const int & tipo){return buffer_velocita_cm+timestep*ntypes*3 + tipo*3;}
+    double * velocity_cm(const int & timestep, const int & tipo){return buffer_velocity_cm+timestep*ntypes*3 + tipo*3;}
     double *scatola_last(){return buffer_scatola + (n_timesteps-1)*buffer_scatola_stride; }
     double * get_rotation_matrix(size_t t){return rotation_matrix+9*t;}
     using BaseTrajectory::BoxFormat;

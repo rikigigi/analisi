@@ -110,7 +110,7 @@ struct Atomo {
     double id;
     double tipo;
     double posizione[3];
-    double velocita[3];
+    double velocity[3];
     static_assert (NDOUBLE_ATOMO==8, "You have to modify class Atomo if you change NDOUBLE_ATOMO" );
     static char * read_id_tipo(char * begin, double & id_, double & tipo_) {
         begin = read_and_advance(begin,&id_);

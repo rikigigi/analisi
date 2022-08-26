@@ -47,12 +47,12 @@ BOOST_AUTO_TEST_CASE(pbc){
     {
         auto tt=TrajTest(true,false);
         size_t n_atoms=tt.t.traj.get_natoms();
-        BOOST_TEST(tt.data.test_regression("pbc_1",tt.t.traj.posizioni(0,0),3*n_atoms));
+        BOOST_TEST(tt.data.test_regression("pbc_1",tt.t.traj.positions(0,0),3*n_atoms));
     }
     {
         auto tt=TrajTest(true,true);
         size_t n_atoms=tt.t.traj.get_natoms();
-        BOOST_TEST(tt.data.test_regression("pbc_2",tt.t.traj.posizioni(0,0),3*n_atoms));
+        BOOST_TEST(tt.data.test_regression("pbc_2",tt.t.traj.positions(0,0),3*n_atoms));
     }
 
 

@@ -41,8 +41,8 @@ void BaseTrajectory<T>::dump_lammps_bin_traj(const std::string &fname, int start
             data[0]=iatom;
             data[1]=get_type(iatom);
             for (int i=0;i<3;++i){
-                data[2+i]=posizioni(t,iatom)[i];
-                data[5+i]=velocita(t,iatom)[i];
+                data[2+i]=positions(t,iatom)[i];
+                data[5+i]=velocity(t,iatom)[i];
             }
             static_assert (NDOUBLE_ATOMO==8, "You have to change the file writing (what do I have to write?) this if you change NDOUBLE_ATOMO" );
             out.write((char*) data,sizeof(double)*NDOUBLE_ATOMO);
