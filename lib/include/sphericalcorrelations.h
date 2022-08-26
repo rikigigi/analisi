@@ -4,6 +4,7 @@
 #include "operazionisulista.h"
 #include "neighbour.h"
 #include "sphericalbase.h"
+#include <string>
 
 template <int l,class TFLOAT, class T>
 class SphericalCorrelations : public VectorOp<SphericalCorrelations<l,TFLOAT,T>,TFLOAT>,
