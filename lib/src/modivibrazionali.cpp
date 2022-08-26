@@ -74,7 +74,7 @@ void ModiVibrazionali::read_force_file(std::string f) {
         abort();
     }
 
-    // legge anche le masse degli atomi
+    // legge anche le mass degli atomi
     for (unsigned int i=0;i<nat_f;i++) {
         int tipo;
         double m,x,y,z;
@@ -236,7 +236,7 @@ void ModiVibrazionali::calculate(unsigned int primo) {
                                 }
 
 
-                    // la radice delle masse è già inserica nel file ifc
+                    // la radice delle mass è già inserica nel file ifc
 /*
                     //moltiplica per il coefficiente 1/sqrt(m_i m_j) le comoponenti della matrice
                     for (unsigned int iatom=0;iatom<posizioni_equilibrio->get_atoms_cell();iatom++)

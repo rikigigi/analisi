@@ -29,7 +29,7 @@ void AtomicDensity<T, Hist>::calc_single_th(const unsigned int &start, const uns
         for (unsigned int iatom=0; iatom<natoms;++iatom) {
             int itype=t->get_type(iatom);
             auto * pos = t->positions(i+primo,iatom);
-            auto * l = t->scatola(i+primo);
+            auto * l = t->box(i+primo);
             bool in_range=false;
             auto ih=idx_(pos,l,in_range,itype);
             if (in_range){

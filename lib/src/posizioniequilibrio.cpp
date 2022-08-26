@@ -288,7 +288,7 @@ void PosizioniEquilibrio::coord_reticolo(double *xyz, double *uvw_min, double *u
 
 
 
-double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *max, /// limiti della scatola
+double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *max, /// limiti della box
                                         double *spostamento ) {
 
     //obiettivo: voglio assegnare ad ogni atomo il suo indice di cella,
@@ -396,7 +396,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
     coord_reticolo(coord,uvw_min,uvw_max); // m,M,M
 
     /*adesso ho i limiti nelle nuove coordinate, genero i punti del reticolo
-     * nella scatola e poi calcolo la distanza da quelli della traiettoria
+     * nella box e poi calcolo la distanza da quelli della traiettoria
     */
 
     spostamento[0]=0.0;
@@ -408,7 +408,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
     for (int u=std::lrint( uvw_min[0]);u<=std::lrint(uvw_max[0]);u++){
         for (int v=std::lrint( uvw_min[1]);v<=std::lrint(uvw_max[1]);v++){
             for (int w=std::lrint( uvw_min[2]);w<=std::lrint(uvw_max[2]);w++){
-                //controlla che l'atomo sia dentro la scatola, se si lo aggiunge
+                //controlla che l'atomo sia dentro la box, se si lo aggiunge
                 //per ogni atomo della base...
                 Eigen::Vector3d uvw;
                 uvw << double(u),double(v),double(w);
@@ -429,7 +429,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
     }
 
     if (reticolo_xyz.size()< traiettoria->get_natoms()) {
-        std::cerr << "La scatola non è abbastanza grande per contenere il reticolo intero ("<<reticolo_xyz.size() <<" atomi contro "<< traiettoria->get_natoms()<<" atomi della traiettoria)!\n";
+        std::cerr << "La box non è abbastanza grande per contenere il reticolo intero ("<<reticolo_xyz.size() <<" atomi contro "<< traiettoria->get_natoms()<<" atomi della traiettoria)!\n";
     }
 
     //guardo la distanza dei punti da quelli della media (da calcolare in precedenza)
@@ -453,7 +453,7 @@ double PosizioniEquilibrio::d2_reticolo_spostamento_medio(double * min, double *
                 }
             }
             if (reticolo_xyz[uvwi].second!=traiettoria->get_natoms()) {
-                std::cerr << "Errore: questo punto del reticolo ha già un atomo assegnato (provare ad aumentare le dimensioni della scatola dove si genera il reticolo?)\n";
+                std::cerr << "Errore: questo punto del reticolo ha già un atomo assegnato (provare ad aumentare le dimensioni della box dove si genera il reticolo?)\n";
                 abort();
             }
             reticolo_xyz[uvwi].second=iatom;
@@ -556,7 +556,7 @@ unsigned int PosizioniEquilibrio::get_number_cells(){
 
 double PosizioniEquilibrio::get_simulation_size(unsigned int icoord) {
     if (icoord <3) {
-        double *b=traiettoria->scatola_last();
+        double *b=traiettoria->box_last();
         return b[icoord*2+1]-b[icoord*2];
     } else {
         std::cerr << "Errore: richiesta una dimensione che non esiste in get_simulation_size()";
@@ -578,13 +578,13 @@ void PosizioniEquilibrio::fit_nacl(){
      * Lo spostamento di prima più questo nuovo sarà lo spostamento effettivo del reticolo rispetto all'origine.
     */
 
-         //trova le dimensioni della scatola, leggendole dalla traiettoria
-        double max[3]={traiettoria->scatola_last()[1],traiettoria->scatola_last()[3],traiettoria->scatola_last()[5]},
-               min[3]={traiettoria->scatola_last()[0],traiettoria->scatola_last()[2],traiettoria->scatola_last()[4]};
+         //trova le dimensioni della box, leggendole dalla traiettoria
+        double max[3]={traiettoria->box_last()[1],traiettoria->box_last()[3],traiettoria->box_last()[5]},
+               min[3]={traiettoria->box_last()[0],traiettoria->box_last()[2],traiettoria->box_last()[4]};
 
 
 #ifdef DEBUG
-        std::cerr << "Limiti della scatola (minxyz),(maxxyz) ("<< min[0]<< ", " << min[1] << ", " << min[2] << "), (" << max[0] << ", " << max[1] << ", " << max[2]<<")\n";
+        std::cerr << "Limiti della box (minxyz),(maxxyz) ("<< min[0]<< ", " << min[1] << ", " << min[2] << "), (" << max[0] << ", " << max[1] << ", " << max[2]<<")\n";
 #endif
 
         /*    ______
@@ -595,7 +595,7 @@ void PosizioniEquilibrio::fit_nacl(){
          *
          */
 
-        //assumo scatola quadrata
+        //assumo box quadrata
         double media_primi_vicini= cbrt( (max[0]-min[0])*(max[1]-min[1])*(max[2]-min[2])/(traiettoria->get_natoms()/8))/2.0;
 
         for (unsigned int i=0;i<3;i++) {

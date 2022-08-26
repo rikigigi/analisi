@@ -47,7 +47,7 @@ Trajectory::Trajectory(std::string filename)
 
     fsize=0;
     file=0;
-    timestep_corrente=0;
+    current_timestep=0;
     timestep_indicizzato=0;
     loaded_timesteps=0;
     tstep_size=0;
@@ -55,11 +55,11 @@ Trajectory::Trajectory(std::string filename)
     n_timesteps=0;
     timesteps=0;
     timesteps_lammps=0;
-    buffer_tipi=0;
-    buffer_tipi_id=0;
+    buffer_type=0;
+    buffer_type_id=0;
     buffer_positions=0;
     buffer_velocity=0;
-    buffer_scatola=0;
+    buffer_boxes=0;
     buffer_positions_size=0;
     buffer_cm_size=0;
     ntypes=0;
@@ -68,8 +68,8 @@ Trajectory::Trajectory(std::string filename)
     indexed_all=false;
     min_type=0;
     max_type=0;
-    masse=0;
-    cariche=0;
+    mass=0;
+    charge=0;
     wrap_pbc=false;
     calculate_center_of_mass=false;
     buffer_positions_cm=0;
@@ -103,11 +103,11 @@ Trajectory::Trajectory(std::string filename)
     size_t dimensione_timestep = leggi_pezzo_intestazione(0,t0);
     natoms=t0.natoms();
 
-    buffer_tipi=new int [natoms];
-    buffer_tipi_id=new int [natoms];
+    buffer_type=new int [natoms];
+    buffer_type_id=new int [natoms];
 
     for (size_t i=0;i<natoms;i++) {
-        buffer_tipi[i]=buffer_tipi_id[i]=-1;
+        buffer_type[i]=buffer_type_id[i]=-1;
     }
 
     init_buffer_tipi();
@@ -169,7 +169,7 @@ void Trajectory::init_buffer_tipi() {
                 Atomo::read_id_tipo(pezzi[ichunk].atomi+iatomo*sizeof(double)*NDOUBLE_ATOMO,id__,type__);
                 int id=id_map.at(round(id__));
                 int tipo=round(type__);
-                buffer_tipi[id]=tipo;
+                buffer_type[id]=tipo;
             }
         }
 
@@ -182,7 +182,7 @@ void Trajectory::init_buffer_tipi() {
            int id=id_map.at(id_lammps);
            int tipo=round(type__);
            std::cerr << id<<" :\tid = " <<id_lammps<<
-                              "\ttype = "<<tipo<<"\ttype_index = "<< buffer_tipi_id[id] <<"\n";
+                              "\ttype = "<<tipo<<"\ttype_index = "<< buffer_type_id[id] <<"\n";
        }
    }
    delete [] pezzi;
@@ -212,7 +212,7 @@ int * Trajectory::get_lammps_type() {
    size_t natoms=get_natoms();               
    int *types = new int[natoms];             
    for (size_t i=0;i<natoms;++i) {
-      types[i]=buffer_tipi[i];
+      types[i]=buffer_type[i];
    }
    return types;
 }
@@ -237,11 +237,11 @@ size_t Trajectory::allinea_offset(const long & offset /// memoria da allineare
 Trajectory::~Trajectory(){
     delete [] timesteps;
     delete [] timesteps_lammps;
-    delete [] buffer_tipi;
-    delete [] buffer_tipi_id;
-    delete [] masse;
-    delete [] cariche;
-    delete [] buffer_scatola;
+    delete [] buffer_type;
+    delete [] buffer_type_id;
+    delete [] mass;
+    delete [] charge;
+    delete [] buffer_boxes;
     fftw_free(buffer_positions);
     fftw_free(buffer_positions_cm);
     fftw_free(buffer_velocity_cm);
@@ -281,11 +281,11 @@ size_t Trajectory::leggi_pezzo(const size_t &partenza /// offset da cui partire 
 
     if (timestep.triclinic()) {
         triclinic=true;
-        buffer_scatola_stride=9;
+        buffer_boxes_stride=9;
         box_format=BoxFormat::Lammps_triclinic;
     } else {
         triclinic=false;
-        buffer_scatola_stride=6;
+        buffer_boxes_stride=6;
         box_format=BoxFormat::Lammps_ortho;
     }
 
@@ -353,8 +353,8 @@ Trajectory::Errori Trajectory::set_data_access_block_size(const size_t &Ntimeste
         buffer_velocity_cm= (double*) fftw_malloc(buffer_cm_size);
         buffer_velocity=(double*) fftw_malloc(buffer_positions_size);
 
-        delete [] buffer_scatola;
-        buffer_scatola= new double [buffer_scatola_stride*Ntimesteps];
+        delete [] buffer_boxes;
+        buffer_boxes= new double [buffer_boxes_stride*Ntimesteps];
     }
 
     loaded_timesteps=Ntimesteps;
@@ -440,7 +440,7 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
         return non_inizializzato;
     }
 
-    if (timestep==timestep_corrente && dati_caricati)
+    if (timestep==current_timestep && dati_caricati)
         return Ok;
 
 #ifdef DEBUG
@@ -453,7 +453,7 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
     //(vuol dire che la stima del numero di timesteps svolta all'inizio era sbagliata)
 
     if (timestep+loaded_timesteps>n_timesteps) {
-        if (fsize-timesteps[timestep_corrente]<(timestep-timestep_corrente + loaded_timesteps)*tstep_size) {
+        if (fsize-timesteps[current_timestep]<(timestep-current_timestep + loaded_timesteps)*tstep_size) {
             allunga_timesteps(timestep+loaded_timesteps+1);
         } else {
             std::cerr << "Cannot use timesteps beyond the end of file (access window was too big?)\n";
@@ -483,7 +483,7 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
         perror(nullptr);
     }
 
-    if (timestep < timestep_corrente && timesteps[timestep]+tstep_size*loaded_timesteps*2 < fsize ) { // avviso che le zone di memoria successive non mi servono
+    if (timestep < current_timestep && timesteps[timestep]+tstep_size*loaded_timesteps*2 < fsize ) { // avviso che le zone di memoria successive non mi servono
         res=madvise(file+timesteps[timestep]+tstep_size*loaded_timesteps*2,
                     fsize-timesteps[timestep]+tstep_size*loaded_timesteps*2,MADV_DONTNEED);
         if ( res==-1) {
@@ -525,25 +525,25 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
     size_t  timestep_copy_tstart=0,timestep_copy_tend=0,
             timestep_read_start=timestep, timestep_read_end=timestep+loaded_timesteps;
 
-    ssize_t finestra_differenza=timestep_corrente-timestep;
+    ssize_t finestra_differenza=current_timestep-timestep;
     if (dati_caricati) {
         if (abs(finestra_differenza)<loaded_timesteps) { // si sovrappongono
             if (finestra_differenza>0){
                 timestep_copy_tstart=0;
                 timestep_copy_tend=loaded_timesteps-finestra_differenza;
 
-                timestep_read_end=timestep_corrente;
+                timestep_read_end=current_timestep;
                 timestep_read_start=timestep;
             } else {
                 timestep_copy_tstart=abs(finestra_differenza);
                 timestep_copy_tend=loaded_timesteps;
 
-                timestep_read_start=timestep_corrente+loaded_timesteps;
+                timestep_read_start=current_timestep+loaded_timesteps;
                 timestep_read_end=timestep+loaded_timesteps;
             }
 #ifdef DEBUG
-            std::cerr << "Copying data from buffer from "<<timestep_corrente+timestep_copy_tstart << " to "
-                      << timestep_corrente+timestep_copy_tend << ".\n";
+            std::cerr << "Copying data from buffer from "<<current_timestep+timestep_copy_tstart << " to "
+                      << current_timestep+timestep_copy_tend << ".\n";
 #endif
         }
 
@@ -590,13 +590,13 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
             throw;
         }
         timesteps_lammps[i]=intestazione.timestep();
-        memcpy(buffer_scatola+t*buffer_scatola_stride,intestazione.scatola(),6*sizeof (double));
+        memcpy(buffer_boxes+t*buffer_boxes_stride,intestazione.box(),6*sizeof (double));
         if (triclinic) {
-            memcpy(buffer_scatola+t*buffer_scatola_stride+6,intestazione.xy_xz_yz(),3*sizeof (double));
+            memcpy(buffer_boxes+t*buffer_boxes_stride+6,intestazione.xy_xz_yz(),3*sizeof (double));
         }
-        lammps_to_internal(buffer_scatola+t*buffer_scatola_stride);
+        lammps_to_internal(buffer_boxes+t*buffer_boxes_stride);
         //TODO: REMOVE THIS!!!
-        //double *l=buffer_scatola+t*buffer_scatola_stride+3;
+        //double *l=buffer_boxes+t*buffer_boxes_stride+3;
         //calcola anche la posizione e la velocità del centro di massa di ciascuna delle specie (dopo aver letto il tipo dell'atomo)
         //prima azzera la media, poi calcolala
         for (size_t itype=0;itype<ntypes*3;itype++){
@@ -622,13 +622,13 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
 //                        buffer_positions[t*3*natoms+id*3+icoord]=buffer_positions[t*3*natoms+id*3+icoord]-round(buffer_positions[t*3*natoms+id*3+icoord]*2/l[icoord])*2*l[icoord];
 //                    }
 //                }
-                if (buffer_tipi[id]!= tipo) {
-                    std::cerr << "WARNING: atomic type for atom with id "<<id<<" is changing from "<<buffer_tipi[id]<< " to "<<tipo<<" !\n";
-                    buffer_tipi[id]=tipo;
+                if (buffer_type[id]!= tipo) {
+                    std::cerr << "WARNING: atomic type for atom with id "<<id<<" is changing from "<<buffer_type[id]<< " to "<<tipo<<" !\n";
+                    buffer_type[id]=tipo;
                 }
 
                 //aggiorna la media delle positions e delle velocità del centro di massa
-                unsigned int tipo_id=buffer_tipi_id[id];
+                unsigned int tipo_id=buffer_type_id[id];
                 cont_cm[tipo_id]++;
                 for (size_t icoord=0;icoord<3;icoord++){
                     buffer_positions_cm[t*3*ntypes+3*tipo_id+icoord]+=
@@ -660,7 +660,7 @@ Trajectory::Errori Trajectory::set_access_at(const size_t &timestep) {
 
     dati_caricati=true;
 
-    timestep_corrente=timestep;
+    current_timestep=timestep;
 
 
     cron.stop();

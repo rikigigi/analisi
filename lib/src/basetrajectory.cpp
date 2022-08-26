@@ -15,13 +15,13 @@ void BaseTrajectory<T>::dump_lammps_bin_traj(const std::string &fname, int start
         Intestazione_timestep_triclinic head;
         head.natoms=natoms;
         for (unsigned int i=0;i<6;++i)
-            head.scatola[i]=scatola(t)[i];
-        internal_to_lammps(head.scatola);
+            head.box[i]=box(t)[i];
+        internal_to_lammps(head.box);
         head.timestep=t;
         head.triclinic=triclinic;
         if (triclinic) {
             for (unsigned int i=0;i<3;++i)
-                head.xy_xz_yz[i]=scatola(t)[6+i];
+                head.xy_xz_yz[i]=box(t)[6+i];
         }
         head.condizioni_al_contorno[0]=0;
         head.condizioni_al_contorno[1]=0;
@@ -54,23 +54,23 @@ template <class T>
 size_t BaseTrajectory<T>::get_ntypes (){
     if (ntypes==0) {
         types.clear();
-        min_type=buffer_tipi[0];
-        max_type=buffer_tipi[0];
+        min_type=buffer_type[0];
+        max_type=buffer_type[0];
         bool *duplicati = new bool[natoms];
         for (size_t i=0;i<natoms;i++)
             duplicati[i]=false;
         for (size_t i=0;i<natoms;i++) {
             if (!duplicati[i]) {
-                if (buffer_tipi[i]>max_type)
-                    max_type=buffer_tipi[i];
-                if (buffer_tipi[i]<min_type)
-                    min_type=buffer_tipi[i];
+                if (buffer_type[i]>max_type)
+                    max_type=buffer_type[i];
+                if (buffer_type[i]<min_type)
+                    min_type=buffer_type[i];
                 for (size_t j=i+1;j<natoms;j++){
-                    if (buffer_tipi[j]==buffer_tipi[i]){
+                    if (buffer_type[j]==buffer_type[i]){
                         duplicati[j]=true;
                     }
                 }
-                types.push_back(buffer_tipi[i]);
+                types.push_back(buffer_type[i]);
                 ntypes++;
             }
         }
@@ -80,11 +80,11 @@ size_t BaseTrajectory<T>::get_ntypes (){
             type_map[types[i]]=i;
         }
         delete [] duplicati;
-        masse = new double [ntypes];
-        cariche = new double [ntypes];
+        mass = new double [ntypes];
+        charge = new double [ntypes];
 
         for (size_t i=0;i<natoms;i++) {
-            buffer_tipi_id[i]=type_map.at(buffer_tipi[i]);
+            buffer_type_id[i]=type_map.at(buffer_type[i]);
         }
     }
     return ntypes;

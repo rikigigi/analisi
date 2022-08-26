@@ -83,20 +83,20 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
 
     natoms=info_pos.shape[1];
     n_timesteps=info_pos.shape[0];
-    buffer_scatola_stride = 6;
+    buffer_boxes_stride = 6;
     triclinic=false;
     std::vector<std::pair<ssize_t,TriclinicLammpsCell<double> >> cells_qr; // first step, rotation matrix
     if (matrix_box== BoxFormat::Lammps_ortho || matrix_box==BoxFormat::Lammps_triclinic){ //convert the format in the internal one, a little more convenient for min image algorithm
         if (matrix_box==BoxFormat::Lammps_triclinic) {
-            buffer_scatola_stride = 9;
+            buffer_boxes_stride = 9;
             triclinic=true;
         }
-        buffer_scatola = new double[info_box.shape[0]*buffer_scatola_stride];
+        buffer_boxes = new double[info_box.shape[0]*buffer_boxes_stride];
         box_allocated=true;
         //copy and do a permutation of everything
         for (ssize_t i=0;i<n_timesteps;++i) {
-            std::memcpy(buffer_scatola+i*buffer_scatola_stride,&static_cast<double*>(info_box.ptr)[i*buffer_scatola_stride],buffer_scatola_stride*sizeof (double));
-            lammps_to_internal(buffer_scatola+i*buffer_scatola_stride);
+            std::memcpy(buffer_boxes+i*buffer_boxes_stride,&static_cast<double*>(info_box.ptr)[i*buffer_boxes_stride],buffer_boxes_stride*sizeof (double));
+            lammps_to_internal(buffer_boxes+i*buffer_boxes_stride);
         }
         std::cerr << "Input format is lammps"<<std::endl;
     } else if (matrix_box==BoxFormat::Cell_vectors){
@@ -122,11 +122,11 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
         } else {
             stride=6;
         }
-        buffer_scatola = new double[info_box.shape[0]*stride];
+        buffer_boxes = new double[info_box.shape[0]*stride];
         ssize_t cur_idx=0;
         for (ssize_t i=0;i<n_timesteps;++i){
             //copy everything in the box array
-            cells_qr[cur_idx].second.set_lammps_cell(buffer_scatola+i*stride,triclinic);
+            cells_qr[cur_idx].second.set_lammps_cell(buffer_boxes+i*stride,triclinic);
             if(rotation_matrix) {
                 cells_qr[cur_idx].second.getQ(rotation_matrix+9*i);
             }
@@ -141,7 +141,7 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
         buffer_velocity=static_cast<double*>(info_vel.ptr);
         box_format=BoxFormat::Lammps_ortho;
     } else {
-        buffer_scatola_stride = 9;
+        buffer_boxes_stride = 9;
         box_format=BoxFormat::Lammps_triclinic;
     }
     if (wrap_pbc || triclinic){ // when I need also a copy of the positions
@@ -173,8 +173,8 @@ Trajectory_numpy::Trajectory_numpy(pybind11::buffer buffer_pos_,
     } else if (wrap_pbc) {
         std::memcpy(buffer_positions,info_pos.ptr,sizeof(double)*3*natoms*n_timesteps);
     }
-    buffer_tipi=static_cast<int*>(info_types.ptr);
-    buffer_tipi_id=new int[natoms];
+    buffer_type=static_cast<int*>(info_types.ptr);
+    buffer_type_id=new int[natoms];
     get_ntypes(); //init type ids
 
     //
@@ -226,14 +226,14 @@ Trajectory_numpy::calc_cm_pos_vel(double * a, double * & cm){
 
 Trajectory_numpy::~Trajectory_numpy() {
     if (box_allocated)
-        delete [] buffer_scatola;
+        delete [] buffer_boxes;
     if (velocities_allocated)
         delete [] buffer_velocity;
     if (posizioni_allocated)
         delete [] buffer_positions;
-    delete [] buffer_tipi_id;
-    delete [] masse;
-    delete [] cariche;
+    delete [] buffer_type_id;
+    delete [] mass;
+    delete [] charge;
     delete [] buffer_positions_cm;
     delete [] buffer_velocity_cm;
     delete [] rotation_matrix;

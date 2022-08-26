@@ -161,7 +161,7 @@ int main(int argc, char ** argv)
     int sub_mean_start=0,numero_frame=0,every=1,blocksize=0,elast=0,blocknumber=0,numero_thread,nbins_vel,skip=1,conv_n=20,final=60,stop_acf=0;
     unsigned int n_seg=0,gofrt=0,read_lines_thread=200,sph=0,buffer_size=10;
     bool sub_mean=false,test=false,spettro_vibraz=false,velocity_h=false,heat_coeff=false,debug=false,debug2=false,dumpGK=false,msd=false,msd_cm=false,msd_self=false,bench=false,fpe=false;
-    double vmax_h=0,cariche[2],dt=5e-3,vicini_r=0.0;
+    double vmax_h=0,charge[2],dt=5e-3,vicini_r=0.0;
     std::pair<int,double> nk;
     std::array<double,3> kdir;
     std::vector<unsigned int > cvar_list,kk_l;
@@ -188,8 +188,8 @@ int main(int argc, char ** argv)
             ("skip,s",boost::program_options::value<int>(&skip)->default_value(1),"when an average over the trajectory is performed, consecutive steps have a distance specified with this option")
             ("every,e",boost::program_options::value<int>(&every)->default_value(1),"For sums over time lags every steps have a difference multiple of every. So far implemented only for g(r,t) and give the number of steps between two consecutive t.")
 #ifdef EXPERIMENTAL
-            ("charge1",boost::program_options::value<double>(&cariche[0])->default_value(1.0),"charge of type 1 (used in a particular case)")
-            ("charge2",boost::program_options::value<double>(&cariche[1])->default_value(-1.0),"charge of type 2 (used in a particular case)")
+            ("charge1",boost::program_options::value<double>(&charge[0])->default_value(1.0),"charge of type 1 (used in a particular case)")
+            ("charge2",boost::program_options::value<double>(&charge[1])->default_value(-1.0),"charge of type 2 (used in a particular case)")
             ("conv_n,C",boost::program_options::value<int>(&conv_n)->default_value(10),"sigma of the gaussian that may be used to compute a convolution with the green-kubo integrals, to smooth out some noise. Number of points units.")
             ("final,f",boost::program_options::value<int>(&final)->default_value(60),"number of points to use to extract the final value of gk integral (used in a particular case)")
 #endif

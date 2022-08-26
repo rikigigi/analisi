@@ -323,14 +323,14 @@ R"lol(
             free_when_done
          );})
     .def("get_box_copy", [](Tk & t) {
-        double * foo=t.scatola(t.get_current_timestep());
+        double * foo=t.box(t.get_current_timestep());
         if (foo == nullptr) {
             return pybind11::array_t<double>();
         }
         long nts=t.get_nloaded_timesteps();
         long nb=t.get_box_stride();
         foo = new double[nts*nb];
-        std::memcpy(foo,t.scatola(t.get_current_timestep()),sizeof (double)*nts*nb);
+        std::memcpy(foo,t.box(t.get_current_timestep()),sizeof (double)*nts*nb);
         pybind11::capsule free_when_done(foo, [](void *f) {
          double *foo = reinterpret_cast<double *>(f);
          std::cerr << "freeing memory @ " << f << "\n";
@@ -406,7 +406,7 @@ PYBIND11_MODULE(pyanalisi,m) {
             .def_buffer([](Trajectory & g) -> py::buffer_info {
 
                 return py::buffer_info(
-                g.serving_pos()? g.posizioni_inizio() : g.velocity_inizio(),                               /* Pointer to buffer */
+                g.serving_pos()? g.positions_data() : g.velocity_data(),                               /* Pointer to buffer */
                 sizeof(double),                          /* Size of one scalar */
                 py::format_descriptor<double>::format(), /* Python struct-style format descriptor */
                 g.get_shape().size(),                                      /* Number of dimensions */

@@ -20,12 +20,12 @@ public:
     template <bool SAFE=true>
     double * velocity (const int & timestep, const int & atomo){return buffer_velocity+natoms*3*timestep+atomo*3;}
     template <bool SAFE=true>
-    double * scatola (const int & timestep){return buffer_scatola+timestep*buffer_scatola_stride;}
+    double * box (const int & timestep){return buffer_boxes+timestep*buffer_boxes_stride;}
     template <bool SAFE=true>
     double * positions_cm(const int & timestep, const int & tipo){return buffer_positions_cm+timestep*ntypes*3 + tipo*3;}
     template <bool SAFE=true>
     double * velocity_cm(const int & timestep, const int & tipo){return buffer_velocity_cm+timestep*ntypes*3 + tipo*3;}
-    double *scatola_last(){return buffer_scatola + (n_timesteps-1)*buffer_scatola_stride; }
+    double *box_last(){return buffer_boxes + (n_timesteps-1)*buffer_boxes_stride; }
     double * get_rotation_matrix(size_t t){return rotation_matrix+9*t;}
     using BaseTrajectory::BoxFormat;
 private:

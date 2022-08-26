@@ -88,7 +88,7 @@ void SpettroVibrazionale<T>::calculate(unsigned int primo  ///ignorato: prendo l
                                    (int*)&size, // lunghezza di ciascuna trasformata
                                    3*traiettoria->get_natoms(), // numero di trasformate
                                    /*  ****** input ******  */
-                                   dummy,//traiettoria->velocity_inizio(), // puntatore ai dati
+                                   dummy,//traiettoria->velocity_data(), // puntatore ai dati
                                    NULL, // i dati sono tutti compatti, non fanno parte di array più grandi
                                    3*traiettoria->get_natoms(), // la distanza fra due dati successivi
                                    1, // la distanza fra due serie di dati adiacenti
@@ -105,7 +105,7 @@ void SpettroVibrazionale<T>::calculate(unsigned int primo  ///ignorato: prendo l
     //devo fare la trasformata della velocità per ogni atomo
     }
 
-    fftw_execute_dft_r2c(fftw3,traiettoria->velocity_inizio(),trasformata);
+    fftw_execute_dft_r2c(fftw3,traiettoria->velocity_data(),trasformata);
     // adesso bisogna fare la media del modulo quadro, una per ogni tipo di atomo
 
     double * media = new double[tipi_atomi];

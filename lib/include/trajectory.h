@@ -51,17 +51,17 @@ public:
                 }
             }
 
-            size_t t=timestep-timestep_corrente; // note that this can be garbage if timestep<timestep_corrente
+            size_t t=timestep-current_timestep; // note that this can be garbage if timestep<current_timestep
 
-            if (dati_caricati && t < loaded_timesteps && timestep>=timestep_corrente) { // vuol dire che ho già caricato i dati
+            if (dati_caricati && t < loaded_timesteps && timestep>=current_timestep) { // vuol dire che ho già caricato i dati
                 return base+t*stride1+atomo*stride2;
             } else { // non ho caricato i dati, li carico prima (questo potrebbe essere inefficiente se dopo devo satare di nuovo indietro!
 #ifdef DEBUG
                 std::cerr << "Warning: loading timesteps starting from "<<timestep<<" not requested with the loading routines!\n";
 #endif
                 if(set_access_at(timestep)) {
-                    t=timestep-timestep_corrente;
-                    if (timestep>=timestep_corrente && t< loaded_timesteps){
+                    t=timestep-current_timestep;
+                    if (timestep>=current_timestep && t< loaded_timesteps){
                         return base + t*stride1+atomo*stride2;
                     }else{
                         throw std::runtime_error("requested timestep is out of range");
@@ -71,7 +71,7 @@ public:
                 }
             }
         } else {
-            return base + (timestep-timestep_corrente)*stride1+atomo*stride2;
+            return base + (timestep-current_timestep)*stride1+atomo*stride2;
         }
     }
 
@@ -84,8 +84,8 @@ public:
         return get_array<SAFE,true>(buffer_velocity,timestep,atomo,3*natoms,3);
     }
     template<bool SAFE=true>
-    double * scatola(const size_t &timestep) {
-        return get_array<SAFE,false>(buffer_scatola,timestep,0,buffer_scatola_stride,0);
+    double * box(const size_t &timestep) {
+        return get_array<SAFE,false>(buffer_boxes,timestep,0,buffer_boxes_stride,0);
     }
     template<bool SAFE=true>
     double * positions_cm(const size_t &timestep, const size_t &tipo){
@@ -96,9 +96,9 @@ public:
     double * velocity_cm(const size_t &timestep, const size_t &tipo){
         return get_array(buffer_velocity_cm,timestep,tipo,3*ntypes,3);
     }
-    double *scatola_last(){
+    double *box_last(){
         if (loaded_timesteps>0) {
-            return &buffer_scatola[ buffer_scatola_stride*(loaded_timesteps-1)];
+            return &buffer_boxes[ buffer_boxes_stride*(loaded_timesteps-1)];
         } else {
             throw std::runtime_error("No data is loaded!\n");
         }

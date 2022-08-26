@@ -25,7 +25,7 @@ public:
 private:
     Trajectory * traiettoria;
     double *J;
-    unsigned int timestep_finestra,timestep_corrente;
+    unsigned int timestep_finestra,current_timestep;
     bool calcolato;
 };
 

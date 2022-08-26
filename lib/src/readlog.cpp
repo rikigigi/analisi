@@ -84,7 +84,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Trajector
      }
 #endif
 
-     //determina il numero di colonne da allocare, e comprende le eventuali cariche
+     //determina il numero di colonne da allocare, e comprende le eventuali charge
      unsigned int n_columns_from_binary=0;
      data_size_from_binary=0;
      if (req_headers.size()>0){
@@ -94,7 +94,7 @@ template <class TFLOAT> ReadLog<TFLOAT>::ReadLog(std::string filename, Trajector
              }
              auto Qs=qs(*it);
              if (Qs.first !=""){
-                 n_columns_from_binary++; //aggiungi i valori delle cariche letti
+                 n_columns_from_binary++; //aggiungi i valori delle charge letti
                  q_current_type.push_back(Qs);
              }
          }
@@ -220,7 +220,7 @@ template <class TFLOAT> unsigned int ReadLog<TFLOAT>::get_calc_j_index(std::stri
 }
 
 
-//questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le cariche
+//questo analizza la stringa speciale "#traj:JZ N q1 ... qN" e ritorna le charge
 template <class TFLOAT> std::pair<std::string,std::vector<TFLOAT> > ReadLog<TFLOAT>::qs(std::string header) {
     if (header.size()==0 || header[0] != '#')
         return std::pair<std::string,std::vector<TFLOAT> >();
