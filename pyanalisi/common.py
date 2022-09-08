@@ -1202,7 +1202,7 @@ def analisi2aiida_traj(t,symbols):
 
 def read_lammps_bin(f,symbols={},wrap=False,nsteps=0,start=0):
     t=pa.Traj(f)
-    t.setWrapPbc(True)
+    t.setWrapPbc(wrap)
     t.setAccessWindowSize(t.getNtimesteps() if nsteps <= 0 else nsteps)
     t.setAccessStart(start)
     return FakeAiidaT(t,symbols_=symbols)
