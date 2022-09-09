@@ -55,7 +55,7 @@ def set_figure_path(new_path):
     FIGURE_PATH = new_path
 
 DEFAULT_PLT_STEINHARDT_KW={'transpose':True,'xmax':.30,'ymax':.60}
-
+DEFAULT_NEIGH=[(57,3.5**2,0.0),(45,3.5**2,0.0)]
 #aiida
 def plt_key(traj,key,conv=1.0,title='',ylabel=''):
     if not key in traj.get_arraynames():
@@ -95,7 +95,10 @@ def get_types_id_array(types_array):
 #aiida
 def get_analisi_traj_from_aiida(traj):
     pos=traj.get_array('positions')
-    vel=traj.get_array('velocities')
+    if 'velocities' in traj.get_arraynames():
+        vel=traj.get_array('velocities')
+    else:
+        vel=np.zeros(pos.shape)
     cel=traj.get_array('cells').transpose((0,2,1)).copy(order='C') 
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
@@ -166,13 +169,25 @@ def analyze_msd(traj_unw,start,stop,tmax=0,nthreads=4,tskip_msd=10,print=print):
     msd.calculate(start)
     return np.array(msd)#,copy=True)
 
-def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print):
+def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print,n_segments=1):
     tmax,n_ave = max_l(start,stop,tmax)
     gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False,1)
-    gofr.reset(n_ave)
-    print('calculating g(r)...',flush=True)
-    gofr.calculate(start)
-    return np.array(gofr)#,copy=True)
+    if n_segments==1:
+        gofr.reset(n_ave)
+        print('calculating g(r)...',flush=True)
+        gofr.calculate(start)
+        return np.array(gofr)#,copy=True)
+    elif n_segments>1:
+        res = []
+        segment_size=max(1,n_ave//n_segments)
+        gofr.reset(segment_size)
+        print(segment_size)
+        for i in range(0,min(segment_size*n_segments,n_ave),segment_size):
+            gofr.calculate(start+i)
+            res.append(np.array(gofr,copy=True))
+        return res
+    else:
+        raise IndexError(f'n_segments must be > 0 ({n_segments})')
 
 def analyze_vdos_single(traj,nstep=None,print=print):
     '''
@@ -1147,8 +1162,8 @@ def analisi_cell2box(box_lammps):
 class FakeAiidaT:
     def __init__(self,t,symbols_={},dt=1.0,pk=None):
         self.data={}
-        key_l=['positions','velocities','cells']
-        key_opt=['energy_constant_motion','ionic_temperature','pressure','electronic_kinetic_energy']
+        key_l=['positions','cells']
+        key_opt=['velocities','energy_constant_motion','ionic_temperature','pressure','electronic_kinetic_energy']
         if isinstance(t,(pa.Traj,pa.Trajectory)):
             self.t=t
             self.symbols=[ symbols_[x] if x in symbols_ else str(x) for x in t.get_lammps_type().tolist()]
@@ -1160,10 +1175,10 @@ class FakeAiidaT:
         elif isinstance(t,dict):
             self.symbols=t['symbols']
             for key in key_l:
-                self.data[key]=t[key]
+                self.data[key]=np.array(t[key])
             for key in key_opt:
                 if key in t:
-                    self.data[key]=t[key]
+                    self.data[key]=np.array(t[key])
         elif isinstance(t,list):
             self.symbols=t[0]['symbols']
             for key in key_l:
@@ -1311,34 +1326,26 @@ import matplotlib.colors as colors
 from matplotlib import cm
 
 
-def compute_steinhardt(aiida_traj,ranges=[(2.5,3.5),(0.8,1.2),(2.2,3.0),(1.5,1.8)],nthreads=4,skip=10,neigh=[], histogram=True,l=6,averaged=False,n_segments=1):
+def compute_steinhardt(aiida_traj,ranges=[(2.5,3.5),(0.8,1.2),(2.2,3.0),(1.5,1.8)],nthreads=4,skip=10,neigh=[], histogram=True,ls=[6,4],averaged=False,n_segments=1,nbins=100):
     atraj=aiida_traj
-    if isinstance(atraj, FakeAiidaT):
+    if isinstance(atraj, FakeAiidaT) and hasattr(atraj,'t'):
         atraj=atraj.t
     elif not isinstance(atraj,pa.Trajectory):
         atraj,atraj_unw=get_analisi_traj_from_aiida(aiida_traj)
     stein = None
-    if l==6:
-        stein=pyanalisi_wrapper('SteinhardtOrderParameterHistogram',atraj,
+    l=sorted(ls)
+
+    if l[0]<0:
+       raise IndexError(f'minimum l cannot be negative {l}')
+    elif l[-1]>10:
+       raise IndexError(f'spherical harmonics with l>10 are not supported {l}. Please modify and recompile source code.')  
+
+    stein=pyanalisi_wrapper(f'SteinhardtOrderParameterHistogram_{l[-1]}',atraj,
                                           ranges,
-                                          1,100,
-                                          [4,6],
+                                          1,nbins,
+                                          l,
                                           nthreads,skip,histogram,neigh,averaged
                                          )
-    elif l==8:
-        stein=pyanalisi_wrapper('SteinhardtOrderParameterHistogram_8',atraj,
-                                      ranges,
-                                      1,100,
-                                      [6,8],
-                                      nthreads,skip,histogram,neigh,averaged
-                                     )
-    elif l==10:
-        stein=pyanalisi_wrapper('SteinhardtOrderParameterHistogram_10',atraj,
-                                      ranges,
-                                      1,100,
-                                      [8,10],
-                                      nthreads,skip,histogram,neigh,averaged
-                                     )
 
     if n_segments==1:
         stein.reset(atraj.getNtimesteps())
@@ -1404,7 +1411,7 @@ def plt_steinhardt(stein_res,vmin=0.01,figsize=(6.,6.),show=True,transpose=True,
         fig.show()
     return fig,axs
 
-def steinhardt_movie(traj,skip=5,neigh=[(45,3.5**2,0.0),(57,3.5**2,0.0)],averaged=True,n_segments=10,plt_steinhardt_kw=DEFAULT_PLT_STEINHARDT_KW,
+def steinhardt_movie(traj,skip=5,neigh=DEFAULT_NEIGH,averaged=True,n_segments=10,plt_steinhardt_kw=DEFAULT_PLT_STEINHARDT_KW,
                      compute_steinhardt_kw={'nthreads':4}):
     tstein=compute_steinhardt(traj,skip=skip,neigh=neigh,averaged=averaged,n_segments=n_segments,**compute_steinhardt_kw)
     class SteinAni:
@@ -1417,6 +1424,31 @@ def steinhardt_movie(traj,skip=5,neigh=[(45,3.5**2,0.0),(57,3.5**2,0.0)],average
             return self.axs
         
     stani=SteinAni(tstein,plt_steinhardt_kw)
+    ani = matplotlib.animation.FuncAnimation(
+        stani.fig, stani, interval=200, blit=True, save_count=n_segments)
+    return HTML(ani.to_jshtml())
+
+def gofr_movie(atraj,skip=5,n_segments=10,gofr_kw={},plt_gofr_kw={},callax=lambda x:None):
+    gofr_kw.setdefault('gr_kw',{})['tskip']=skip
+    if isinstance(atraj, FakeAiidaT) and hasattr(atraj,'t'):
+        atraj=atraj.t
+    elif not isinstance(atraj,pa.Trajectory):
+        atraj,atraj_unw=get_analisi_traj_from_aiida(atraj)
+    traj=atraj
+    gofr=do_compute_gr_multi(traj,n_segments=n_segments,**gofr_kw)
+    class SteinAni:
+        def __init__(self,tstein,plt_gofr_kw,callax):
+            self.callax=callax
+            self.tstein=tstein
+            self.plt_gofr_kw=plt_gofr_kw
+            self.fig,self.axs,_,_,_,_,_,_,_,_,_,_=do_plots_gr_sh(*self.tstein[0],**self.plt_gofr_kw)
+        def __call__(self,i):
+            self.axs.clear()
+            self.fig,self.axs,_,_,_,_,_,_,_,_,_,_=do_plots_gr_sh(*self.tstein[i],**self.plt_gofr_kw,fig_ax=(self.fig,self.axs))
+            self.callax(self.axs)
+            return [self.axs]
+        
+    stani=SteinAni(gofr,plt_gofr_kw,callax)
     ani = matplotlib.animation.FuncAnimation(
         stani.fig, stani, interval=200, blit=True, save_count=n_segments)
     return HTML(ani.to_jshtml())
@@ -1505,6 +1537,38 @@ def get_conv_functs(gr_0,gr_dr):
     return np.vectorize(gr_r2i), np.vectorize(gr_i2r)
     
 
+def do_compute_gr_multi(t,gr_kw={'tskip':10},n_segments=1,gr_0=0.5,gr_end=3.8,gr_N=150):
+    '''
+    computes the g(r) pair correlation function and find the peaks of it
+    '''
+    nts=t.getNtimesteps()
+    param_gr=(nts,gr_0,gr_end,gr_N)
+    #first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
+    gr_dr=(gr_end-gr_0)/gr_N
+
+    #get utility functions for converting from index to r value and back
+    gr_r2i,gr_i2r=get_conv_functs(gr_0,gr_dr)
+    
+    gofr=analyze_gofr(t,0,nts,gr_0,gr_end,gr_N,
+                      tmax=1,**gr_kw,n_segments=n_segments) #only g(r)
+    #from the histogram generate the g(r) -- divide by the volumes of the spherical shells
+    res=[]
+    for i in range(n_segments):
+        gr=hist2gofr(gr_N,gr_dr,gr_0,gofr if n_segments==1 else gofr[i])
+        
+            
+        #find nearest peak to 1.0 (N-H bond)
+        idx_spread_low,idx_spread_hi,spread_low,spread_hi,w23h,NH_thre,NH_peak_val,NH_peak_idx,peaks,NH = analyze_peak(gr,1.0,0.5,gr_r2i,gr_i2r)
+        
+        #print(f'width at 1/2 of height: {w23h}')
+        #calculate sh correlations of hydrogen peak
+        sh_low=spread_low-w23h*0.1
+        sh_hi=spread_hi+w23h*0.1
+        NH_peak=(NH_thre,spread_low,spread_hi,peaks,NH,w23h,NH_peak_val)
+        res.append( (None,param_gr,gofr if n_segments==1 else gofr[i],(None,None),None,NH_peak))
+    return res
+
+
 def do_compute_gr_sh(t,times,do_sh=True,neigh=[],analyze_sh_kw={'tskip':50},gr_kw={'tskip':10}):
     '''
     computes the g(r) pair correlation function and the spherical harmonics correlation function computed around the N-H peak of the g(r), at around 1.0 Angstrom
@@ -1542,7 +1606,7 @@ def do_compute_gr_sh(t,times,do_sh=True,neigh=[],analyze_sh_kw={'tskip':50},gr_k
     param_sh = (sh_low,sh_hi)
     return times,param_gr,gofr,param_sh,sh,NH_peak
 
-def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak):
+def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_kw={}):
 
     nts,gr_0,gr_end,gr_N=param_gr
     sh_low,sh_hi=param_sh
@@ -1552,11 +1616,12 @@ def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak):
     #get utility functions for converting from index to r value and back
     gr_r2i,gr_i2r=get_conv_functs(gr_0,gr_dr)
     
-    fig_gr,ax_gr=plot_gofr(gr_0,gr_end,gofr)
+    fig_gr,ax_gr=plot_gofr(gr_0,gr_end,gofr,fig_ax=fig_ax,**plot_gr_kw)
     ax_gr.grid()
-    
-    ax_gr.axvline(sh_low,color='r')
-    ax_gr.axvline(sh_hi,color='r')
+    if sh_low is not None: 
+        ax_gr.axvline(sh_low,color='r')
+    if sh_hi is not None:
+        ax_gr.axvline(sh_hi,color='r')
     
     #annotate N-N peak
     
@@ -1614,7 +1679,7 @@ def do_plots_msd(msd,times,msd_start,coeffs):
 def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             do_sh=True,do_density=False, plot_sh_h=True,
             show_traj_dyn=False,dt=None,
-            neigh=[(57,3.5**2,0.0),(45,3.5**2,0.0)],
+            neigh=DEFAULT_NEIGH,
             plot_st_kw={'transpose':True,'xmax':.20,'ymax':.60},
             analyze_sh_kw={'tskip':50},
             compute_steinhardt_kw={'skip':10},
@@ -1712,7 +1777,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             sh_h = pickle_or_unpickle(sh_h_pickle)
             if sh_h is None:
                 sh_h=compute_steinhardt(atraj,neigh=neigh,averaged=True,**compute_steinhardt_kw)
-                fig_shh,axs_shh=plt_steinhardt(sh_h,vmin=0.01,**plot_st_kw)
+                fig_shh,axs_shh=plt_steinhardt(sh_h,**plot_st_kw)
                 fig_shh.savefig(plt_fname_pre+'steinhardt'+plt_fname_suff)
             
 

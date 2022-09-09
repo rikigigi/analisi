@@ -253,13 +253,25 @@ void Steinhardt<l,TFLOAT,T>::join_data() {
 
 #ifdef BUILD_MMAP
 #include "trajectory.h"
+template class Steinhardt<2,double,Trajectory>;
+template class Steinhardt<3,double,Trajectory>;
+template class Steinhardt<4,double,Trajectory>;
+template class Steinhardt<5,double,Trajectory>;
 template class Steinhardt<6,double,Trajectory>;
+template class Steinhardt<7,double,Trajectory>;
 template class Steinhardt<8,double,Trajectory>;
+template class Steinhardt<9,double,Trajectory>;
 template class Steinhardt<10,double,Trajectory>;
 #endif
 #ifdef PYTHON_SUPPORT
 #include "trajectory_numpy.h"
+template class Steinhardt<2,double,Trajectory_numpy>;
+template class Steinhardt<3,double,Trajectory_numpy>;
+template class Steinhardt<4,double,Trajectory_numpy>;
+template class Steinhardt<5,double,Trajectory_numpy>;
 template class Steinhardt<6,double,Trajectory_numpy>;
+template class Steinhardt<7,double,Trajectory_numpy>;
 template class Steinhardt<8,double,Trajectory_numpy>;
+template class Steinhardt<9,double,Trajectory_numpy>;
 template class Steinhardt<10,double,Trajectory_numpy>;
 #endif
