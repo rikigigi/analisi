@@ -201,8 +201,8 @@ def analyze_vdos_single(traj,nstep=None,print=print):
       return:
         vdos: numpy array (ntypes , nstep/2+1,3) 
     '''
-    if nstep is None or nstep>=traj.getNtimesteps():
-       ntep = traj.getNtimesteps()
+    if nstep is None or nstep>=traj.get_nloaded_timesteps():
+       ntep = traj.get_nloaded_timesteps()
 
     vdos=pyanalisi_wrapper('VibrationSpectrum',traj,False)
     vdos.reset(nstep)
@@ -1348,12 +1348,12 @@ def compute_steinhardt(aiida_traj,ranges=[(2.5,3.5),(0.8,1.2),(2.2,3.0),(1.5,1.8
                                          )
 
     if n_segments==1:
-        stein.reset(atraj.getNtimesteps())
+        stein.reset(atraj.get_nloaded_timesteps())
         stein.calculate(0)
         stein_res=np.array(stein)
         return stein_res
     elif n_segments>1:
-        segment_size=max(1,atraj.getNtimesteps()//n_segments)
+        segment_size=max(1,atraj.get_nloaded_timesteps()//n_segments)
         stein.reset(segment_size)
         print(segment_size)
         res=[]
@@ -1412,8 +1412,9 @@ def plt_steinhardt(stein_res,vmin=0.01,figsize=(6.,6.),show=True,transpose=True,
     return fig,axs
 
 def steinhardt_movie(traj,skip=5,neigh=DEFAULT_NEIGH,averaged=True,n_segments=10,plt_steinhardt_kw=DEFAULT_PLT_STEINHARDT_KW,
-                     compute_steinhardt_kw={'nthreads':4}):
-    tstein=compute_steinhardt(traj,skip=skip,neigh=neigh,averaged=averaged,n_segments=n_segments,**compute_steinhardt_kw)
+                     compute_steinhardt_kw={'nthreads':4},tstein=None):
+    if tstein is None:
+        tstein=compute_steinhardt(traj,skip=skip,neigh=neigh,averaged=averaged,n_segments=n_segments,**compute_steinhardt_kw)
     class SteinAni:
         def __init__(self,tstein,plt_steinhardt_kw):
             self.tstein=tstein
@@ -1426,7 +1427,7 @@ def steinhardt_movie(traj,skip=5,neigh=DEFAULT_NEIGH,averaged=True,n_segments=10
     stani=SteinAni(tstein,plt_steinhardt_kw)
     ani = matplotlib.animation.FuncAnimation(
         stani.fig, stani, interval=200, blit=True, save_count=n_segments)
-    return HTML(ani.to_jshtml())
+    return HTML(ani.to_jshtml()), tstein
 
 def gofr_movie(atraj,skip=5,n_segments=10,gofr_kw={},plt_gofr_kw={},callax=lambda x:None):
     gofr_kw.setdefault('gr_kw',{})['tskip']=skip
@@ -1541,7 +1542,7 @@ def do_compute_gr_multi(t,gr_kw={'tskip':10},n_segments=1,gr_0=0.5,gr_end=3.8,gr
     '''
     computes the g(r) pair correlation function and find the peaks of it
     '''
-    nts=t.getNtimesteps()
+    nts=t.get_nloaded_timesteps()
     param_gr=(nts,gr_0,gr_end,gr_N)
     #first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
     gr_dr=(gr_end-gr_0)/gr_N
@@ -1576,7 +1577,7 @@ def do_compute_gr_sh(t,times,do_sh=True,neigh=[],analyze_sh_kw={'tskip':50},gr_k
     gr_0=0.5
     gr_end=3.8
     gr_N=150
-    nts=t.getNtimesteps()
+    nts=t.get_nloaded_timesteps()
     param_gr=(nts,gr_0,gr_end,gr_N)
     DT_PS=times[1]-times[0]
     #first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
@@ -1654,7 +1655,7 @@ def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_k
     return fig_gr,ax_gr,fig_sh,ax_sh,axins_sh,fit_sh,wNN,rNN,wHH,rHH,wNH,rNH
 
 def do_compute_msd(t_unw,times,msd_kw={}):
-    nts=t_unw.getNtimesteps()
+    nts=t_unw.get_nloaded_timesteps()
     msd=analyze_msd(t_unw,0,nts,**msd_kw)
     #compute slope
     DT_PS=times[1]-times[0]

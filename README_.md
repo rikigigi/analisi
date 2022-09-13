@@ -159,6 +159,7 @@ Calculations:
 If you clone the repository you have to initialize the submodules with
 	
 	git submodule init
+        git submodule update
 
 this will initialize the pybind11 repository for the (optional) python interface
 Dependencies:
