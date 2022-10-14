@@ -1686,7 +1686,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             compute_steinhardt_kw={'skip':10},
             msd_kw={},
             gr_kw={'tskip':10},
-            nthreads=4):
+            nthreads=4,save_data=False):
     results={}
     analyze_sh_kw['nthreads']=nthreads
     compute_steinhardt_kw['nthreads']=nthreads
@@ -1795,6 +1795,11 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
         if msd is None:
             msd=do_compute_msd(atraj_unw,t,msd_kw=msd_kw)
             pickle_or_unpickle(msd_pickle,analisi = msd)
+
+        if save_data:
+            results['data_gofrsh']=gofrsh
+            results['data_msd']=msd
+        
         
         wNN,rNN,wHH,rHH,wNH,rNH=None,None,None,None,None,None
         if plot:

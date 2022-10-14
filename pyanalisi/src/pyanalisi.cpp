@@ -348,6 +348,7 @@ R"lol(
             foo,
             free_when_done
          );})
+     .def("get_type",&Tk::get_type,"get the type used for the internal representation")
      .def("get_nloaded_timesteps",&Tk::get_nloaded_timesteps)
      .def("getNtimesteps",&Tk::get_ntimesteps,R"begend(
      returns estimated number of timesteps from the file size
