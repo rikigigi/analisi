@@ -1218,9 +1218,9 @@ def analisi2aiida_traj(t,symbols):
     return res
 
 def read_lammps_bin(f,pk=None,symbols={},wrap=False,nsteps=0,start=0,dt=1.0, traj_skip=1):
-'''
-Read a binary lammps file. traj_skip loads a step every traj_skip steps. Note that this is done at the numpy python level, and the trajectory object still has all steps inside it
-'''
+    '''
+    Read a binary lammps file. traj_skip loads a step every traj_skip steps. Note that this is done at the numpy python level, and the trajectory object still has all steps inside it
+    '''
 
     t=pa.Traj(f)
     t.setWrapPbc(wrap)
