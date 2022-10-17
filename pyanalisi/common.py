@@ -1160,37 +1160,39 @@ def analisi_cell2box(box_lammps):
     return cells
 
 class FakeAiidaT:
-    def __init__(self,t,symbols_={},dt=1.0,pk=None):
+    def __init__(self,t,symbols_={},dt=1.0,pk=None,traj_skip=1):
+        def _copy(d,skip):
+            return np.copy(d[::traj_skip],order='C') if skip>1 else d
         self.data={}
         key_l=['positions','cells']
         key_opt=['velocities','energy_constant_motion','ionic_temperature','pressure','electronic_kinetic_energy']
         if isinstance(t,(pa.Traj,pa.Trajectory)):
             self.t=t
             self.symbols=[ symbols_[x] if x in symbols_ else str(x) for x in t.get_lammps_type().tolist()]
-            self.data['positions']=t.get_positions_copy()
-            self.data['velocities']=t.get_velocities_copy()
-            self.box_lammps=t.get_box_copy()
+            self.data['positions']=_copy(t.get_positions_copy(), traj_skip) 
+            self.data['velocities']=_copy(t.get_velocities_copy(), traj_skip)
+            self.box_lammps=_copy(t.get_box_copy(), traj_skip)
             self.numsteps=self.data['positions'].shape[0]
             self.data['cells']=analisi_cell2box(self.box_lammps)
         elif isinstance(t,dict):
             self.symbols=t['symbols']
             for key in key_l:
-                self.data[key]=np.array(t[key])
+                self.data[key]=_copy(np.array(t[key]),traj_skip)
             for key in key_opt:
                 if key in t:
-                    self.data[key]=np.array(t[key])
+                    self.data[key]=_copy(np.array(t[key]),traj_skip)
         elif isinstance(t,list):
             self.symbols=t[0]['symbols']
             for key in key_l:
-                self.data[key] = np.concatenate( [t[i][key] for i in range(len(t))], axis=0)
+                self.data[key] = np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
             for key in key_opt:
                 if key in t[0]:
-                    self.data[key]=np.concatenate( [t[i][key] for i in range(len(t))], axis=0)
+                    self.data[key]=np.concatenate( _copy([t[i][key], traj_skip) for i in range(len(t))], axis=0)
         else:
             raise RuntimeError(f'first argument cannot be {str(t)}')
         self.data['steps']=np.arange(0,self.data['positions'].shape[0])
-        self.data['times']=self.data['steps']*dt
-        self.dt=dt
+        self.data['times']=self.data['steps']*dt*traj_skip
+        self.dt=dt*traj_skip
         self.numsites=self.data['positions'].shape[1]
         self.pk=pk
         self.numsteps=self.data['positions'].shape[0]
@@ -1215,8 +1217,10 @@ def analisi2aiida_traj(t,symbols):
         res.set_array(name,ft.get_array(name))
     return res
 
-def read_lammps_bin(f,pk=None,symbols={},wrap=False,nsteps=0,start=0,dt=1.0):
-
+def read_lammps_bin(f,pk=None,symbols={},wrap=False,nsteps=0,start=0,dt=1.0, traj_skip=1):
+'''
+Read a binary lammps file. traj_skip loads a step every traj_skip steps. Note that this is done at the numpy python level, and the trajectory object still has all steps inside it
+'''
 
     t=pa.Traj(f)
     t.setWrapPbc(wrap)
@@ -1227,7 +1231,7 @@ def read_lammps_bin(f,pk=None,symbols={},wrap=False,nsteps=0,start=0,dt=1.0):
         import time
         pk=str(time.time_ns())
 
-    return FakeAiidaT(t,symbols_=symbols,dt=dt,pk=pk)
+    return FakeAiidaT(t,symbols_=symbols,dt=dt,pk=pk,traj_skip=traj_skip)
 
 def get_type_mask(at):
     return get_type_mask_from_s(at.symbols)
