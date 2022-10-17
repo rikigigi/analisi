@@ -1215,12 +1215,19 @@ def analisi2aiida_traj(t,symbols):
         res.set_array(name,ft.get_array(name))
     return res
 
-def read_lammps_bin(f,symbols={},wrap=False,nsteps=0,start=0):
+def read_lammps_bin(f,pk=None,symbols={},wrap=False,nsteps=0,start=0,dt=1.0):
+
+
     t=pa.Traj(f)
     t.setWrapPbc(wrap)
     t.setAccessWindowSize(t.getNtimesteps() if nsteps <= 0 else nsteps)
     t.setAccessStart(start)
-    return FakeAiidaT(t,symbols_=symbols)
+
+    if pk is None:
+        import time
+        pk=str(time.time_ns())
+
+    return FakeAiidaT(t,symbols_=symbols,dt=dt,pk=pk)
 
 def get_type_mask(at):
     return get_type_mask_from_s(at.symbols)
