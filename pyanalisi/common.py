@@ -1187,7 +1187,7 @@ class FakeAiidaT:
                 self.data[key] = np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
             for key in key_opt:
                 if key in t[0]:
-                    self.data[key]=np.concatenate( _copy([t[i][key], traj_skip) for i in range(len(t))], axis=0)
+                    self.data[key]=np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
         else:
             raise RuntimeError(f'first argument cannot be {str(t)}')
         self.data['steps']=np.arange(0,self.data['positions'].shape[0])
