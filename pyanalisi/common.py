@@ -349,6 +349,7 @@ def analyze(traj,traj_unw,start,stop,nthreads=4,
 
 try:
     import scipy as sp
+    import scipy.ndimage
     import scipy.optimize 
 except:
     print('WARNING: cannot import scipy')
@@ -803,10 +804,8 @@ def rotation(a,b,c,order='zxy'):
                [math.sin(c),math.cos(c),0],
                [0,0,1]])
    
-   print(order[0])
    xyz=np.copy(mats[order[0]])
    for ax in order[1:]:
-      print (ax)
       xyz=mats[ax].dot(xyz)
    r=np.eye(4)
    r[:3,:3]=xyz
@@ -912,7 +911,7 @@ def density_field2(res,box,box_kw={},plot=None,ns=[[1,1,1]]):
 
     return plot
 
-def density_field(res,box,box_kw={},plot=None,sph_max_idx=0):
+def density_field(res,box,box_kw={},plot=None,sph_max_idx=0,gaussian_filter=False,gaussian_filter_radius=1.2):
     bounds=[ 
                                                         box[0],box[0]+2*box[3],
                                                         box[1],box[1]+2*box[4],
@@ -924,7 +923,12 @@ def density_field(res,box,box_kw={},plot=None,sph_max_idx=0):
     objs=[]
     if len(res.shape) >3:
         for i in range(res.shape[0]):
-            objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
+            if gaussian_filter:
+               objs.append(k3d.volume(
+                    scipy.ndimage.gaussian_filter(res[i],gaussian_filter_radius,output='float32')
+                   ,bounds=bounds))
+            else:
+               objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
             plot+=objs[-1]
     else:
         objs.append(k3d.volume(np.array(res,dtype='float16'),bounds=bounds))
@@ -958,7 +962,6 @@ def density_field(res,box,box_kw={},plot=None,sph_max_idx=0):
     _rot_b = 0.0
     _rot_c = 0.0
     _rot_Q = np.eye(4)
- 
     def rotate_plane(Q,ps):
        prs=[]
        for p in ps:
@@ -973,7 +976,12 @@ def density_field(res,box,box_kw={},plot=None,sph_max_idx=0):
                 [0,1,0,_w_y-_y],[0,-1,0,_w_y+_y],
                 [0,0,1,_w_z-_z],[0,0,-1,_w_z+_z]
                ])
-    button=widgets.Button(description='Center on 1')
+    box_layout = widgets.Layout(display='flex',
+                    flex_flow='row',
+                    align_items='stretch',
+                    border='none',
+                    width='95%') 
+    button=widgets.Button(description='Center on 1',layout=box_layout)
     @button.on_click
     def button1_on_click(b):
         global _x
@@ -985,64 +993,70 @@ def density_field(res,box,box_kw={},plot=None,sph_max_idx=0):
         print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,res[sph_max_idx].shape))
         print('value={}'.format(res[sph_max_idx][idx]))
         plot.clipping_planes=global_clipping_planes()
-    display(button)#,button2,button3)
-    @interact(spherical=widgets.Checkbox(value=False))
-    def g(spherical):
+    wlist=[button]
+    def g1(spherical):
         global _sphere
         _sphere=spherical
         plot.clipping_planes=global_clipping_planes()
-    @interact(a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
-    def g(a):
+    wlist.append(interactive(g1,spherical=widgets.Checkbox(value=False,layout=box_layout)))
+    def g2(a):
         global _rot_a
         global _rot_Q
         _rot_a=a
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
-    @interact(b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
-    def g(b):
+    wlist.append(interactive(g2,a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01,layout=box_layout)))
+    def g3(b):
         global _rot_b
         global _rot_Q
         _rot_b=b
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
-    @interact(c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
-    def g(c):
+    wlist.append(interactive(g3,b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01,layout=box_layout)))
+    def g4(c):
         global _rot_c
         global _rot_Q
         _rot_c=c
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
-
-    @interact(x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100))
-    def g(x):
+    wlist.append(interactive(g4,c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01,layout=box_layout)))
+    def g5(x):
         global _x
         _x=x
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100))
-    def g(w_x):
+    wlist.append(interactive(g5,x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100,layout=box_layout)))
+    def g6(w_x):
         global _w_x
         _w_x=w_x
         plot.clipping_planes=global_clipping_planes()
-    @interact(y=widgets.FloatSlider(value=box[1]+box[4],min=box[1],max=box[1]+2*box[4],step=box[4]/100))
-    def g(y):
+    wlist.append(interactive(g6,w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100,layout=box_layout)))
+    def g7(y):
         global _y
         _y=y
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_y=widgets.FloatSlider(value=2*box[4],min=0,max=2*box[4],step=box[4]/100))
-    def g(w_y):
+    wlist.append(interactive(g7,y=widgets.FloatSlider(value=box[1]+box[4],min=box[1],max=box[1]+2*box[4],step=box[4]/100,layout=box_layout)))
+    def g8(w_y):
         global _w_y
         _w_y=w_y
         plot.clipping_planes=global_clipping_planes()
-    @interact(z=widgets.FloatSlider(value=box[2]+box[5],min=box[2],max=box[2]+2*box[5],step=box[5]/100))
-    def g(z):
+    wlist.append(interactive(g8,w_y=widgets.FloatSlider(value=2*box[4],min=0,max=2*box[4],step=box[4]/100,layout=box_layout)))
+    def g9(z):
         global _z
         _z=z
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_z=widgets.FloatSlider(value=2*box[5],min=0.0,max=2*box[5],step=box[5]/100))
-    def g(w_z):
+    wlist.append(interactive(g9,z=widgets.FloatSlider(value=box[2]+box[5],min=box[2],max=box[2]+2*box[5],step=box[5]/100,layout=box_layout)))
+    def g10(w_z):
         global _w_z
         _w_z=w_z
         plot.clipping_planes=global_clipping_planes()
+    wlist.append(interactive(g10,w_z=widgets.FloatSlider(value=2*box[5],min=0.0,max=2*box[5],step=box[5]/100,layout=box_layout)))
+    box_all = widgets.GridBox(children=wlist, layout=widgets.Layout(
+                                grid_template_columns='40% 40%',
+                                grid_template_rows='auto'
+                              )
+                      )
+    #for w in wlist: display(w)
+    display(box_all)
     return plot
         
 def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(dpi=300)):
@@ -1707,7 +1721,8 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             compute_steinhardt_kw={'skip':10},
             msd_kw={},
             gr_kw={'tskip':10},
-            nthreads=4,save_data=False,tskip=1):
+            nthreads=4,save_data=False,tskip=1,
+            atomic_density_kwargs={}):
     results={}
     analyze_sh_kw['nthreads']=nthreads
     compute_steinhardt_kw['nthreads']=nthreads
@@ -1794,7 +1809,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
         
         if plot and do_density:
             res=atomic_density(atraj)
-            plot_=density_field(*res)
+            plot_=density_field(*res,**atomic_density_kwargs)
         
         #histogram of steinhardt parameters
         if plot_sh_h: 
