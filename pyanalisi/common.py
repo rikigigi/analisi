@@ -57,7 +57,7 @@ def set_figure_path(new_path):
 DEFAULT_PLT_STEINHARDT_KW={'transpose':True,'xmax':.30,'ymax':.60}
 DEFAULT_NEIGH=[(57,3.5**2,0.0),(45,3.5**2,0.0)]
 #aiida
-def plt_key(traj,key,conv=1.0,title='',ylabel=''):
+def plt_key(traj,key,conv=1.0,title='',ylabel='',dt=None):
     if not key in traj.get_arraynames():
         return
     if title=='': title=key
@@ -68,8 +68,11 @@ def plt_key(traj,key,conv=1.0,title='',ylabel=''):
     ax.set_xlabel('time (ps)')
     ax.set_ylabel(ylabel)
     axins.set_title('100 points of "{}"'.format(title))
-    t=traj.get_array('times')
     q=traj.get_array(key)
+    if dt is None:
+        t=traj.get_array('times')
+    else:
+        t=np.arange(q.shape[0])*dt
     ax.plot(t,q*conv)
     axins.plot(t,q*conv)
     x1=len(t)//2
@@ -93,13 +96,15 @@ def get_types_id_array(types_array):
     return np.array(res,dtype='int32')
 
 #aiida
-def get_analisi_traj_from_aiida(traj):
-    pos=traj.get_array('positions')
+def get_analisi_traj_from_aiida(traj,tskip=1):
+    if tskip < 1:
+        raise IndexError(f'cannot have a trajectory skip of {tskip}')
+    pos=traj.get_array('positions')[::tskip].copy(order='C')
     if 'velocities' in traj.get_arraynames():
-        vel=traj.get_array('velocities')
+        vel=traj.get_array('velocities')[::tskip].copy(order='C')
     else:
         vel=np.zeros(pos.shape)
-    cel=traj.get_array('cells').transpose((0,2,1)).copy(order='C') 
+    cel=traj.get_array('cells')[::tskip].transpose((0,2,1)).copy(order='C') 
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
     atraj=pa.Trajectory(*params,pa.BoxFormat.CellVectors, True,True)
@@ -592,8 +597,8 @@ def get_max_in_mask(a,mask):
     b.mask=mask
     return np.unravel_index(np.argmax(b, axis=None), b.shape)
 
-def idx_to_coord(idx,shape,l=(1.0,1.0,1.0)):
-    return (np.array(idx,dtype=float)/np.array(shape,dtype=float)-np.array((0.5,0.5,0.5),dtype=float))*np.array(l)
+def idx_to_coord(idx,shape,l=(1.0,1.0,1.0),l0=np.array((0.0,0.0,0.0))):
+    return (np.array(idx,dtype=float)/np.array(shape,dtype=float)-l0)*np.array(l)
 
 def is_inside(a,idx,planes):
     idx_c=idx_to_coord(idx,a.shape)
@@ -603,10 +608,10 @@ def is_inside(a,idx,planes):
             return 1
     return 0
 
-def is_inside_sphere(a,idx,r2,xyz):
-    return np.sum((idx_to_coord(idx,a.shape)-xyz)**2)<r2
+def is_inside_sphere(a,idx,r2,xyz,l=(1.0,1.0,1.0)):
+    return np.sum((idx_to_coord(idx,a.shape,l=l)-xyz)**2)<r2
 
-def get_max_in_spherical_domain(a,r,z,y,x):
+def get_max_in_spherical_domain(a,r,z,y,x,l=(1.0,1.0,1.0)):
     #planes=sph_tangents_cover(r,n,x,y,z)
     mask=np.zeros(a.shape,dtype=int)
     r2=r**2
@@ -615,9 +620,9 @@ def get_max_in_spherical_domain(a,r,z,y,x):
         for iy in range(a.shape[1]):
             for ix in range(a.shape[2]):
                 idx=(iz,iy,ix)
-                mask[idx]=not is_inside_sphere(a,idx,r2,xyz)
+                mask[idx]=not is_inside_sphere(a,idx,r2,xyz,l=l)
     idx=get_max_in_mask(a,mask)
-    return idx, idx_to_coord(idx,a.shape)
+    return idx, idx_to_coord(idx,a.shape,l=l)
             
 
 def mask_around(mask,idx,size):
@@ -907,7 +912,7 @@ def density_field2(res,box,box_kw={},plot=None,ns=[[1,1,1]]):
 
     return plot
 
-def density_field(res,box,box_kw={},plot=None):
+def density_field(res,box,box_kw={},plot=None,sph_max_idx=0):
     bounds=[ 
                                                         box[0],box[0]+2*box[3],
                                                         box[1],box[1]+2*box[4],
@@ -975,10 +980,10 @@ def density_field(res,box,box_kw={},plot=None):
         global _y
         global _z
         print('finding maximum in spherical domain with r={}, center=({},{},{})'.format(_w_x,_x,_y,_z))
-        idx, (_z,_y,_x)=get_max_in_spherical_domain(ress[0],_w_x,_z,_y,_x)
+        idx, (_z,_y,_x)=get_max_in_spherical_domain(res[sph_max_idx],_w_x,_z,_y,_x,l=(2*box[5],2*box[4],2*box[3]))
         #_x,_y,_z=-_x,-_y,-_z
-        print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,ress[0].shape))
-        print('value={}'.format(ress[0][idx]))
+        print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,res[sph_max_idx].shape))
+        print('value={}'.format(res[sph_max_idx][idx]))
         plot.clipping_planes=global_clipping_planes()
     display(button)#,button2,button3)
     @interact(spherical=widgets.Checkbox(value=False))
@@ -1307,9 +1312,9 @@ def wrap_dataset(tt):
       'stress':rotated_stress
      }
 
-def show_traj(tr,wrap=True,fast=1.0):
+def show_traj(tr,wrap=True,fast=1.0,tskip=1):
     if wrap:
-        atraj,_=get_analisi_traj_from_aiida(tr)
+        atraj,_=get_analisi_traj_from_aiida(tr,tskip=tskip)
     else:
         atraj=None
     plot=k3d.plot()
@@ -1337,12 +1342,17 @@ import matplotlib.colors as colors
 from matplotlib import cm
 
 
-def compute_steinhardt(aiida_traj,ranges=[(2.5,3.5),(0.8,1.2),(2.2,3.0),(1.5,1.8)],nthreads=4,skip=10,neigh=[], histogram=True,ls=[6,4],averaged=False,n_segments=1,nbins=100):
+def compute_steinhardt(aiida_traj,ranges=[(2.5,3.5),(0.8,1.2),(2.2,3.0),(1.5,1.8)],nthreads=4,skip=10,neigh=[], histogram=True,ls=[6,4],averaged=False,n_segments=1,nbins=100,tskip=1):
     atraj=aiida_traj
     if isinstance(atraj, FakeAiidaT) and hasattr(atraj,'t'):
+        if tskip != 1:
+            raise IndexError(f'trajectory skip not implemented after Trajectory instance is created')
         atraj=atraj.t
     elif not isinstance(atraj,pa.Trajectory):
-        atraj,atraj_unw=get_analisi_traj_from_aiida(aiida_traj)
+        atraj,atraj_unw=get_analisi_traj_from_aiida(aiida_traj,tskip=tskip)
+    elif tskip != 1:
+        raise IndexError(f'trajectory skip not implemented after Trajectory instance is created')
+
     stein = None
     l=sorted(ls)
 
@@ -1690,14 +1700,14 @@ def do_plots_msd(msd,times,msd_start,coeffs):
 
 def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             do_sh=True,do_density=False, plot_sh_h=True,
-            show_traj_dyn=False,dt=None,
+            show_traj_dyn=False,dt='auto',
             neigh=DEFAULT_NEIGH,
             plot_st_kw={'transpose':True,'xmax':.20,'ymax':.60},
             analyze_sh_kw={'tskip':50},
             compute_steinhardt_kw={'skip':10},
             msd_kw={},
             gr_kw={'tskip':10},
-            nthreads=4,save_data=False):
+            nthreads=4,save_data=False,tskip=1):
     results={}
     analyze_sh_kw['nthreads']=nthreads
     compute_steinhardt_kw['nthreads']=nthreads
@@ -1723,10 +1733,13 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
         results['P']=press_mean
     else:
         press_mean = float('nan')
-    
-    if 'times' in traj.get_arraynames():
+    if dt is None and 'times' in traj.get_arraynames():
         t=traj.get_array('times')
-    else:
+    elif isinstance(dt,float):
+        t=np.arange(temp.shape[0])*dt
+    elif dt=='auto' and 'times' in traj.get_arraynames():
+        t=traj.get_array('times')
+        dt=(t[1]-t[0])
         t=np.arange(temp.shape[0])*dt
     def t_to_timestep(x):
         return np.interp(x,t,np.arange(t.shape[0]))
@@ -1764,12 +1777,12 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
     if plot_traj and plot:
         print('cell_average = {}'.format(cell_0))
         print('cell_average_volume = {} A^3'.format(volume))
-        plt_key(traj,'electronic_kinetic_energy',eV_to_K,ylabel='K')
-        plt_key(traj,'energy_constant_motion')
-        plt_key(traj,'ionic_temperature',ylabel='K')
-        plt_key(traj,'pressure',ylabel='GPa')
+        plt_key(traj,'electronic_kinetic_energy',eV_to_K,ylabel='K',dt=dt)
+        plt_key(traj,'energy_constant_motion',dt=dt)
+        plt_key(traj,'ionic_temperature',ylabel='K',dt=dt)
+        plt_key(traj,'pressure',ylabel='GPa',dt=dt)
         plt.show()
-    atraj,atraj_unw=get_analisi_traj_from_aiida(traj)
+    atraj,atraj_unw=get_analisi_traj_from_aiida(traj,tskip=tskip)
 
 
     if show_traj_dyn:
@@ -1797,14 +1810,14 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
         grsh_pickle=pickle_dump_name+ ('_gofr_sh.pickle' if do_sh else '_gofr.pickle')
         gofrsh = pickle_or_unpickle(grsh_pickle)
         if gofrsh is None:
-            gofrsh=do_compute_gr_sh(atraj,t,do_sh=do_sh,neigh=neigh,analyze_sh_kw=analyze_sh_kw,gr_kw=gr_kw)
+            gofrsh=do_compute_gr_sh(atraj,t[::tskip],do_sh=do_sh,neigh=neigh,analyze_sh_kw=analyze_sh_kw,gr_kw=gr_kw)
             pickle_or_unpickle(grsh_pickle,analisi = gofrsh)
                 
         #msd
         msd_pickle=pickle_dump_name+'_msd.pickle'
         msd = pickle_or_unpickle(msd_pickle)
         if msd is None:
-            msd=do_compute_msd(atraj_unw,t,msd_kw=msd_kw)
+            msd=do_compute_msd(atraj_unw,t[::tskip],msd_kw=msd_kw)
             pickle_or_unpickle(msd_pickle,analisi = msd)
 
         if save_data:
@@ -1839,10 +1852,10 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
     if (cells_transition!=cells_transition[0]).any():
         if plot:
             fig, ax = plt.subplots(nrows=2,figsize=(10,8),dpi=300)
-            lines=ax[0].plot(t,cells_transition[:,3:6]*2)
+            lines=ax[0].plot(t[::tskip],cells_transition[:,3:6]*2)
             for i,c in enumerate(['x','y','z']):
                 lines[i].set_label(c)
-            ax[0].plot(t,(2*cells_transition[:,3:6]).prod(axis=1)**.33333,label=r'$volume^{\frac{1}{3}}$')
+            ax[0].plot(t[::tskip],(2*cells_transition[:,3:6]).prod(axis=1)**(1.0/3.0),label=r'$volume^{\frac{1}{3}}$')
             ax[0].grid()
             ax[0].set_title('cell parameters: cell size (up) and cell tilt (down)')
             ax[1].set_xlabel('t (ps)')
@@ -1850,7 +1863,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             ax[0].secondary_xaxis('top',functions=(t_to_timestep,timestep_to_t))
             ax[0].legend()
             if cells_transition.shape[1]>6:
-                lines=ax[1].plot(t,cells_transition[:,6:])
+                lines=ax[1].plot(t[::tskip],cells_transition[:,6:])
                 ax[1].grid()
                 ax[1].set_ylabel('(A)')
                 ax[1].secondary_xaxis('top',functions=(t_to_timestep,timestep_to_t))
@@ -1863,16 +1876,16 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             uma=1.66e-27 #kg
             mcell=(sum( [ 1 for i in traj.get_attribute('symbols') if i=='H']) + sum( [ 14 for i in traj.get_attribute('symbols') if i=='N']))*uma
             def vs_C(traj,nsteps):
-                density=(mcell/np.linalg.det(traj.get_array('cells')[:nsteps]*1e-10)).mean()
-                CS,CSm=elastic_c(traj.get_array('ionic_temperature')[:nsteps].mean()*1.38064852e-23,
-                                 traj.get_array('cells')[:nsteps]*1e-10)
+                density=(mcell/np.linalg.det(traj.get_array('cells')[:nsteps:tskip]*1e-10)).mean()
+                CS,CSm=elastic_c(traj.get_array('ionic_temperature')[:nsteps:tskip].mean()*1.38064852e-23,
+                                 traj.get_array('cells')[:nsteps:tskip]*1e-10)
                 vs=((CS[0,0]+4.0/3*CS[3,3])*1e9/density)**.5
                 print ('sqrt((C_{xx,xx} + C_{xy,xy})/density) [m/s] ' ,vs)
                 return CS,CSm,vs,density
             CSs,CSms,vss,ts,densities=([],[],[],[],[])
             for i in range(10):
-                stop_step=traj.numsteps*(i+1)//10
-                ts.append(t[stop_step-1])
+                stop_step=traj.numsteps//tskip*(i+1)//10
+                ts.append(t[::tskip][stop_step-1])
                 CSi,CSmi,vsi,density=vs_C(traj,stop_step)
                 CSs.append(CSi)
                 CSms.append(CSmi)

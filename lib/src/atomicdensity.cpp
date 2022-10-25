@@ -60,11 +60,11 @@ void  AtomicDensity<T,Hist>::reset(const unsigned int numeroTimestepsPerBlocco) 
 }
 template <class T, class Hist>
 std::vector<ssize_t>  AtomicDensity<T,Hist>::get_shape() const{
-    return {static_cast<long>(ntypes),static_cast<long>(nbin[0]),static_cast<long>(nbin[1]),static_cast<long>(nbin[2])};
+    return {static_cast<long>(ntypes),static_cast<long>(nbin[2]),static_cast<long>(nbin[1]),static_cast<long>(nbin[0])};
 }
 template <class T, class Hist>
 std::vector<ssize_t>  AtomicDensity<T,Hist>::get_stride() const {
-    return {static_cast<long>(sizeof (Hist))*static_cast<long>(nbin[0]*nbin[1]*nbin[2]),static_cast<long>(nbin[1]*nbin[2]*sizeof (Hist)),static_cast<long>(nbin[2]*sizeof (Hist)),static_cast<long>(sizeof (Hist))};
+    return {static_cast<long>(sizeof (Hist))*static_cast<long>(nbin[0]*nbin[1]*nbin[2]),static_cast<long>(nbin[1]*nbin[0]*sizeof (Hist)),static_cast<long>(nbin[0]*sizeof (Hist)),static_cast<long>(sizeof (Hist))};
 }
 
 #ifdef BUILD_MMAP

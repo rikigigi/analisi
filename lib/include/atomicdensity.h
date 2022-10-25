@@ -32,7 +32,7 @@ private:
     T * t;
     size_t ntypes;
     size_t idx(const size_t x, const size_t y, const size_t z, const size_t itype) const {
-        return x + nbin[2]*(y + nbin[1]*(z + itype*nbin[0]));
+        return x + nbin[0]*(y + nbin[1]*(z + itype*nbin[2]));
     }
     size_t idx_(const double * pos, const double * l, bool & ok,int itype) const {
         size_t idxs[3];
@@ -49,7 +49,7 @@ private:
             }
             idxs[icoord] = std::floor(l_*nbin[icoord]);
         }
-        return idx(idxs[2],idxs[1],idxs[0],itype);
+        return idx(idxs[0],idxs[1],idxs[2],itype);
     }
 
     using CalculateMultiThread<This>::ntimesteps;
