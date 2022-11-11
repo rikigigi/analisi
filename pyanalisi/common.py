@@ -56,12 +56,13 @@ def set_figure_path(new_path):
 
 DEFAULT_PLT_STEINHARDT_KW={'transpose':True,'xmax':.30,'ymax':.60}
 DEFAULT_NEIGH=[(57,3.5**2,0.0),(45,3.5**2,0.0)]
+DEFAULT_SUBPLOTS_KW={'figsize':(6,4),'dpi':300}
 #aiida
-def plt_key(traj,key,conv=1.0,title='',ylabel='',dt=None):
+def plt_key(traj,key,conv=1.0,title='',ylabel='',dt=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     if not key in traj.get_arraynames():
         return
     if title=='': title=key
-    fig,ax =plt.subplots(figsize=(8,6),dpi=300)
+    fig,ax =plt.subplots(**subplots_kw)
     ax=fig.add_axes([0,0,1,1])
     axins=inset_axes(ax,width='20%',height='20%',loc='upper right')
     ax.set_title(title)
@@ -207,7 +208,7 @@ def analyze_vdos_single(traj,nstep=None,print=print):
         vdos: numpy array (ntypes , nstep/2+1,3) 
     '''
     if nstep is None or nstep>=traj.get_nloaded_timesteps():
-       ntep = traj.get_nloaded_timesteps()
+       nstep = traj.get_nloaded_timesteps()
 
     vdos=pyanalisi_wrapper('VibrationSpectrum',traj,False)
     vdos.reset(nstep)
@@ -251,6 +252,11 @@ def analyze_vdos_lammps(traj,nstep=None,start=0,resetAccess=True,print=print):
        print('traj.setAccessStart(0)')
        
     return vdos #,copy=True)
+
+def vdos_norm_factor(dt,N):
+    return dt/N/6.0
+def vdos_domega(dt,N):
+    return 2.0/dt/N
 
 def analyze_vdos_numpy(pos, vel, types, box,
                                     matrix_format=True, # matrix format for the box array
@@ -438,11 +444,11 @@ def plt_err(ax,x,v,var,*args,**kwargs):
     else:
         ax.plot(x,v,*args,**kwargs)
 
-def plot_msd(times,res,cm,title='',res_var=None, fig_ax=None):
+def plot_msd(times,res,cm,title='',res_var=None, fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     if fig_ax is not None:
        fig, ax = fig_ax
     else:
-       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+       fig,ax =plt.subplots(**subplots_kw)
     ax=fig.add_axes([0,0,1,1])
     for i in range(res.shape[-1]):
         plt_err(ax,times[:res.shape[0]]-times[0],res[:,cm,i],res_var[:,cm,i] if res_var is not None else res_var,label='type='+str(i))
@@ -516,7 +522,7 @@ def fit_sh(times,res,type1,type2,ibin,lmin=0,lmax=11,
 
 def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_var=None,
             maxt=-1.0,fitmax=-1.0,fitmin=-1.0,pre_fit=-1.0,log=True,rescale_array=True,scale_exp_coeff=0.1,
-            fig_ax=None):
+            fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     t=times[:res.shape[0]]-times[0]
     r = res
     r_var = res_var
@@ -535,7 +541,7 @@ def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_v
     if fig_ax is not None:
        fig, ax = fig_ax
     else:
-       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+       fig,ax =plt.subplots(**subplots_kw)
     ax=fig.add_axes([0,0,1,1])
     axins=inset_axes(ax,width='20%',height='20%',loc='upper right')
     fits = fit_sh(t,res,type1,type2,ibin,lmin,lmax,maxt,fitmax,fitmin,pre_fit,
@@ -563,11 +569,11 @@ def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_v
     return fig,ax,axins, fits
 
 
-def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None):
+def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     if fig_ax is not None:
        fig, ax = fig_ax
     else:
-       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+       fig,ax =plt.subplots(**subplots_kw)
     rm=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
     rp=(np.arange(res.shape[-1])+1)*(endr-startr)/res.shape[-1]+startr
     vols=4*np.pi/3*(rp**3-rm**3)
@@ -1059,7 +1065,7 @@ def density_field(res,box,box_kw={},plot=None,sph_max_idx=0,gaussian_filter=Fals
     display(box_all)
     return plot
         
-def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(dpi=300)):
+def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(**DEFAULT_SUBPLOTS_KW)):
     pwcalcjobs=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.pw.PwCalculation'>"]:
         pwcalcjobs.append(c)
@@ -1067,7 +1073,7 @@ def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(
     res,axs,figs,n_ax=analyze_forces_ratio(pwcalcjobs,minpk=wf.pk,ax_=ax,create_fig = create_fig)
     return res,axs,figs,n_ax
 
-def plot_force_ratio(res,fig=None,ax=None,hheight=10):
+def plot_force_ratio(res,fig=None,ax=None,hheight=10,subplots_kw=DEFAULT_SUBPLOTS_KW):
     def update_x_low_high(em,dt,d,x,x_size=0.0):
         e=d.setdefault(dt,{}).setdefault(em,{})
         x_lo=e.setdefault('x_lo',x)
@@ -1079,7 +1085,7 @@ def plot_force_ratio(res,fig=None,ax=None,hheight=10):
     #c_k=list(mcolors.TABLEAU_COLORS.keys())
     #idx=0
     if ax==None:
-        fig,ax=plt.subplots(dpi=300)
+        fig,ax=plt.subplots(**subplots_kw)
     x_low_high={}
     for e in dict_keys(res,level=2):
         for dt in dict_keys(res,level=1):
@@ -1136,12 +1142,15 @@ def plot_force_ratio(res,fig=None,ax=None,hheight=10):
 def length_traj(traj):
     t=traj.get_array('times')
     return t[-1]-t[0]
-def get_cp_with_traj(wf,min_t=0.0):
+def get_cp_with_traj(wf,min_t=0.0, ignore_not_ok=False):
     l=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>"]:
-        if 'output_trajectory' in c.outputs:
-            t = length_traj(c.outputs.output_trajectory)
-            if t >= min_t:
+        if 'output_trajectory' in c.outputs and (c.is_finished_ok or ignore_not_ok):
+            if min_t > 0.0:
+               t = length_traj(c.outputs.output_trajectory)
+               if t >= min_t:
+                  l.append(c)
+            else:
                l.append(c)
     return sorted(l,key=lambda x: x.pk)
 
@@ -1698,18 +1707,20 @@ def do_compute_msd(t_unw,times,msd_kw={}):
     coeffs=np.polyfit(times[msd_start:msd.shape[0]]-times[0],msd[msd_start:,0,:],1)
     return msd,times,msd_start,coeffs
 
-def do_plots_msd(msd,times,msd_start,coeffs):
+def do_plots_msd(msd,times,msd_start,coeffs,do_fit=True,fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     DT_PS=times[1]-times[0]
-    fig,ax=plot_msd(times,msd,0)
-    t0=times[msd_start]-times[0]
-    tf=times[msd.shape[0]-1]-times[0]
-    lines=[[(t0,coeffs[0,0]*t0+coeffs[1,0]),(tf,coeffs[0,0]*tf+coeffs[1,0])],
-          [(t0,coeffs[0,1]*t0+coeffs[1,1]),(tf,coeffs[0,1]*tf+coeffs[1,1])]]
-    lc=mc.LineCollection(lines,zorder=-1)
-    ax.add_collection(lc)
+    fig,ax=plot_msd(times,msd,0,fig_ax=fig_ax,subplots_kw=subplots_kw)
+    ax.grid()
+    if do_fit:
+        t0=times[msd_start]-times[0]
+        tf=times[msd.shape[0]-1]-times[0]
+        lines=[[(t0,coeffs[0,0]*t0+coeffs[1,0]),(tf,coeffs[0,0]*tf+coeffs[1,0])],
+              [(t0,coeffs[0,1]*t0+coeffs[1,1]),(tf,coeffs[0,1]*tf+coeffs[1,1])]]
+        lc=mc.LineCollection(lines,zorder=-1)
+        ax.add_collection(lc)
 
-    ax.annotate(f'D={coeffs[0,0]/6:.2f}',lines[0][1])
-    ax.annotate(f'D={coeffs[0,1]/6:.2f}',lines[1][1])
+        ax.annotate(f'D={coeffs[0,0]/6:.2f}',lines[0][1])
+        ax.annotate(f'D={coeffs[0,1]/6:.2f}',lines[1][1])
     return fig,ax
 
 def inspect(traj, only_cell=False,plot_traj=True,plot=True,
@@ -1722,7 +1733,9 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             msd_kw={},
             gr_kw={'tskip':10},
             nthreads=4,save_data=False,tskip=1,
-            atomic_density_kwargs={}):
+            atomic_density_kwargs={},
+            msd_plot_kw={},
+            subplots_kw=DEFAULT_SUBPLOTS_KW):
     results={}
     analyze_sh_kw['nthreads']=nthreads
     compute_steinhardt_kw['nthreads']=nthreads
@@ -1848,7 +1861,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             if fig_sh is not None:
                 fig_sh.show()
                 fig_sh.savefig(plt_fname_pre+'sh'+plt_fname_suff)
-            fig_msd,ax_msd=do_plots_msd(*msd)
+            fig_msd,ax_msd=do_plots_msd(*msd,**msd_plot_kw)
             fig_msd.show()
             fig_msd.savefig(plt_fname_pre+'msd'+plt_fname_suff)
         
@@ -1866,7 +1879,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
     
     if (cells_transition!=cells_transition[0]).any():
         if plot:
-            fig, ax = plt.subplots(nrows=2,figsize=(10,8),dpi=300)
+            fig, ax = plt.subplots(nrows=2,**subplots_kw)
             lines=ax[0].plot(t[::tskip],cells_transition[:,3:6]*2)
             for i,c in enumerate(['x','y','z']):
                 lines[i].set_label(c)
@@ -1911,7 +1924,7 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
             vss=np.array(vss)
             ts=np.array(ts)
             if plot:
-                fig, ax = plt.subplots(figsize=(10,8),dpi=300)
+                fig, ax = plt.subplots(**subplots_kw)
                 ax.plot(ts,vss)
                 ax.set_xlabel('t (ps)')
                 ax.set_ylabel('vs (m/s)')
@@ -1932,7 +1945,7 @@ def multiinspect(nodes,plot=False,prefix='',inspect_kw={}):
         plt.show()
         all_res.append(res)
     return all_res, print_all(all_res,prefix=prefix)
-def print_all(all_res,prefix=''):
+def print_all(all_res,prefix='',subplots_kw=DEFAULT_SUBPLOTS_KW):
     Ts=[]
     Ps=[]
     MSDs=[]
@@ -1964,7 +1977,7 @@ def print_all(all_res,prefix=''):
     alist=[('NN peak r',grp_pos[:,1]),('NN peak width',grp_width[:,1]),('msd0',MSDs[:,0]),('msd1',MSDs[:,1])] + ([('Vs',Vss)] if len(Vss) > 0 else [])
     try:
         for k,arr in alist:
-            fig, ax = plt.subplots(nrows=1,figsize=(10,8),dpi=300)
+            fig, ax = plt.subplots(nrows=1,**subplots_kw)
             for i in range(len(Ts)):
                  ax.annotate(f'dt={DTs[i]:.3f}', xy=(Ts[i], arr[i]),
                      xytext=(-1, 1), textcoords="offset points",
@@ -1978,7 +1991,7 @@ def print_all(all_res,prefix=''):
             fig.savefig(fname)
         #some sqrt(elastic constants/density)
         def plt_el(Ts,CS,density):
-            fig, ax = plt.subplots(nrows=1,figsize=(10,8),dpi=300)
+            fig, ax = plt.subplots(nrows=1,**subplots_kw)
 #            for arr,label in [(((CS[:,0,0]+CS[:,1,1]+CS[:,2,2])/(3.0*density))**.5,'longitudinal'),(((CS[:,3,3]+CS[:,4,4]+CS[:,5,5])/(3.0*density))**.5,'shear')]:
             for arr,label in [((CS[:,0,0]/density)**.5,'longitudinal'),((CS[:,3,3]/density)**.5,'shear')]:
                 for i in range(len(Ts)):
