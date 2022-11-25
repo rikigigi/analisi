@@ -449,7 +449,8 @@ def plot_msd(times,res,cm,title='',res_var=None, fig_ax=None,subplots_kw=DEFAULT
        fig, ax = fig_ax
     else:
        fig,ax =plt.subplots(**subplots_kw)
-    ax=fig.add_axes([0,0,1,1])
+       print(f'DEBUG: sublots kwargs = {subplots_kw}')
+    #ax=fig.add_axes([0,0,1,1])
     for i in range(res.shape[-1]):
         plt_err(ax,times[:res.shape[0]]-times[0],res[:,cm,i],res_var[:,cm,i] if res_var is not None else res_var,label='type='+str(i))
     ax.legend()
@@ -1144,7 +1145,14 @@ def length_traj(traj):
     return t[-1]-t[0]
 def get_cp_with_traj(wf,min_t=0.0, ignore_not_ok=False):
     l=[]
-    for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>"]:
+    lall=[]
+    for x in wf.called:
+        try:
+            if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>":
+               lall.append(x)
+        except AttributeError as err:
+            print('Ignoring: ', err)
+    for c in lall:
         if 'output_trajectory' in c.outputs and (c.is_finished_ok or ignore_not_ok):
             if min_t > 0.0:
                t = length_traj(c.outputs.output_trajectory)
@@ -1210,12 +1218,21 @@ class FakeAiidaT:
                 if key in t:
                     self.data[key]=_copy(np.array(t[key]),traj_skip)
         elif isinstance(t,list):
-            self.symbols=t[0]['symbols']
-            for key in key_l:
-                self.data[key] = np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
-            for key in key_opt:
-                if key in t[0]:
-                    self.data[key]=np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
+            if isinstance(t[0], dict):
+                self.symbols=t[0]['symbols']
+                for key in key_l:
+                    self.data[key] = np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
+                for key in key_opt:
+                    if key in t[0]:
+                        self.data[key]=np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
+            else:
+                self.symbols=t[0].symbols
+                for key in key_l:
+                    self.data[key] = np.concatenate( [_copy(t[i].get_array(key), traj_skip) for i in range(len(t))], axis=0)
+                for key in key_opt:
+                    if key in t[0].get_arraynames():
+                        self.data[key]=np.concatenate( [_copy(t[i].get_array(key), traj_skip) for i in range(len(t))], axis=0)
+
         else:
             raise RuntimeError(f'first argument cannot be {str(t)}')
         self.data['steps']=np.arange(0,self.data['positions'].shape[0])
@@ -1651,7 +1668,7 @@ def do_compute_gr_sh(t,times,do_sh=True,neigh=[],analyze_sh_kw={'tskip':50},gr_k
     param_sh = (sh_low,sh_hi)
     return times,param_gr,gofr,param_sh,sh,NH_peak
 
-def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_kw={}):
+def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_kw={},plot_sh_band=False):
 
     nts,gr_0,gr_end,gr_N=param_gr
     sh_low,sh_hi=param_sh
@@ -1663,10 +1680,11 @@ def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_k
     
     fig_gr,ax_gr=plot_gofr(gr_0,gr_end,gofr,fig_ax=fig_ax,**plot_gr_kw)
     ax_gr.grid()
-    if sh_low is not None: 
-        ax_gr.axvline(sh_low,color='r')
-    if sh_hi is not None:
-        ax_gr.axvline(sh_hi,color='r')
+    if plot_sh_band:
+        if sh_low is not None: 
+            ax_gr.axvline(sh_low,color='r')
+        if sh_hi is not None:
+            ax_gr.axvline(sh_hi,color='r')
     
     #annotate N-N peak
     
@@ -1675,8 +1693,10 @@ def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_k
     def annotate_peak(r0,h,ax_gr):
         _,_,NN_spread_low,NN_spread_hi,w2NN,NN_thre,NN_peak_val,NN_peak_idx,peaks,NN = analyze_peak(gr,r0,h,gr_r2i,gr_i2r)
         ax_gr.hlines(NN_thre,NN_spread_low,NN_spread_hi)
-        ax_gr.annotate(f'{w2NN:.2f}',(peaks[0,NN]*0.95,NN_thre*1.05))
-        ax_gr.annotate(f'{peaks[0,NN]:.2f}',(peaks[0,NN]*0.95,NN_peak_val*1.02))
+        
+        #ax_gr.annotate(f'{w2NN:.2f}',(peaks[0,NN]*0.95,NN_thre*1.05))
+        #ax_gr.annotate(f'{peaks[0,NN]:.2f}',(peaks[0,NN]*0.95,NN_peak_val*1.02))
+        ax_gr.annotate(f'{peaks[0,NN]:.2f}\n{w2NN:.2f}',(peaks[0,NN]*0.95,NN_thre*1.05))
         return w2NN,peaks[0,NN]
     #find nearest peak to 2.6 (N-N bond)
     wNN,rNN=annotate_peak(2.6,0.5,ax_gr)
@@ -1876,14 +1896,24 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
         results['HH_peak_pos']=rHH
 
     cells_transition=atraj.get_box_copy()
+    cell_transition_ave=cells_transition.mean(axis=0)
+    print(f'average cell xx,yy,zz = {2*cell_transition_ave[3:6]}')
+    a = cell_transition_ave[3]/4+cell_transition_ave[4]/(3*3**.5)
+    hcpx = a*4
+    hcpy = a*3*3**.5
+    hcpz = a*2*6**.5
+    print(f'close packed ideal structure = {hcpx} {hcpy} {hcpz}')
+    print(f'close packed ideal structure delta = {hcpx-2*cell_transition_ave[3]} {hcpy-2*cell_transition_ave[4]} {hcpz-2*cell_transition_ave[5]}')
+    if cells_transition.shape[1]>6:
+        print(f'average cell xy,xz,yz = {cell_transition_ave[6:]}')
     
     if (cells_transition!=cells_transition[0]).any():
         if plot:
-            fig, ax = plt.subplots(nrows=2,**subplots_kw)
+            fig, ax = plt.subplots(nrows=2,sharex=True,**subplots_kw)
             lines=ax[0].plot(t[::tskip],cells_transition[:,3:6]*2)
             for i,c in enumerate(['x','y','z']):
                 lines[i].set_label(c)
-            ax[0].plot(t[::tskip],(2*cells_transition[:,3:6]).prod(axis=1)**(1.0/3.0),label=r'$volume^{\frac{1}{3}}$')
+            ax[0].plot(t[::tskip],(2*cells_transition[:,3:6]).prod(axis=1)**(1.0/3.0),label=r'V$^{1/3}$')
             ax[0].grid()
             ax[0].set_title('cell parameters: cell size (up) and cell tilt (down)')
             ax[1].set_xlabel('t (ps)')
@@ -1894,7 +1924,6 @@ def inspect(traj, only_cell=False,plot_traj=True,plot=True,
                 lines=ax[1].plot(t[::tskip],cells_transition[:,6:])
                 ax[1].grid()
                 ax[1].set_ylabel('(A)')
-                ax[1].secondary_xaxis('top',functions=(t_to_timestep,timestep_to_t))
                 for i,c in enumerate(['xy','xz','yz']):
                     lines[i].set_label(c)
                 ax[1].legend()
