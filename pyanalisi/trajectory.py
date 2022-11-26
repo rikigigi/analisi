@@ -1,5 +1,5 @@
 import numpy as np
-import .pyanalisi as pa
+import pyanalisi as pa
 import time
 
 class Trajectory:

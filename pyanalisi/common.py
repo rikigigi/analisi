@@ -66,7 +66,7 @@ DEFAULT_SUBPLOTS_KW = {'figsize': (6, 4), 'dpi': 300}
 # aiida
 
 # legacy import
-from trajectory import Trajectory as FakeAiidaT
+from .trajectory import Trajectory as FakeAiidaT
 
 analisi_cell2box = FakeAiidaT.analisi_cell2box
 
@@ -1929,8 +1929,7 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
                 CS, CSm = elastic_c(traj.get_array('ionic_temperature')[:nsteps:tskip].mean() * 1.38064852e-23,
                                     traj.get_array('cells')[:nsteps:tskip] * 1e-10)
                 vs = ((CS[0, 0] + 4.0 / 3 * CS[3, 3]) * 1e9 / density) ** .5
-                print('sqrt((C_{xx,xx} + C_{xy,xy})/density)
-s] ', vs)
+                print('sqrt((C_{xx,xx} + C_{xy,xy})/density)', vs)
                 return CS, CSm, vs, density
 
             CSs, CSms, vss, ts, densities = ([], [], [], [], [])

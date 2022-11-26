@@ -1,2 +1,2 @@
-from pyanalisi.pyanalisi import *
-from pyanalisi.common import *
+from .pyanalisi import *
+from .common import *
