@@ -12,7 +12,7 @@ class Trajectory:
     DEFAULT_SAVE_REFERENCE = True
 
     @classmethod
-    def from_lammps_binary(cls, fname, dt=None, traj_skip=1, symbols=None, wrap=False, nsteps=0, pk=None):
+    def from_lammps_binary(cls, fname, dt=None, traj_skip=1, symbols=None, wrap=False, start=0,nsteps=0, pk=None):
         '''
         Read a binary lammps file. traj_skip loads a step every traj_skip steps.
         Note that this is done at the numpy python level, and the trajectory object still has all steps inside it
@@ -78,6 +78,7 @@ class Trajectory:
             symbols_ = {}
 
         if pk is None:
+            import time
             pk = str(time.time_ns())
 
         self.data = {}
@@ -113,7 +114,7 @@ class Trajectory:
                     dt=times[1]-times[0]
             except:
                 raise RuntimeError(f'first argument cannot be {str(t)}')
-        self.data[Trajectory,STEP_K] = np.arange(0, self.data['positions'].shape[0])
+        self.data[Trajectory.STEP_K] = np.arange(0, self.data['positions'].shape[0])
         if dt is None:
             dt=1.0
         self.data[Trajectory.TIME_K] = self.data[Trajectory.STEP_K] * dt * traj_skip
@@ -299,3 +300,18 @@ class Trajectory:
             raise IndexError('start > end !')
         wrapped = self.get_analisi_traj(wrapped=False,save_reference=self.DEFAULT_SAVE_REFERENCE)
         wrapped.write_lammps_binary(fname, start, end)
+
+    def show_traj(self, fast=1.0, plot=None):
+        import k3d
+        if plot is None:
+            plot = k3d.plot()
+        atomic_species = list(set(self.symbols))
+        masks = []
+        for sp in atomic_species:
+            masks.append(np.array(self.symbols) == sp)
+        pos_m = self.get_array('positions')
+        t = self.get_array('steps')
+        for sp, mask in zip(atomic_species, masks):
+            plot += k3d.points(positions={str(t / 30.0 / fast): pos_m[t, mask, :] for t in range(pos_m.shape[0])}, size=1.0, name=sp, shader='mesh',point_size=0.6)
+        return plot
+
