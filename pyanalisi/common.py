@@ -52,6 +52,9 @@ from matplotlib import collections as mc
 from IPython.core.display import display, HTML
 import matplotlib.animation
 
+from .plotters import *
+from .analysis import *
+
 FIGURE_PATH = '.'
 
 
@@ -809,7 +812,8 @@ def pickle_or_unpickle(pickle_dump_name, analisi=None):
     return analysis_results[pickle_dump_name]
 
 
-def atomic_density(atraj, dr=0.1, start=-1):
+def atomic_density(traj, dr=0.1, start=-1):
+    atraj=traj.get_analisi_traj(wrapped=True)
     if start < 0:
         start = atraj.get_current_timestep()
     box = atraj.get_box_copy().mean(axis=0)
@@ -1345,102 +1349,15 @@ def show_atraj(tr, atraj, wrap=True, plot=None, fast=1.0):
     return plot
 
 
-import matplotlib.colors as colors
-from matplotlib import cm
 
 
 def compute_steinhardt(aiida_traj, ranges=[(2.5, 3.5), (0.8, 1.2), (2.2, 3.0), (1.5, 1.8)], nthreads=4, skip=10,
                        neigh=[], histogram=True, ls=[6, 4], averaged=False, n_segments=1, nbins=100, tskip=1):
-    atraj = aiida_traj
-    if isinstance(atraj, FakeAiidaT) and hasattr(atraj, 't'):
-        if tskip != 1:
-            raise IndexError(f'trajectory skip not implemented after Trajectory instance is created')
-        atraj = atraj.t
-    elif not isinstance(atraj, pa.Trajectory):
-        atraj, atraj_unw = get_analisi_traj_from_aiida(aiida_traj, tskip=tskip)
-    elif tskip != 1:
-        raise IndexError(f'trajectory skip not implemented after Trajectory instance is created')
+    atraj = FakeAiidaT(aiida_traj,traj_skip=tskip)
+    a = Analysis(atraj)
 
-    stein = None
-    l = sorted(ls)
-
-    if l[0] < 0:
-        raise IndexError(f'minimum l cannot be negative {l}')
-    elif l[-1] > 10:
-        raise IndexError(
-            f'spherical harmonics with l>10 are not supported {l}. Please modify and recompile source code.')
-
-    stein = pyanalisi_wrapper(f'SteinhardtOrderParameterHistogram_{l[-1]}', atraj,
-                              ranges,
-                              1, nbins,
-                              l,
-                              nthreads, skip, histogram, neigh, averaged
-                              )
-
-    if n_segments == 1:
-        stein.reset(atraj.get_nloaded_timesteps())
-        stein.calculate(0)
-        stein_res = np.array(stein)
-        return stein_res
-    elif n_segments > 1:
-        segment_size = max(1, atraj.get_nloaded_timesteps() // n_segments)
-        stein.reset(segment_size)
-        print(segment_size)
-        res = []
-        for i in range(0, segment_size * n_segments, segment_size):
-            print(f'calculating {i}...')
-            stein.calculate(i)
-            res.append(np.array(stein, copy=True))
-        return np.array(res)
-    else:
-        raise IndexError('n_segments must be >= 1')
-
-
-from mpl_toolkits.axes_grid1 import ImageGrid
-from matplotlib.patches import Circle
-
-
-def plt_steinhardt(stein_res, vmin=0.01, figsize=(6., 6.), show=True, transpose=True, xmax=0.2, ymax=0.6,
-                   inverted_type_index=False, axs=None, fig=None, single=None, plt_points=None):
-    if len(stein_res.shape) != 5:
-        raise RuntimeError('implemented only for 2d histograms!')
-    cmap = cm.get_cmap('inferno').copy()
-    cmap.set_bad('black')
-    nt = stein_res.shape[1]
-    mask = np.zeros(stein_res.shape)
-    # mask[:,:,:,-1,-1]=1
-    masked = np.ma.masked_array(stein_res, mask=mask)
-    if axs is None:
-        if fig is None:
-            fig = plt.figure(figsize=figsize)
-        axs = ImageGrid(fig, 111, nrows_ncols=(nt, nt) if single is None else (1, 1), axes_pad=0.3)
-    idx = 0
-    for itype in range(nt):
-        for jtype in range(nt):
-            if single is not None:
-                if (itype, jtype) != single:
-                    continue
-            if inverted_type_index:
-                itype, jtype = jtype, itype
-            try:
-                axs[idx].imshow(stein_res[0, itype, jtype].transpose() if transpose else stein_res[0, itype, jtype],
-                                norm=colors.LogNorm(vmin=vmin, vmax=masked[0, itype, jtype].max()),
-                                cmap=cmap,
-                                origin='lower', extent=[0.0, 1.0, 0.0, 1.0],
-                                aspect=xmax / ymax)
-                axs[idx].set_xlim(0, xmax)
-                axs[idx].set_ylim(0, ymax)
-                if plt_points:
-                    for x, y, r, c_kw in plt_points:
-                        circ = Circle((x, y), radius=r, **c_kw)
-                        axs[idx].add_patch(circ)
-            except Exception as e:
-                print(e)
-            idx += 1
-    if show:
-        fig.show()
-    return fig, axs
-
+    return a.compute_steinhardt(ranges=ranges,nthreads=nthreads,skip=skip,neigh=neigh,histogram=histogram,ls=ls,averaged=averaged,
+                                n_segments=n_segments,nbins=nbins)
 
 def steinhardt_movie(traj, skip=5, neigh=DEFAULT_NEIGH, averaged=True, n_segments=10,
                      plt_steinhardt_kw=DEFAULT_PLT_STEINHARDT_KW,
@@ -1449,21 +1366,8 @@ def steinhardt_movie(traj, skip=5, neigh=DEFAULT_NEIGH, averaged=True, n_segment
         tstein = compute_steinhardt(traj, skip=skip, neigh=neigh, averaged=averaged, n_segments=n_segments,
                                     **compute_steinhardt_kw)
 
-    class SteinAni:
-        def __init__(self, tstein, plt_steinhardt_kw):
-            self.tstein = tstein
-            self.plt_steinhardt_kw = plt_steinhardt_kw
-            self.fig, self.axs = plt_steinhardt(self.tstein[0], **self.plt_steinhardt_kw, show=False)
-
-        def __call__(self, i):
-            self.fig, self.axs = plt_steinhardt(self.tstein[i], **self.plt_steinhardt_kw, axs=self.axs, fig=self.fig,
-                                                show=False)
-            return self.axs
-
-    stani = SteinAni(tstein, plt_steinhardt_kw)
-    ani = matplotlib.animation.FuncAnimation(
-        stani.fig, stani, interval=200, blit=True, save_count=n_segments)
-    return HTML(ani.to_jshtml()), tstein
+    html = SteinPlot.animation(tstein,plt_steinhardt_kw=plt_steinhardt_kw) 
+    return html, tstein
 
 
 def gofr_movie(atraj, skip=5, n_segments=10, gofr_kw={}, plt_gofr_kw={}, callax=lambda x: None):
@@ -1618,13 +1522,14 @@ def do_compute_gr_multi(t, gr_kw={'tskip': 10}, n_segments=1, gr_0=0.5, gr_end=3
     return res
 
 
-def do_compute_gr_sh(t, times, do_sh=True, neigh=[], analyze_sh_kw={'tskip': 50}, gr_kw={'tskip': 10}):
+def do_compute_gr_sh(traj, times, do_sh=True, neigh=[], analyze_sh_kw={'tskip': 50}, gr_kw={'tskip': 10}):
     '''
     computes the g(r) pair correlation function and the spherical harmonics correlation function computed around the N-H peak of the g(r), at around 1.0 Angstrom
     '''
     gr_0 = 0.5
     gr_end = 3.8
     gr_N = 150
+    t=traj.get_analisi_traj(wrapped=True)
     nts = t.get_nloaded_timesteps()
     param_gr = (nts, gr_0, gr_end, gr_N)
     DT_PS = times[1] - times[0]
@@ -1710,7 +1615,8 @@ def do_plots_gr_sh(times, param_gr, gofr, param_sh, sh, NH_peak, fig_ax=None, pl
     return fig_gr, ax_gr, fig_sh, ax_sh, axins_sh, fit_sh, wNN, rNN, wHH, rHH, wNH, rNH
 
 
-def do_compute_msd(t_unw, times, msd_kw={}):
+def do_compute_msd(traj, times, msd_kw={}):
+    t_unw=traj.get_analisi_traj(wrapped=False)
     nts = t_unw.get_nloaded_timesteps()
     msd = analyze_msd(t_unw, 0, nts, **msd_kw)
     # compute slope
@@ -1823,15 +1729,15 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
         plt_key(traj, 'ionic_temperature', ylabel='K', dt=dt)
         plt_key(traj, 'pressure', ylabel='GPa', dt=dt)
         plt.show()
-    atraj, atraj_unw = get_analisi_traj_from_aiida(traj, tskip=tskip)
+    #atraj, atraj_unw = get_analisi_traj_from_aiida(traj, tskip=tskip)
 
     if show_traj_dyn:
-        traj_dyn = show_atraj(traj, atraj, wrap=False)
+        traj_dyn = traj.show_traj()
 
     if not only_cell:
 
         if plot and do_density:
-            res = atomic_density(atraj)
+            res = atomic_density(traj)
             plot_ = density_field(*res, **atomic_density_kwargs)
 
         # histogram of steinhardt parameters
@@ -1839,15 +1745,15 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
             sh_h_pickle = pickle_dump_name + '_sh_h.pickle'
             sh_h = pickle_or_unpickle(sh_h_pickle)
             if sh_h is None:
-                sh_h = compute_steinhardt(atraj, neigh=neigh, averaged=True, **compute_steinhardt_kw)
-                fig_shh, axs_shh = plt_steinhardt(sh_h, **plot_st_kw)
+                sh_h = compute_steinhardt(traj, neigh=neigh, averaged=True, **compute_steinhardt_kw)
+                fig_shh, axs_shh = SteinPlot.plot(sh_h, **plot_st_kw)
                 fig_shh.savefig(plt_fname_pre + 'steinhardt' + plt_fname_suff)
 
         # g of r / spherical correlations
         grsh_pickle = pickle_dump_name + ('_gofr_sh.pickle' if do_sh else '_gofr.pickle')
         gofrsh = pickle_or_unpickle(grsh_pickle)
         if gofrsh is None:
-            gofrsh = do_compute_gr_sh(atraj, t[::tskip], do_sh=do_sh, neigh=neigh, analyze_sh_kw=analyze_sh_kw,
+            gofrsh = do_compute_gr_sh(traj, t, do_sh=do_sh, neigh=neigh, analyze_sh_kw=analyze_sh_kw,
                                       gr_kw=gr_kw)
             pickle_or_unpickle(grsh_pickle, analisi=gofrsh)
 
@@ -1855,7 +1761,7 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
         msd_pickle = pickle_dump_name + '_msd.pickle'
         msd = pickle_or_unpickle(msd_pickle)
         if msd is None:
-            msd = do_compute_msd(atraj_unw, t[::tskip], msd_kw=msd_kw)
+            msd = do_compute_msd(traj, t, msd_kw=msd_kw)
             pickle_or_unpickle(msd_pickle, analisi=msd)
 
         if save_data:
@@ -1884,7 +1790,7 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
         results['HH_peak_width'] = wHH
         results['HH_peak_pos'] = rHH
 
-    cells_transition = atraj.get_box_copy()
+    cells_transition = traj.get_analisi_traj().get_box_copy()
     cell_transition_ave = cells_transition.mean(axis=0)
     print(f'average cell xx,yy,zz = {2 * cell_transition_ave[3:6]}')
     a = cell_transition_ave[3] / 4 + cell_transition_ave[4] / (3 * 3 ** .5)
@@ -1900,10 +1806,10 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
     if (cells_transition != cells_transition[0]).any():
         if plot:
             fig, ax = plt.subplots(nrows=2, sharex=True, **subplots_kw)
-            lines = ax[0].plot(t[::tskip], cells_transition[:, 3:6] * 2)
+            lines = ax[0].plot(t, cells_transition[:, 3:6] * 2)
             for i, c in enumerate(['x', 'y', 'z']):
                 lines[i].set_label(c)
-            ax[0].plot(t[::tskip], (2 * cells_transition[:, 3:6]).prod(axis=1) ** (1.0 / 3.0), label=r'V$^{1/3}$')
+            ax[0].plot(t, (2 * cells_transition[:, 3:6]).prod(axis=1) ** (1.0 / 3.0), label=r'V$^{1/3}$')
             ax[0].grid()
             ax[0].set_title('cell parameters: cell size (up) and cell tilt (down)')
             ax[1].set_xlabel('t (ps)')
@@ -1911,7 +1817,7 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
             ax[0].secondary_xaxis('top', functions=(t_to_timestep, timestep_to_t))
             ax[0].legend()
             if cells_transition.shape[1] > 6:
-                lines = ax[1].plot(t[::tskip], cells_transition[:, 6:])
+                lines = ax[1].plot(t, cells_transition[:, 6:])
                 ax[1].grid()
                 ax[1].set_ylabel('(A)')
                 for i, c in enumerate(['xy', 'xz', 'yz']):
@@ -1935,7 +1841,7 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
             CSs, CSms, vss, ts, densities = ([], [], [], [], [])
             for i in range(10):
                 stop_step = traj.numsteps // tskip * (i + 1) // 10
-                ts.append(t[::tskip][stop_step - 1])
+                ts.append(t[stop_step - 1])
                 CSi, CSmi, vsi, density = vs_C(traj, stop_step)
                 CSs.append(CSi)
                 CSms.append(CSmi)
@@ -1958,7 +1864,7 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
             results['density'] = densities[-1]
         except:
             print('error in estimating elastic constant')
-    return atraj, atraj_unw, results
+    return None, None, results
 
 
 def multiinspect(nodes, plot=False, prefix='', inspect_kw={}):

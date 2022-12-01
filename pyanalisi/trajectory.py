@@ -301,11 +301,14 @@ class Trajectory:
         wrapped = self.get_analisi_traj(wrapped=False,save_reference=self.DEFAULT_SAVE_REFERENCE)
         wrapped.write_lammps_binary(fname, start, end)
 
+    def get_atomic_types(self):
+        return list(set(self.symbols))
+
     def show_traj(self, fast=1.0, plot=None):
         import k3d
         if plot is None:
             plot = k3d.plot()
-        atomic_species = list(set(self.symbols))
+        atomic_species = self.get_atomic_types()
         masks = []
         for sp in atomic_species:
             masks.append(np.array(self.symbols) == sp)

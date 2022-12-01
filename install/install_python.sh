@@ -28,7 +28,7 @@ fi
 
 mkdir -p "$SP_DIR/pyanalisi"
 $CP "$BUILD_DIR"/pyanalisi*.so "$SP_DIR/pyanalisi/"
-for f in common.py trajectory.py __init__.py
+for f in common.py trajectory.py analysis.py plotters.py __init__.py
 do
 $CP "$SOURCE_DIR/pyanalisi/$f" "$SP_DIR/pyanalisi/"
 done
