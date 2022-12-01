@@ -1683,11 +1683,11 @@ def inspect(traj, only_cell=False, plot_traj=True, plot=True,
     if dt is None and 'times' in traj.get_arraynames():
         t = traj.get_array('times')
     elif isinstance(dt, float):
-        t = np.arange(temp.shape[0]) * dt
+        t = np.arange(traj.get_array('positions').shape[0]) * dt
     elif dt == 'auto' and 'times' in traj.get_arraynames():
         t = traj.get_array('times')
         dt = (t[1] - t[0])
-        t = np.arange(temp.shape[0]) * dt
+        t = np.arange(t.shape[0]) * dt
 
     def t_to_timestep(x):
         return np.interp(x, t, np.arange(t.shape[0]))
