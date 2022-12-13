@@ -1,6 +1,7 @@
 import numpy as np
 import pyanalisi as pa
 import time
+from .analysis import Analysis
 
 class Trajectory:
     KEYS = {'positions', 'cells'}
@@ -71,20 +72,31 @@ class Trajectory:
             self.paTraj = t
 
 
-    def __init__(self, t, symbols_=None, dt=None, pk=None, traj_skip=1, save_reference=DEFAULT_SAVE_REFERENCE):
+    def __init__(self, t, symbols_=None, dt=None, pk=None, traj_skip=None, max_len=None, save_reference=DEFAULT_SAVE_REFERENCE):
         self.paTrajWrapped = None
         self.paTraj = None
         if symbols_ is None:
             symbols_ = {}
-
-        if pk is None:
-            import time
-            pk = str(time.time_ns())
+        if traj_skip is None and max_len is None:
+            traj_skip=1
+        if traj_skip is not None and max_len is not None:
+            raise AttributeError("You can't specify both traj_skip and max_len keywords args")
 
         self.data = {}
         if isinstance(t, list): ##list of whatever supported object
             nlist = [ Trajectory(it) for it in t ]
+            if max_len is not None:
+                tot_len = sum([_.numsteps for _ in nlist])
+                traj_skip=max(tot_len//max_len,1)
+                
             self.symbols = nlist[0].symbols
+            if dt is None:
+                dt = nlist[0].dt
+            if pk is None:
+                pks= [f'{_.pk}' for _ in nlist if _.pk is not None]
+                if len(pks)>0:
+                    pk='_'.join(pks)
+                del pks
             for key in self.KEYS:
                 self.data[key] = Trajectory._copy(np.concatenate([it.get_array(key) for it in nlist], axis=0),
                                                   traj_skip)
@@ -92,10 +104,18 @@ class Trajectory:
                 if key in t[0].get_arraynames():
                     self.data[key] = Trajectory._copy(np.concatenate([it.get_array(key) for it in nlist], axis=0),
                                                       traj_skip)
+            del nlist
         elif isinstance(t, (pa.Traj, pa.Trajectory)):  ##pyanalisi trajectory
+            if max_len is not None:
+                traj_skip=max(t.get_nloaded_timesteps()//max_len,1)
             self._init_from_pa_traj(t, symbols_=symbols_, traj_skip=traj_skip, save_reference=save_reference)
         elif isinstance(t, dict): ##simple dict with the data
             self.symbols = t['symbols']
+            if max_len is not None:
+                try:
+                   traj_skip = max(t[self.KEYS[0]].shape[0]//max_len,1)
+                except:
+                   traj_skip = max( len(t[self.KEYS[0]])//max_len,1)
             for key in self.KEYS:
                 self.data[key] = Trajectory._copy(np.array(t[key]), traj_skip)
             for key in self.KEYS_OPT:
@@ -104,6 +124,8 @@ class Trajectory:
         else: ##Trajectory-like interface, similar to aiida one
             try:
                 self.symbols = t.symbols
+                if max_len is not None:
+                    traj_skip=max(1, t.numsteps//max_len)
                 for key in self.KEYS:
                     self.data[key] = Trajectory._copy(t.get_array(key), traj_skip)
                 for key in self.KEYS_OPT:
@@ -112,9 +134,15 @@ class Trajectory:
                 if Trajectory.TIME_K in t.get_arraynames() and dt is None:
                     times=t.get_array(Trajectory.TIME_K)
                     dt=times[1]-times[0]
+                if hasattr(t,'pk') and pk is None:
+                    pk = t.pk
             except:
                 raise RuntimeError(f'first argument cannot be {str(t)}')
         self.data[Trajectory.STEP_K] = np.arange(0, self.data['positions'].shape[0])
+        if pk is None:
+            
+            import time
+            pk = str(time.time_ns())
         if dt is None:
             dt=1.0
         self.data[Trajectory.TIME_K] = self.data[Trajectory.STEP_K] * dt * traj_skip
@@ -317,4 +345,7 @@ class Trajectory:
         for sp, mask in zip(atomic_species, masks):
             plot += k3d.points(positions={str(t / 30.0 / fast): pos_m[t, mask, :] for t in range(pos_m.shape[0])}, size=1.0, name=sp, shader='mesh',point_size=0.6)
         return plot
+
+    def get_analysis(self,**kwargs):
+        return Analysis(self,**kwargs)
 

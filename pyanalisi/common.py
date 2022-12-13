@@ -1252,6 +1252,8 @@ def get_cp_with_traj(wf, min_t=0.0, ignore_not_ok=False):
                 lall.append(x)
         except AttributeError as err:
             print('Ignoring: ', err)
+        except ValueError as err:
+            print('Ignoring: ', err)
     for c in lall:
         if 'output_trajectory' in c.outputs and (c.is_finished_ok or ignore_not_ok):
             if min_t > 0.0:
