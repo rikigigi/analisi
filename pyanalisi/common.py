@@ -1439,57 +1439,9 @@ def elastic_c(kbT, box_matrix):
 
 
 def hist2gofr(gr_N, gr_dr, gr_0, gofr):
-    rs_m = np.arange(gr_N) * gr_dr + gr_0
-    rs_p = (np.arange(gr_N) + 1) * gr_dr + gr_0
-    vols = 4 * np.pi / 3 * (rs_p ** 3 - rs_m ** 3)
-    return gofr / vols
+    return Analysis.hist2gofr(gr_N, gr_dr, gr_0, gofr)
 
 
-def peak_width(gr, NH, NH_thre, gr_r2i, min_spread=0.1):
-    '''
-    get the width of the first peak in the gr at a given height
-    '''
-    idx_23 = 0
-    while gr[0, NH, idx_23] < NH_thre:
-        idx_23 += 1
-    idx_spread_low = idx_23
-    while gr[0, NH, idx_23] > NH_thre * 0.9:
-        if idx_23 == gr.shape[2] - 1 or (idx_23 - idx_spread_low > gr_r2i(min_spread) and gr[0, NH, idx_23] < NH_thre):
-            break
-        idx_23 += 1
-    idx_spread_hi = idx_23
-    return idx_spread_low, idx_spread_hi
-
-
-def analyze_peak(gr, r0, peak_fractional_height, gr_r2i, gr_i2r):
-    '''
-    find the peak around r0 in the g(r) array and get some info
-    '''
-    maxs = np.argmax(gr, axis=2)
-    peaks = gr_i2r(maxs)
-
-    # find nearest peak to r0
-    NH = np.argmin((peaks - r0) ** 2)
-    # get spread at 'peak_fractional_height' of peak height
-    NH_peak_idx = maxs[0, NH]
-    NH_peak_val = gr[0, NH, NH_peak_idx]
-    NH_thre = NH_peak_val * peak_fractional_height
-    # get width of peak
-    idx_spread_low, idx_spread_hi = peak_width(gr, NH, NH_thre, gr_r2i)
-    spread_low = gr_i2r(idx_spread_low)
-    spread_hi = gr_i2r(idx_spread_hi)
-    w23h = spread_hi - spread_low
-    return idx_spread_low, idx_spread_hi, spread_low, spread_hi, w23h, NH_thre, NH_peak_val, NH_peak_idx, peaks, NH
-
-
-def get_conv_functs(gr_0, gr_dr):
-    def gr_r2i(r):
-        return int((r - gr_0) / gr_dr)
-
-    def gr_i2r(i):
-        return gr_0 + i * gr_dr
-
-    return np.vectorize(gr_r2i), np.vectorize(gr_i2r)
 
 
 def do_compute_gr_multi(t, gr_kw={'tskip': 10}, n_segments=1, gr_0=0.5, gr_end=3.8, gr_N=150):
@@ -1501,9 +1453,6 @@ def do_compute_gr_multi(t, gr_kw={'tskip': 10}, n_segments=1, gr_0=0.5, gr_end=3
     # first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
     gr_dr = (gr_end - gr_0) / gr_N
 
-    # get utility functions for converting from index to r value and back
-    gr_r2i, gr_i2r = get_conv_functs(gr_0, gr_dr)
-
     gofr = analyze_gofr(t, 0, nts, gr_0, gr_end, gr_N,
                         tmax=1, **gr_kw, n_segments=n_segments)  # only g(r)
     # from the histogram generate the g(r) -- divide by the volumes of the spherical shells
@@ -1512,8 +1461,8 @@ def do_compute_gr_multi(t, gr_kw={'tskip': 10}, n_segments=1, gr_0=0.5, gr_end=3
         gr = hist2gofr(gr_N, gr_dr, gr_0, gofr if n_segments == 1 else gofr[i])
 
         # find nearest peak to 1.0 (N-H bond)
-        idx_spread_low, idx_spread_hi, spread_low, spread_hi, w23h, NH_thre, NH_peak_val, NH_peak_idx, peaks, NH = analyze_peak(
-            gr, 1.0, 0.5, gr_r2i, gr_i2r)
+        idx_spread_low, idx_spread_hi, spread_low, spread_hi, w23h, NH_thre, NH_peak_val, NH_peak_idx, peaks, NH = Analysis.compute_peaks_gofr(
+            gr, 1.0,gr_0,gr_dr, 0.5)
 
         # print(f'width at 1/2 of height: {w23h}')
         # calculate sh correlations of hydrogen peak
@@ -1538,17 +1487,14 @@ def do_compute_gr_sh(traj, times, do_sh=True, neigh=[], analyze_sh_kw={'tskip': 
     # first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
     gr_dr = (gr_end - gr_0) / gr_N
 
-    # get utility functions for converting from index to r value and back
-    gr_r2i, gr_i2r = get_conv_functs(gr_0, gr_dr)
-
     gofr = analyze_gofr(t, 0, nts, gr_0, gr_end, gr_N,
                         tmax=1, **gr_kw)  # only g(r)
     # from the histogram generate the g(r) -- divide by the volumes of the spherical shells
     gr = hist2gofr(gr_N, gr_dr, gr_0, gofr)
 
     # find nearest peak to 1.0 (N-H bond)
-    idx_spread_low, idx_spread_hi, spread_low, spread_hi, w23h, NH_thre, NH_peak_val, NH_peak_idx, peaks, NH = analyze_peak(
-        gr, 1.0, 0.5, gr_r2i, gr_i2r)
+    idx_spread_low, idx_spread_hi, spread_low, spread_hi, w23h, NH_thre, NH_peak_val, NH_peak_idx, peaks, NH = Analysis.compute_peaks_gofr(
+        gr, 1.0, gr_0,gr_dr, 0.5)
 
     # print(f'width at 1/2 of height: {w23h}')
     # calculate sh correlations of hydrogen peak
@@ -1569,9 +1515,6 @@ def do_plots_gr_sh(times, param_gr, gofr, param_sh, sh, NH_peak, fig_ax=None, pl
     NH_thre, spread_low, spread_hi, peaks, NH, w23h, NH_peak_val = NH_peak
 
     gr_dr = (gr_end - gr_0) / gr_N
-    # get utility functions for converting from index to r value and back
-    gr_r2i, gr_i2r = get_conv_functs(gr_0, gr_dr)
-
     fig_gr, ax_gr = plot_gofr(gr_0, gr_end, gofr, fig_ax=fig_ax, **plot_gr_kw)
     ax_gr.grid()
     if plot_sh_band:
@@ -1586,9 +1529,8 @@ def do_plots_gr_sh(times, param_gr, gofr, param_sh, sh, NH_peak, fig_ax=None, pl
     gr = hist2gofr(gr_N, gr_dr, gr_0, gofr)
 
     def annotate_peak(r0, h, ax_gr):
-        _, _, NN_spread_low, NN_spread_hi, w2NN, NN_thre, NN_peak_val, NN_peak_idx, peaks, NN = analyze_peak(gr, r0, h,
-                                                                                                             gr_r2i,
-                                                                                                             gr_i2r)
+        _, _, NN_spread_low, NN_spread_hi, w2NN, NN_thre, NN_peak_val, NN_peak_idx, peaks, NN = Analysis.compute_peaks_gofr(gr, r0,
+                                           gr_0,gr_dr,  h)
         ax_gr.hlines(NN_thre, NN_spread_low, NN_spread_hi)
 
         # ax_gr.annotate(f'{w2NN:.2f}',(peaks[0,NN]*0.95,NN_thre*1.05))
