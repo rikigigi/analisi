@@ -28,7 +28,7 @@ class Analysis:
         if nthreads is None:
             nthreads = self.nthreads
         if ranges is None:
-            ranges = [ (0.0,2.0) for i in range(len(self.traj.get_atomic_types())) ]
+            ranges = [ (0.0,2.0) for i in range(len(self.traj.get_atomic_types())**2) ]
         atraj = self.traj.get_analisi_traj(tskip=tskip,wrapped=True)
         if neigh is None:
             neig=[]
