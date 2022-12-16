@@ -66,12 +66,12 @@ class Analysis:
         else:
             raise IndexError('n_segments must be >= 1')
 
-    def steinhardt_movie(self, skip=1,averaged=True,n_segments=60,plt_steinhardt_kw=None, compute_steinhardt_kw=None):
+    def steinhardt_movie(self, skip=1,averaged=True,n_segments=60,plt_steinhardt_kw=None, compute_steinhardt_kw=None, plt_steinhardt_init_add_kw=None):
         if compute_steinhardt_kw is None:
             compute_steinhardt_kw={}
         compute_steinhardt_kw.setdefault('n_segments',n_segments)
         tstein = self.compute_steinhardt(**compute_steinhardt_kw)
-        return SteinPlot.animation(tstein,plt_steinhardt_kw=plt_steinhardt_kw)
+        return SteinPlot.animation(tstein,plt_steinhardt_kw=plt_steinhardt_kw,plt_steinhardt_init_add_kw=plt_steinhardt_init_add_kw)
 
     @staticmethod
     def max_l(start, stop, tmax=0):

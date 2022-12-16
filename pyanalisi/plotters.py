@@ -51,15 +51,17 @@ class SteinPlot:
         return fig, axs
 
     @staticmethod
-    def animation(tstein, plt_steinhardt_kw=None):
+    def animation(tstein, plt_steinhardt_kw=None, plt_steinhardt_init_add_kw=None):
         if plt_steinhardt_kw is None:
             plt_steinhardt_kw = {}
+        if plt_steinhardt_init_add_kw is None:
+            plt_steinhardt_init_add_kw = {}
         n_segments = tstein.shape[0]
         class SteinAni:
             def __init__(self, tstein, plt_steinhardt_kw):
                 self.tstein = tstein
                 self.plt_steinhardt_kw = plt_steinhardt_kw
-                self.fig, self.axs = SteinPlot.plot(self.tstein[0], **self.plt_steinhardt_kw, show=False)
+                self.fig, self.axs = SteinPlot.plot(self.tstein[0],**plt_steinhardt_init_add_kw, **self.plt_steinhardt_kw, show=False)
     
             def __call__(self, i):
                 self.fig, self.axs = SteinPlot.plot(self.tstein[i], **self.plt_steinhardt_kw, axs=self.axs, fig=self.fig,

@@ -72,9 +72,11 @@ class Trajectory:
             self.paTraj = t
 
 
-    def __init__(self, t, symbols_=None, dt=None, pk=None, traj_skip=None, max_len=None, save_reference=DEFAULT_SAVE_REFERENCE):
+    def __init__(self, t, symbols_=None, dt=None, pk=None, traj_skip=None, max_len=None, save_reference=DEFAULT_SAVE_REFERENCE,lazy_load=False):
         self.paTrajWrapped = None
         self.paTraj = None
+        self.to_load_keys=[]
+        self.lazy_load_obj=None
         if symbols_ is None:
             symbols_ = {}
         if traj_skip is None and max_len is None:
@@ -84,7 +86,7 @@ class Trajectory:
 
         self.data = {}
         if isinstance(t, list): ##list of whatever supported object
-            nlist = [ Trajectory(it) for it in t ]
+            nlist = [ Trajectory(it,lazy_load=lazy_load) for it in t ]
             if max_len is not None:
                 tot_len = sum([_.numsteps for _ in nlist])
                 traj_skip=max(tot_len//max_len,1)
@@ -126,11 +128,18 @@ class Trajectory:
                 self.symbols = t.symbols
                 if max_len is not None:
                     traj_skip=max(1, t.numsteps//max_len)
-                for key in self.KEYS:
-                    self.data[key] = Trajectory._copy(t.get_array(key), traj_skip)
-                for key in self.KEYS_OPT:
-                    if key in t.get_arraynames():
+                if not lazy_load:
+                    for key in self.KEYS:
                         self.data[key] = Trajectory._copy(t.get_array(key), traj_skip)
+                    for key in self.KEYS_OPT:
+                        if key in t.get_arraynames():
+                            self.data[key] = Trajectory._copy(t.get_array(key), traj_skip)
+                else:
+                    self.lazy_load_skip=traj_skip
+                    self.lazy_load_obj=t
+                    to_load_keys=t.get_arraynames()
+                    self.to_load_keys=set([ key for key in self.KEYS if key in to_load_keys] + [ key for key in self.KEYS_OPT if key in to_load_keys])
+                    self.will_load_keys=list(self.to_load_keys)
                 if Trajectory.TIME_K in t.get_arraynames() and dt is None:
                     times=t.get_array(Trajectory.TIME_K)
                     dt=times[1]-times[0]
@@ -138,21 +147,34 @@ class Trajectory:
                     pk = t.pk
             except:
                 raise RuntimeError(f'first argument cannot be {str(t)}')
-        self.data[Trajectory.STEP_K] = np.arange(0, self.data['positions'].shape[0])
         if pk is None:
-            
             import time
             pk = str(time.time_ns())
         if dt is None:
             dt=1.0
+        if 'positions' in self.data.keys():
+            nsteps= self.data['positions'].shape[0]
+            nsites= self.data['positions'].shape[1]
+        elif lazy_load:
+            try:
+                nsteps=t.numsteps//traj_skip
+                nsites = t.numsites
+            except:
+                raise RuntimeError("Lazy load of trajectory of type {type(t)} not implemented")
+        self.data[Trajectory.STEP_K] = np.arange(0, nsteps)
         self.data[Trajectory.TIME_K] = self.data[Trajectory.STEP_K] * dt * traj_skip
         self.dt = dt * traj_skip
-        self.numsites = self.data['positions'].shape[1]
+        self.numsites = nsites
         self.pk = pk
-        self.numsteps = self.data['positions'].shape[0]
+        self.numsteps = nsteps
 
 
     def get_array(self, name):
+        if name in self.to_load_keys:
+            self.data[name] = Trajectory._copy(self.lazy_load_obj.get_array(name), self.lazy_load_skip)
+            self.to_load_keys.remove(name)
+            if len(self.to_load_keys)==0:
+                self.lazy_load_obj=None
         if name in self.data:
             return self.data[name]
         else:
@@ -165,7 +187,10 @@ class Trajectory:
             raise KeyError(f'attribute {k} not present')
 
     def get_arraynames(self):
-        return self.data.keys()
+        if self.lazy_load_obj is None:
+            return self.data.keys()
+        else:
+            return self.will_load_keys
 
     @staticmethod
     def get_types_id_array(types_array):
