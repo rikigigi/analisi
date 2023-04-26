@@ -21,7 +21,7 @@ jobs:
     strategy:
         matrix:
             os: [ubuntu-latest, macos-latest ]
-            python-version: [ "3.7" ] 
+            python-version: [ "3.7", "3.11" ] 
     steps:
     - uses: actions/checkout@v3
       with:
@@ -72,7 +72,7 @@ jobs:
     strategy:
         matrix:
             os: [windows-latest ]
-            python-version: [ "3.7" ] 
+            python-version: [ "3.7", "3.11" ] 
     steps:
     - uses: actions/checkout@v2
       with:
