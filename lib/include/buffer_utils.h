@@ -1,3 +1,7 @@
+#ifndef BUFFER_UTILS_H
+#define BUFFER_UTILS_H
+
+#include "compiler_types.h"
 
 template <typename T>
 bool has_no_stride(const pybind11::buffer_info & buf) {
@@ -9,3 +13,5 @@ bool has_no_stride(const pybind11::buffer_info & buf) {
     }
     return true;
 }
+
+#endif

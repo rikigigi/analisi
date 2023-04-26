@@ -265,7 +265,7 @@ if(PYTHON_INTERFACE)
 if (${PYTHONLIBS_FOUND})
 #python interface
 set (PYTHON_SUPPORT ${PYTHON_LIBRARIES})
-#target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::module)
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC pybind11::embed)
 INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS})
 include_directories(pybind11/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

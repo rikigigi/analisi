@@ -111,8 +111,14 @@ void define_atomic_traj(py::module & m, std::string typestr){
 
     });
 
-    steinDef< Steinhardt<6,double,T>,T > (m,typestr);
+    steinDef< Steinhardt<2,double,T>,T > (m,std::string("_2")+typestr);
+    steinDef< Steinhardt<3,double,T>,T > (m,std::string("_3")+typestr);
+    steinDef< Steinhardt<4,double,T>,T > (m,std::string("_4")+typestr);
+    steinDef< Steinhardt<5,double,T>,T > (m,std::string("_5")+typestr);
+    steinDef< Steinhardt<6,double,T>,T > (m,std::string("_6")+typestr);
+    steinDef< Steinhardt<7,double,T>,T > (m,std::string("_7")+typestr);
     steinDef< Steinhardt<8,double,T>,T > (m,std::string("_8")+typestr);
+    steinDef< Steinhardt<9,double,T>,T > (m,std::string("_9")+typestr);
     steinDef< Steinhardt<10,double,T>,T > (m,std::string("_10")+typestr);
 
     using MSD=MSD<T>;
@@ -342,6 +348,7 @@ R"lol(
             foo,
             free_when_done
          );})
+     .def("get_type",&Tk::get_type,"get the type used for the internal representation")
      .def("get_nloaded_timesteps",&Tk::get_nloaded_timesteps)
      .def("getNtimesteps",&Tk::get_ntimesteps,R"begend(
      returns estimated number of timesteps from the file size

@@ -45,18 +45,35 @@ import pyanalisi.pyanalisi as pa
 
 print(pa.info())
 
+from matplotlib import collections  as mc
+from IPython.core.display import display, HTML
+import matplotlib.animation
+
+FIGURE_PATH = '.'
+def set_figure_path(new_path):
+    global FIGURE_PATH
+    FIGURE_PATH = new_path
+
+DEFAULT_PLT_STEINHARDT_KW={'transpose':True,'xmax':.30,'ymax':.60}
+DEFAULT_NEIGH=[(57,3.5**2,0.0),(45,3.5**2,0.0)]
+DEFAULT_SUBPLOTS_KW={'figsize':(6,4),'dpi':300}
 #aiida
-def plt_key(traj,key,conv=1.0,title='',ylabel=''):
+def plt_key(traj,key,conv=1.0,title='',ylabel='',dt=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
+    if not key in traj.get_arraynames():
+        return
     if title=='': title=key
-    fig,ax =plt.subplots(figsize=(8,6),dpi=300)
+    fig,ax =plt.subplots(**subplots_kw)
     ax=fig.add_axes([0,0,1,1])
     axins=inset_axes(ax,width='20%',height='20%',loc='upper right')
     ax.set_title(title)
     ax.set_xlabel('time (ps)')
     ax.set_ylabel(ylabel)
     axins.set_title('100 points of "{}"'.format(title))
-    t=traj.get_array('times')
     q=traj.get_array(key)
+    if dt is None:
+        t=traj.get_array('times')
+    else:
+        t=np.arange(q.shape[0])*dt
     ax.plot(t,q*conv)
     axins.plot(t,q*conv)
     x1=len(t)//2
@@ -80,10 +97,15 @@ def get_types_id_array(types_array):
     return np.array(res,dtype='int32')
 
 #aiida
-def get_analisi_traj_from_aiida(traj):
-    pos=traj.get_array('positions')
-    vel=traj.get_array('velocities')
-    cel=traj.get_array('cells').transpose((0,2,1)).copy(order='C') 
+def get_analisi_traj_from_aiida(traj,tskip=1):
+    if tskip < 1:
+        raise IndexError(f'cannot have a trajectory skip of {tskip}')
+    pos=traj.get_array('positions')[::tskip].copy(order='C')
+    if 'velocities' in traj.get_arraynames():
+        vel=traj.get_array('velocities')[::tskip].copy(order='C')
+    else:
+        vel=np.zeros(pos.shape)
+    cel=traj.get_array('cells')[::tskip].transpose((0,2,1)).copy(order='C') 
     types=get_types_id_array(traj.get_attribute('symbols'))
     params= [pos, vel, types,  cel]
     atraj=pa.Trajectory(*params,pa.BoxFormat.CellVectors, True,True)
@@ -153,13 +175,25 @@ def analyze_msd(traj_unw,start,stop,tmax=0,nthreads=4,tskip_msd=10,print=print):
     msd.calculate(start)
     return np.array(msd)#,copy=True)
 
-def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print):
+def analyze_gofr(traj,start,stop,startr,endr,nbin,tmax=1,nthreads=4,tskip=10,print=print,n_segments=1):
     tmax,n_ave = max_l(start,stop,tmax)
     gofr=pyanalisi_wrapper('Gofrt',traj,startr,endr,nbin,tmax,nthreads,tskip,False,1)
-    gofr.reset(n_ave)
-    print('calculating g(r)...',flush=True)
-    gofr.calculate(start)
-    return np.array(gofr)#,copy=True)
+    if n_segments==1:
+        gofr.reset(n_ave)
+        print('calculating g(r)...',flush=True)
+        gofr.calculate(start)
+        return np.array(gofr)#,copy=True)
+    elif n_segments>1:
+        res = []
+        segment_size=max(1,n_ave//n_segments)
+        gofr.reset(segment_size)
+        print(segment_size)
+        for i in range(0,min(segment_size*n_segments,n_ave),segment_size):
+            gofr.calculate(start+i)
+            res.append(np.array(gofr,copy=True))
+        return res
+    else:
+        raise IndexError(f'n_segments must be > 0 ({n_segments})')
 
 def analyze_vdos_single(traj,nstep=None,print=print):
     '''
@@ -173,8 +207,8 @@ def analyze_vdos_single(traj,nstep=None,print=print):
       return:
         vdos: numpy array (ntypes , nstep/2+1,3) 
     '''
-    if nstep is None or nstep>=traj.getNtimesteps():
-       ntep = traj.getNtimesteps()
+    if nstep is None or nstep>=traj.get_nloaded_timesteps():
+       nstep = traj.get_nloaded_timesteps()
 
     vdos=pyanalisi_wrapper('VibrationSpectrum',traj,False)
     vdos.reset(nstep)
@@ -218,6 +252,11 @@ def analyze_vdos_lammps(traj,nstep=None,start=0,resetAccess=True,print=print):
        print('traj.setAccessStart(0)')
        
     return vdos #,copy=True)
+
+def vdos_norm_factor(dt,N):
+    return dt/N/6.0
+def vdos_domega(dt,N):
+    return 2.0/dt/N
 
 def analyze_vdos_numpy(pos, vel, types, box,
                                     matrix_format=True, # matrix format for the box array
@@ -316,6 +355,7 @@ def analyze(traj,traj_unw,start,stop,nthreads=4,
 
 try:
     import scipy as sp
+    import scipy.ndimage
     import scipy.optimize 
 except:
     print('WARNING: cannot import scipy')
@@ -404,12 +444,13 @@ def plt_err(ax,x,v,var,*args,**kwargs):
     else:
         ax.plot(x,v,*args,**kwargs)
 
-def plot_msd(times,res,cm,title='',res_var=None, fig_ax=None):
+def plot_msd(times,res,cm,title='',res_var=None, fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     if fig_ax is not None:
        fig, ax = fig_ax
     else:
-       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
-    ax=fig.add_axes([0,0,1,1])
+       fig,ax =plt.subplots(**subplots_kw)
+       print(f'DEBUG: sublots kwargs = {subplots_kw}')
+    #ax=fig.add_axes([0,0,1,1])
     for i in range(res.shape[-1]):
         plt_err(ax,times[:res.shape[0]]-times[0],res[:,cm,i],res_var[:,cm,i] if res_var is not None else res_var,label='type='+str(i))
     ax.legend()
@@ -482,7 +523,7 @@ def fit_sh(times,res,type1,type2,ibin,lmin=0,lmax=11,
 
 def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_var=None,
             maxt=-1.0,fitmax=-1.0,fitmin=-1.0,pre_fit=-1.0,log=True,rescale_array=True,scale_exp_coeff=0.1,
-            fig_ax=None):
+            fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     t=times[:res.shape[0]]-times[0]
     r = res
     r_var = res_var
@@ -501,7 +542,7 @@ def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_v
     if fig_ax is not None:
        fig, ax = fig_ax
     else:
-       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+       fig,ax =plt.subplots(**subplots_kw)
     ax=fig.add_axes([0,0,1,1])
     axins=inset_axes(ax,width='20%',height='20%',loc='upper right')
     fits = fit_sh(t,res,type1,type2,ibin,lmin,lmax,maxt,fitmax,fitmin,pre_fit,
@@ -529,11 +570,11 @@ def plot_sh(startr,endr,times,res,type1,type2,ibin,lmin=0,lmax=11,title='',res_v
     return fig,ax,axins, fits
 
 
-def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None):
+def plot_gofr(startr,endr,res,title='',res_var=None,fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
     if fig_ax is not None:
        fig, ax = fig_ax
     else:
-       fig,ax =plt.subplots(figsize=(10,8),dpi=300)
+       fig,ax =plt.subplots(**subplots_kw)
     rm=np.arange(res.shape[-1])*(endr-startr)/res.shape[-1]+startr
     rp=(np.arange(res.shape[-1])+1)*(endr-startr)/res.shape[-1]+startr
     vols=4*np.pi/3*(rp**3-rm**3)
@@ -564,8 +605,8 @@ def get_max_in_mask(a,mask):
     b.mask=mask
     return np.unravel_index(np.argmax(b, axis=None), b.shape)
 
-def idx_to_coord(idx,shape,l=(1.0,1.0,1.0)):
-    return (np.array(idx,dtype=float)/np.array(shape,dtype=float)-np.array((0.5,0.5,0.5),dtype=float))*np.array(l)
+def idx_to_coord(idx,shape,l=(1.0,1.0,1.0),l0=np.array((0.0,0.0,0.0))):
+    return (np.array(idx,dtype=float)/np.array(shape,dtype=float)-l0)*np.array(l)
 
 def is_inside(a,idx,planes):
     idx_c=idx_to_coord(idx,a.shape)
@@ -575,10 +616,10 @@ def is_inside(a,idx,planes):
             return 1
     return 0
 
-def is_inside_sphere(a,idx,r2,xyz):
-    return np.sum((idx_to_coord(idx,a.shape)-xyz)**2)<r2
+def is_inside_sphere(a,idx,r2,xyz,l=(1.0,1.0,1.0)):
+    return np.sum((idx_to_coord(idx,a.shape,l=l)-xyz)**2)<r2
 
-def get_max_in_spherical_domain(a,r,z,y,x):
+def get_max_in_spherical_domain(a,r,z,y,x,l=(1.0,1.0,1.0)):
     #planes=sph_tangents_cover(r,n,x,y,z)
     mask=np.zeros(a.shape,dtype=int)
     r2=r**2
@@ -587,9 +628,9 @@ def get_max_in_spherical_domain(a,r,z,y,x):
         for iy in range(a.shape[1]):
             for ix in range(a.shape[2]):
                 idx=(iz,iy,ix)
-                mask[idx]=not is_inside_sphere(a,idx,r2,xyz)
+                mask[idx]=not is_inside_sphere(a,idx,r2,xyz,l=l)
     idx=get_max_in_mask(a,mask)
-    return idx, idx_to_coord(idx,a.shape)
+    return idx, idx_to_coord(idx,a.shape,l=l)
             
 
 def mask_around(mask,idx,size):
@@ -770,10 +811,8 @@ def rotation(a,b,c,order='zxy'):
                [math.sin(c),math.cos(c),0],
                [0,0,1]])
    
-   print(order[0])
    xyz=np.copy(mats[order[0]])
    for ax in order[1:]:
-      print (ax)
       xyz=mats[ax].dot(xyz)
    r=np.eye(4)
    r[:3,:3]=xyz
@@ -879,7 +918,7 @@ def density_field2(res,box,box_kw={},plot=None,ns=[[1,1,1]]):
 
     return plot
 
-def density_field(res,box,box_kw={},plot=None):
+def density_field(res,box,box_kw={},plot=None,sph_max_idx=0,gaussian_filter=False,gaussian_filter_radius=1.2):
     bounds=[ 
                                                         box[0],box[0]+2*box[3],
                                                         box[1],box[1]+2*box[4],
@@ -891,7 +930,12 @@ def density_field(res,box,box_kw={},plot=None):
     objs=[]
     if len(res.shape) >3:
         for i in range(res.shape[0]):
-            objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
+            if gaussian_filter:
+               objs.append(k3d.volume(
+                    scipy.ndimage.gaussian_filter(res[i],gaussian_filter_radius,output='float32')
+                   ,bounds=bounds))
+            else:
+               objs.append(k3d.volume(np.array(res[i],dtype='float16'),bounds=bounds))
             plot+=objs[-1]
     else:
         objs.append(k3d.volume(np.array(res,dtype='float16'),bounds=bounds))
@@ -925,7 +969,6 @@ def density_field(res,box,box_kw={},plot=None):
     _rot_b = 0.0
     _rot_c = 0.0
     _rot_Q = np.eye(4)
- 
     def rotate_plane(Q,ps):
        prs=[]
        for p in ps:
@@ -940,79 +983,90 @@ def density_field(res,box,box_kw={},plot=None):
                 [0,1,0,_w_y-_y],[0,-1,0,_w_y+_y],
                 [0,0,1,_w_z-_z],[0,0,-1,_w_z+_z]
                ])
-    button=widgets.Button(description='Center on 1')
+    box_layout = widgets.Layout(display='flex',
+                    flex_flow='row',
+                    align_items='stretch',
+                    border='none',
+                    width='95%') 
+    button=widgets.Button(description='Center on 1',layout=box_layout)
     @button.on_click
     def button1_on_click(b):
         global _x
         global _y
         global _z
         print('finding maximum in spherical domain with r={}, center=({},{},{})'.format(_w_x,_x,_y,_z))
-        idx, (_z,_y,_x)=get_max_in_spherical_domain(ress[0],_w_x,_z,_y,_x)
+        idx, (_z,_y,_x)=get_max_in_spherical_domain(res[sph_max_idx],_w_x,_z,_y,_x,l=(2*box[5],2*box[4],2*box[3]))
         #_x,_y,_z=-_x,-_y,-_z
-        print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,ress[0].shape))
-        print('value={}'.format(ress[0][idx]))
+        print('center=({},{},{}), idx={} shape={}'.format(_x,_y,_z,idx,res[sph_max_idx].shape))
+        print('value={}'.format(res[sph_max_idx][idx]))
         plot.clipping_planes=global_clipping_planes()
-    display(button)#,button2,button3)
-    @interact(spherical=widgets.Checkbox(value=False))
-    def g(spherical):
+    wlist=[button]
+    def g1(spherical):
         global _sphere
         _sphere=spherical
         plot.clipping_planes=global_clipping_planes()
-    @interact(a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
-    def g(a):
+    wlist.append(interactive(g1,spherical=widgets.Checkbox(value=False,layout=box_layout)))
+    def g2(a):
         global _rot_a
         global _rot_Q
         _rot_a=a
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
-    @interact(b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
-    def g(b):
+    wlist.append(interactive(g2,a=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01,layout=box_layout)))
+    def g3(b):
         global _rot_b
         global _rot_Q
         _rot_b=b
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
-    @interact(c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01))
-    def g(c):
+    wlist.append(interactive(g3,b=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01,layout=box_layout)))
+    def g4(c):
         global _rot_c
         global _rot_Q
         _rot_c=c
         _rot_Q=rotation(_rot_a,_rot_b,_rot_c)
         plot.clipping_planes=global_clipping_planes()
-
-    @interact(x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100))
-    def g(x):
+    wlist.append(interactive(g4,c=widgets.FloatSlider(value=0,min=0,max=2*np.pi,step=0.01,layout=box_layout)))
+    def g5(x):
         global _x
         _x=x
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100))
-    def g(w_x):
+    wlist.append(interactive(g5,x=widgets.FloatSlider(value=box[0]+box[3],min=box[0],max=box[0]+2*box[3],step=box[3]/100,layout=box_layout)))
+    def g6(w_x):
         global _w_x
         _w_x=w_x
         plot.clipping_planes=global_clipping_planes()
-    @interact(y=widgets.FloatSlider(value=box[1]+box[4],min=box[1],max=box[1]+2*box[4],step=box[4]/100))
-    def g(y):
+    wlist.append(interactive(g6,w_x=widgets.FloatSlider(value=box[3]/5,min=0.0,max=2*box[3],step=box[3]/100,layout=box_layout)))
+    def g7(y):
         global _y
         _y=y
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_y=widgets.FloatSlider(value=2*box[4],min=0,max=2*box[4],step=box[4]/100))
-    def g(w_y):
+    wlist.append(interactive(g7,y=widgets.FloatSlider(value=box[1]+box[4],min=box[1],max=box[1]+2*box[4],step=box[4]/100,layout=box_layout)))
+    def g8(w_y):
         global _w_y
         _w_y=w_y
         plot.clipping_planes=global_clipping_planes()
-    @interact(z=widgets.FloatSlider(value=box[2]+box[5],min=box[2],max=box[2]+2*box[5],step=box[5]/100))
-    def g(z):
+    wlist.append(interactive(g8,w_y=widgets.FloatSlider(value=2*box[4],min=0,max=2*box[4],step=box[4]/100,layout=box_layout)))
+    def g9(z):
         global _z
         _z=z
         plot.clipping_planes=global_clipping_planes()
-    @interact(w_z=widgets.FloatSlider(value=2*box[5],min=0.0,max=2*box[5],step=box[5]/100))
-    def g(w_z):
+    wlist.append(interactive(g9,z=widgets.FloatSlider(value=box[2]+box[5],min=box[2],max=box[2]+2*box[5],step=box[5]/100,layout=box_layout)))
+    def g10(w_z):
         global _w_z
         _w_z=w_z
         plot.clipping_planes=global_clipping_planes()
+    wlist.append(interactive(g10,w_z=widgets.FloatSlider(value=2*box[5],min=0.0,max=2*box[5],step=box[5]/100,layout=box_layout)))
+    box_all = widgets.GridBox(children=wlist, layout=widgets.Layout(
+                                grid_template_columns='40% 40%',
+                                grid_template_rows='auto'
+                              )
+                      )
+    #for w in wlist: display(w)
+    display(box_all)
     return plot
         
-def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(dpi=300)):
+def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(**DEFAULT_SUBPLOTS_KW)):
     pwcalcjobs=[]
     for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.pw.PwCalculation'>"]:
         pwcalcjobs.append(c)
@@ -1020,7 +1074,7 @@ def force_ratio_histogram(wf,print=print,ax=[],create_fig=lambda : plt.subplots(
     res,axs,figs,n_ax=analyze_forces_ratio(pwcalcjobs,minpk=wf.pk,ax_=ax,create_fig = create_fig)
     return res,axs,figs,n_ax
 
-def plot_force_ratio(res,fig=None,ax=None,hheight=10):
+def plot_force_ratio(res,fig=None,ax=None,hheight=10,subplots_kw=DEFAULT_SUBPLOTS_KW):
     def update_x_low_high(em,dt,d,x,x_size=0.0):
         e=d.setdefault(dt,{}).setdefault(em,{})
         x_lo=e.setdefault('x_lo',x)
@@ -1032,7 +1086,7 @@ def plot_force_ratio(res,fig=None,ax=None,hheight=10):
     #c_k=list(mcolors.TABLEAU_COLORS.keys())
     #idx=0
     if ax==None:
-        fig,ax=plt.subplots(dpi=300)
+        fig,ax=plt.subplots(**subplots_kw)
     x_low_high={}
     for e in dict_keys(res,level=2):
         for dt in dict_keys(res,level=1):
@@ -1089,12 +1143,22 @@ def plot_force_ratio(res,fig=None,ax=None,hheight=10):
 def length_traj(traj):
     t=traj.get_array('times')
     return t[-1]-t[0]
-def get_cp_with_traj(wf,min_t=0.0):
+def get_cp_with_traj(wf,min_t=0.0, ignore_not_ok=False):
     l=[]
-    for c in [x for x in wf.called if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>"]:
-        if 'output_trajectory' in c.outputs:
-            t = length_traj(c.outputs.output_trajectory)
-            if t >= min_t:
+    lall=[]
+    for x in wf.called:
+        try:
+            if str(x.process_class) == "<class 'aiida_quantumespresso.calculations.cp.CpCalculation'>":
+               lall.append(x)
+        except AttributeError as err:
+            print('Ignoring: ', err)
+    for c in lall:
+        if 'output_trajectory' in c.outputs and (c.is_finished_ok or ignore_not_ok):
+            if min_t > 0.0:
+               t = length_traj(c.outputs.output_trajectory)
+               if t >= min_t:
+                  l.append(c)
+            else:
                l.append(c)
     return sorted(l,key=lambda x: x.pk)
 
@@ -1106,3 +1170,873 @@ def print_cp_with_traj(wf,print=print,min_t=0.0):
         print(c.inputs.parameters.get_dict()['IONS'])
         print(c.inputs.parameters.get_dict()['CELL'] if 'CELL' in c.inputs.parameters.get_dict() else '')
     return l
+
+#tools for converting an analisi trajectory to a aiida trajectory, or an object that behaves in a similar way
+
+def analisi_cell2box(box_lammps):
+    '''returns cell vectors arranged in ROWS.
+       Analisi code always rotate the system to have a triangular cell matrix.'''
+    cells=np.zeros((box_lammps.shape[0],3,3))
+    for i in range(box_lammps.shape[0]):
+        lc=box_lammps[i]
+        if lc.shape[0] == 9: #note that this matrix is transposed: the cell vectors are arranged in ROWS
+            #                    a_x 0   0
+            #                    b_x b_y 0
+            #                    c_x c_y c_z
+            cells[i]=np.array([ [lc[3]*2, 0,       0      ],
+                                [lc[6],   lc[4]*2, 0      ],
+                                [lc[7],   lc[8],   lc[5]*2]
+                              ])
+        elif lc.shape[0] == 6: #for orthorombic cells there is no difference between row arranged and column arranged cell vectors
+            cells[i]=np.array([ [lc[3]*2,0,0],
+                                 [0,lc[4]*2,0],
+                                 [0,0,lc[5]*2]])
+        else:
+            raise IndexError('wrong shape of cell array')
+    return cells
+
+class FakeAiidaT:
+    def __init__(self,t,symbols_={},dt=1.0,pk=None,traj_skip=1):
+        def _copy(d,skip):
+            return np.copy(d[::traj_skip],order='C') if skip>1 else d
+        self.data={}
+        key_l=['positions','cells']
+        key_opt=['velocities','energy_constant_motion','ionic_temperature','pressure','electronic_kinetic_energy']
+        if isinstance(t,(pa.Traj,pa.Trajectory)):
+            self.t=t
+            self.symbols=[ symbols_[x] if x in symbols_ else str(x) for x in t.get_lammps_type().tolist()]
+            self.data['positions']=_copy(t.get_positions_copy(), traj_skip) 
+            self.data['velocities']=_copy(t.get_velocities_copy(), traj_skip)
+            self.box_lammps=_copy(t.get_box_copy(), traj_skip)
+            self.numsteps=self.data['positions'].shape[0]
+            self.data['cells']=analisi_cell2box(self.box_lammps)
+        elif isinstance(t,dict):
+            self.symbols=t['symbols']
+            for key in key_l:
+                self.data[key]=_copy(np.array(t[key]),traj_skip)
+            for key in key_opt:
+                if key in t:
+                    self.data[key]=_copy(np.array(t[key]),traj_skip)
+        elif isinstance(t,list):
+            if isinstance(t[0], dict):
+                self.symbols=t[0]['symbols']
+                for key in key_l:
+                    self.data[key] = np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
+                for key in key_opt:
+                    if key in t[0]:
+                        self.data[key]=np.concatenate( [_copy(t[i][key], traj_skip) for i in range(len(t))], axis=0)
+            else:
+                self.symbols=t[0].symbols
+                for key in key_l:
+                    self.data[key] = np.concatenate( [_copy(t[i].get_array(key), traj_skip) for i in range(len(t))], axis=0)
+                for key in key_opt:
+                    if key in t[0].get_arraynames():
+                        self.data[key]=np.concatenate( [_copy(t[i].get_array(key), traj_skip) for i in range(len(t))], axis=0)
+
+        else:
+            raise RuntimeError(f'first argument cannot be {str(t)}')
+        self.data['steps']=np.arange(0,self.data['positions'].shape[0])
+        self.data['times']=self.data['steps']*dt*traj_skip
+        self.dt=dt*traj_skip
+        self.numsites=self.data['positions'].shape[1]
+        self.pk=pk
+        self.numsteps=self.data['positions'].shape[0]
+        
+    def get_array(self,name):
+        if name in self.data:
+            return self.data[name]
+        else:
+            raise KeyError(f'cannot find key {name}')
+    def get_attribute(self,k):
+        if k=='symbols':
+            return self.symbols
+        else:
+            raise KeyError(f'attribute {k} not present')
+    def get_arraynames(self):
+        return self.data.keys()
+def analisi2aiida_traj(t,symbols):
+    ft = FakeAiidaT(t,symbols)
+    res=aiida.orm.nodes.data.array.trajectory.TrajectoryData()
+    res.set_attribute('symbols',ft.symbols)
+    for name in ['steps','positions','cells','times','velocities']:
+        res.set_array(name,ft.get_array(name))
+    return res
+
+def read_lammps_bin(f,pk=None,symbols={},wrap=False,nsteps=0,start=0,dt=1.0, traj_skip=1):
+    '''
+    Read a binary lammps file. traj_skip loads a step every traj_skip steps. Note that this is done at the numpy python level, and the trajectory object still has all steps inside it
+    '''
+
+    t=pa.Traj(f)
+    t.setWrapPbc(wrap)
+    t.setAccessWindowSize(t.getNtimesteps() if nsteps <= 0 else nsteps)
+    t.setAccessStart(start)
+
+    if pk is None:
+        import time
+        pk=str(time.time_ns())
+
+    return FakeAiidaT(t,symbols_=symbols,dt=dt,pk=pk,traj_skip=traj_skip)
+
+def get_type_mask(at):
+    return get_type_mask_from_s(at.symbols)
+
+def get_type_mask_from_s(symbols):
+    typesa=set(symbols)
+    masks={}
+    types=[]
+    types_array=np.zeros(len(symbols),dtype=int)
+    itype=0
+    for t in typesa:
+        masks[t]=np.array(symbols)==t
+        types.append(t)
+        types_array[masks[t]]=itype
+        itype+=1
+    return types,types_array,masks
+
+def gen_poscar(at,every=1, start=0,desc=''):
+    poscars=[]
+    types,types_array,masks=get_type_mask(at)
+    pos=at.get_array("positions")
+    vel=at.get_array("velocities")
+    cel=at.get_array("cells")
+    nt={}
+    for it in types:
+        nt[it]=np.sum(masks[it])
+    for i in range(start,at.numsteps,every):
+        c=cel[i]
+        p=f'{desc}\n1.0\n'
+        for idim in range(3):
+            p+=f'{c[idim,0]} {c[idim,1]} {c[idim,2]}\n'
+        for it in types:
+            p+=it+' '
+        p+='\n'
+        for it in types:
+            p+=f'{nt[it]} '
+        p+='\nCartesian\n'
+        for it in types:
+            ps=pos[i,masks[it]]
+            for iatom in range(nt[it]):
+                p+= f'{ps[iatom,0]} {ps[iatom,1]} {ps[iatom,2]} \n'
+        p+='Cartesian\n'
+        for it in types:
+            v=vel[i,masks[it]]
+            for iatom in range(nt[it]):
+                p+= f'{v[iatom,0]} {v[iatom,1]} {v[iatom,2]} \n'
+        
+        poscars.append(p)
+    return poscars
+
+def wrap_dataset(tt):
+    '''This rotates the cell to get a triangular cell matrix, then wraps atomic positions around the cell center in a cubic region of space. Not sure about stress transformation: to check'''
+    nat=tt['positions'].shape[1]//3
+    nts=tt['positions'].shape[0]
+    wrapped=pa.Trajectory(tt['positions'].reshape(nts,nat,3),
+                  tt['forces'].reshape(nts,nat,3),
+                  np.zeros(nat,dtype='i'),
+                  np.array(tt['cells'].reshape(nts,3,3).transpose((0,2,1)),order='C'),
+                  pa.BoxFormat.CellVectors,
+                  True,
+                  True
+                  )
+    Q=wrapped.get_rotation_matrix()
+    rotated_forces=np.einsum('taj,tij -> tai',tt['forces'].reshape(nts,nat,3),Q).reshape((nts,nat*3))
+    rotated_stress=np.einsum('tlm,tli,tmj -> tij',tt['stress'].reshape(nts,3,3),Q,Q).reshape((nts,9))
+    rotated_positions=np.einsum('taj,tij -> tai',tt['positions'].reshape(nts,nat,3),Q).reshape((nts,nat*3))
+    return {'cells':analisi_cell2box(wrapped.get_box_copy()).reshape((nts,9)),
+      'cells_unrotated':tt['cells'],
+      'Q':Q.reshape((nts,9)),
+      'positions':wrapped.get_positions_copy().reshape((nts,nat*3)),
+      'forces':wrapped.get_velocities_copy().reshape((nts,nat*3)),
+      'energy':tt['energy'],
+      'stress':rotated_stress
+     }
+
+def show_traj(tr,wrap=True,fast=1.0,tskip=1):
+    if wrap:
+        atraj,_=get_analisi_traj_from_aiida(tr,tskip=tskip)
+    else:
+        atraj=None
+    plot=k3d.plot()
+    plot=show_atraj(tr,atraj,wrap=wrap,plot=plot,fast=fast)
+    plot.display()
+    return plot
+
+def show_atraj(tr,atraj,wrap=True,plot=None,fast=1.0):
+    atomic_species=list(set(tr.symbols))
+    masks=[]
+    for sp in atomic_species:
+        masks.append(np.array(tr.symbols)==sp)
+    if wrap:
+        pos_m=atraj.get_positions_copy()
+    else:
+        pos_m=tr.get_array('positions')
+    t=tr.get_array('steps')
+    #pos=t.get_positions_copy()
+    for sp,mask in zip(atomic_species,masks):
+        plot += k3d.points(positions={str(t/30.0/fast):pos_m[t,mask,:] for t in range(pos_m.shape[0])},size=1.0,name=sp)
+        print (sp)
+    return plot
+
+import matplotlib.colors as colors
+from matplotlib import cm
+
+
+def compute_steinhardt(aiida_traj,ranges=[(2.5,3.5),(0.8,1.2),(2.2,3.0),(1.5,1.8)],nthreads=4,skip=10,neigh=[], histogram=True,ls=[6,4],averaged=False,n_segments=1,nbins=100,tskip=1):
+    atraj=aiida_traj
+    if isinstance(atraj, FakeAiidaT) and hasattr(atraj,'t'):
+        if tskip != 1:
+            raise IndexError(f'trajectory skip not implemented after Trajectory instance is created')
+        atraj=atraj.t
+    elif not isinstance(atraj,pa.Trajectory):
+        atraj,atraj_unw=get_analisi_traj_from_aiida(aiida_traj,tskip=tskip)
+    elif tskip != 1:
+        raise IndexError(f'trajectory skip not implemented after Trajectory instance is created')
+
+    stein = None
+    l=sorted(ls)
+
+    if l[0]<0:
+       raise IndexError(f'minimum l cannot be negative {l}')
+    elif l[-1]>10:
+       raise IndexError(f'spherical harmonics with l>10 are not supported {l}. Please modify and recompile source code.')  
+
+    stein=pyanalisi_wrapper(f'SteinhardtOrderParameterHistogram_{l[-1]}',atraj,
+                                          ranges,
+                                          1,nbins,
+                                          l,
+                                          nthreads,skip,histogram,neigh,averaged
+                                         )
+
+    if n_segments==1:
+        stein.reset(atraj.get_nloaded_timesteps())
+        stein.calculate(0)
+        stein_res=np.array(stein)
+        return stein_res
+    elif n_segments>1:
+        segment_size=max(1,atraj.get_nloaded_timesteps()//n_segments)
+        stein.reset(segment_size)
+        print(segment_size)
+        res=[]
+        for i in range(0,segment_size*n_segments,segment_size):
+            print(f'calculating {i}...')
+            stein.calculate(i)
+            res.append(np.array(stein,copy=True))
+        return np.array(res)
+    else:
+        raise IndexError('n_segments must be >= 1')
+
+
+
+from mpl_toolkits.axes_grid1 import ImageGrid
+from matplotlib.patches import Circle
+
+
+def plt_steinhardt(stein_res,vmin=0.01,figsize=(6.,6.),show=True,transpose=True,xmax=0.2,ymax=0.6,inverted_type_index=False,axs=None,fig=None,single=None,plt_points=None):
+    if len(stein_res.shape) != 5:
+        raise RuntimeError('implemented only for 2d histograms!')
+    cmap=cm.get_cmap('inferno').copy()
+    cmap.set_bad('black')
+    nt=stein_res.shape[1]
+    mask=np.zeros(stein_res.shape)
+    #mask[:,:,:,-1,-1]=1
+    masked=np.ma.masked_array(stein_res,mask=mask)
+    if axs is None:
+        if fig is None:
+            fig = plt.figure(figsize=figsize)
+        axs = ImageGrid(fig,111,nrows_ncols=(nt,nt) if single is None else (1,1),axes_pad=0.3)
+    idx=0
+    for itype in range(nt):
+        for jtype in range(nt):
+            if single is not None:
+                if (itype,jtype) != single:
+                    continue
+            if inverted_type_index:
+                itype, jtype = jtype, itype
+            try:
+                axs[idx].imshow(stein_res[0,itype,jtype].transpose() if transpose else stein_res[0,itype,jtype],
+                                norm=colors.LogNorm(vmin=vmin, vmax=masked[0,itype,jtype].max()),
+                                cmap=cmap,
+                                origin='lower',extent=[0.0,1.0,0.0,1.0],
+                                aspect=xmax/ymax)
+                axs[idx].set_xlim(0,xmax)
+                axs[idx].set_ylim(0,ymax)
+                if plt_points:
+                    for x,y,r,c_kw in plt_points:
+                        circ = Circle((x,y),radius=r,**c_kw)
+                        axs[idx].add_patch(circ)
+            except Exception as e:
+                print(e)
+            idx += 1
+    if show: 
+        fig.show()
+    return fig,axs
+
+def steinhardt_movie(traj,skip=5,neigh=DEFAULT_NEIGH,averaged=True,n_segments=10,plt_steinhardt_kw=DEFAULT_PLT_STEINHARDT_KW,
+                     compute_steinhardt_kw={'nthreads':4},tstein=None):
+    if tstein is None:
+        tstein=compute_steinhardt(traj,skip=skip,neigh=neigh,averaged=averaged,n_segments=n_segments,**compute_steinhardt_kw)
+    class SteinAni:
+        def __init__(self,tstein,plt_steinhardt_kw):
+            self.tstein=tstein
+            self.plt_steinhardt_kw=plt_steinhardt_kw
+            self.fig,self.axs=plt_steinhardt(self.tstein[0],**self.plt_steinhardt_kw,show=False)
+        def __call__(self,i):
+            self.fig,self.axs=plt_steinhardt(self.tstein[i],**self.plt_steinhardt_kw,axs=self.axs,fig=self.fig,show=False)
+            return self.axs
+        
+    stani=SteinAni(tstein,plt_steinhardt_kw)
+    ani = matplotlib.animation.FuncAnimation(
+        stani.fig, stani, interval=200, blit=True, save_count=n_segments)
+    return HTML(ani.to_jshtml()), tstein
+
+def gofr_movie(atraj,skip=5,n_segments=10,gofr_kw={},plt_gofr_kw={},callax=lambda x:None):
+    gofr_kw.setdefault('gr_kw',{})['tskip']=skip
+    if isinstance(atraj, FakeAiidaT) and hasattr(atraj,'t'):
+        atraj=atraj.t
+    elif not isinstance(atraj,pa.Trajectory):
+        atraj,atraj_unw=get_analisi_traj_from_aiida(atraj)
+    traj=atraj
+    gofr=do_compute_gr_multi(traj,n_segments=n_segments,**gofr_kw)
+    class SteinAni:
+        def __init__(self,tstein,plt_gofr_kw,callax):
+            self.callax=callax
+            self.tstein=tstein
+            self.plt_gofr_kw=plt_gofr_kw
+            self.fig,self.axs,_,_,_,_,_,_,_,_,_,_=do_plots_gr_sh(*self.tstein[0],**self.plt_gofr_kw)
+        def __call__(self,i):
+            self.axs.clear()
+            self.fig,self.axs,_,_,_,_,_,_,_,_,_,_=do_plots_gr_sh(*self.tstein[i],**self.plt_gofr_kw,fig_ax=(self.fig,self.axs))
+            self.callax(self.axs)
+            return [self.axs]
+        
+    stani=SteinAni(gofr,plt_gofr_kw,callax)
+    ani = matplotlib.animation.FuncAnimation(
+        stani.fig, stani, interval=200, blit=True, save_count=n_segments)
+    return HTML(ani.to_jshtml())
+
+def elastic_c(kbT, box_matrix):
+    "returns elastic constants in GPa"
+    is_diagonal=False
+    box_ave=box_matrix.mean(axis=0)
+    if np.count_nonzero(box_ave-np.diag(np.diagonal(box_ave))) == 0:
+        is_diagonal=True
+    vol_mean=np.linalg.det(box_ave)
+    G=np.einsum('tji,tjl->til',box_matrix,box_matrix)
+    box_inv=np.linalg.inv(box_matrix)
+    box_ave_inv=box_inv.mean(axis=0)
+    strain=0.5*(np.einsum('ji,tjl,lm->tim',box_ave_inv,G,box_ave_inv)-np.eye(3))
+    strain_0 = strain.mean(axis=0)
+    nt=strain.shape[0]
+    #pick=[0,1,2,4,5,8] # xx, xy, xz, yy, yz, zz
+    pick=[0,4,8,1,2,5] # xx, yy, zz, xy, xz, yz
+    if is_diagonal:
+        pick=pick[:3]
+    CS_minus1=np.einsum('ti,tk->ik',(strain-strain_0).reshape((nt,9))[:,pick],(strain-strain_0).reshape((nt,9))[:,pick])*vol_mean/kbT/nt*1e9
+    CS=np.linalg.inv(CS_minus1)
+    with np.printoptions(precision=3, suppress=False,linewidth=150):
+        print('xx, yy, zz, xy, xz, yz : GPa')
+        print (CS)
+        print('============')
+        print('1/GPa')
+        print(np.linalg.det(CS_minus1))
+        print(CS_minus1)
+    if is_diagonal: #fill with zeros the 6x6 matrix not involved in the calculation
+        CS2=np.zeros((6,6))
+        CS_minus12=np.zeros((6,6))
+        CS2[:3,:3]=CS
+        CS_minus12[:3,:3]=CS_minus1
+        CS=CS2
+        CS_minus1=CS_minus12
+    return CS, CS_minus1
+
+def hist2gofr(gr_N,gr_dr,gr_0,gofr):
+    rs_m=np.arange(gr_N)*gr_dr+gr_0
+    rs_p=(np.arange(gr_N)+1)*gr_dr+gr_0
+    vols=4*np.pi/3*(rs_p**3-rs_m**3)
+    return gofr/vols
+
+def peak_width(gr,NH,NH_thre,gr_r2i,min_spread=0.1):
+    '''
+    get the width of the first peak in the gr at a given height
+    '''
+    idx_23=0
+    while gr[0,NH,idx_23] < NH_thre:
+        idx_23 += 1
+    idx_spread_low=idx_23
+    while gr[0,NH,idx_23] > NH_thre*0.9:
+        if idx_23 == gr.shape[2]-1 or (idx_23 -idx_spread_low > gr_r2i(min_spread) and gr[0,NH,idx_23] < NH_thre):
+            break
+        idx_23 += 1
+    idx_spread_hi=idx_23
+    return idx_spread_low,idx_spread_hi
+
+def analyze_peak(gr,r0,peak_fractional_height,gr_r2i,gr_i2r):
+    '''
+    find the peak around r0 in the g(r) array and get some info
+    '''
+    maxs=np.argmax(gr,axis=2)
+    peaks=gr_i2r(maxs)
+    
+    #find nearest peak to r0
+    NH=np.argmin((peaks-r0)**2)
+    #get spread at 'peak_fractional_height' of peak height
+    NH_peak_idx=maxs[0,NH]
+    NH_peak_val=gr[0,NH,NH_peak_idx]
+    NH_thre=NH_peak_val*peak_fractional_height
+    #get width of peak
+    idx_spread_low,idx_spread_hi=peak_width(gr,NH,NH_thre,gr_r2i)
+    spread_low=gr_i2r(idx_spread_low)
+    spread_hi=gr_i2r(idx_spread_hi)
+    w23h=spread_hi-spread_low
+    return idx_spread_low,idx_spread_hi,spread_low,spread_hi,w23h,NH_thre,NH_peak_val,NH_peak_idx,peaks,NH
+
+def get_conv_functs(gr_0,gr_dr):
+    def gr_r2i(r):
+        return int((r-gr_0)/gr_dr)
+    def gr_i2r(i):
+        return gr_0+i*gr_dr
+    return np.vectorize(gr_r2i), np.vectorize(gr_i2r)
+    
+
+def do_compute_gr_multi(t,gr_kw={'tskip':10},n_segments=1,gr_0=0.5,gr_end=3.8,gr_N=150):
+    '''
+    computes the g(r) pair correlation function and find the peaks of it
+    '''
+    nts=t.get_nloaded_timesteps()
+    param_gr=(nts,gr_0,gr_end,gr_N)
+    #first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
+    gr_dr=(gr_end-gr_0)/gr_N
+
+    #get utility functions for converting from index to r value and back
+    gr_r2i,gr_i2r=get_conv_functs(gr_0,gr_dr)
+    
+    gofr=analyze_gofr(t,0,nts,gr_0,gr_end,gr_N,
+                      tmax=1,**gr_kw,n_segments=n_segments) #only g(r)
+    #from the histogram generate the g(r) -- divide by the volumes of the spherical shells
+    res=[]
+    for i in range(n_segments):
+        gr=hist2gofr(gr_N,gr_dr,gr_0,gofr if n_segments==1 else gofr[i])
+        
+            
+        #find nearest peak to 1.0 (N-H bond)
+        idx_spread_low,idx_spread_hi,spread_low,spread_hi,w23h,NH_thre,NH_peak_val,NH_peak_idx,peaks,NH = analyze_peak(gr,1.0,0.5,gr_r2i,gr_i2r)
+        
+        #print(f'width at 1/2 of height: {w23h}')
+        #calculate sh correlations of hydrogen peak
+        sh_low=spread_low-w23h*0.1
+        sh_hi=spread_hi+w23h*0.1
+        NH_peak=(NH_thre,spread_low,spread_hi,peaks,NH,w23h,NH_peak_val)
+        res.append( (None,param_gr,gofr if n_segments==1 else gofr[i],(None,None),None,NH_peak))
+    return res
+
+
+def do_compute_gr_sh(t,times,do_sh=True,neigh=[],analyze_sh_kw={'tskip':50},gr_kw={'tskip':10}):
+    '''
+    computes the g(r) pair correlation function and the spherical harmonics correlation function computed around the N-H peak of the g(r), at around 1.0 Angstrom
+    '''
+    gr_0=0.5
+    gr_end=3.8
+    gr_N=150
+    nts=t.get_nloaded_timesteps()
+    param_gr=(nts,gr_0,gr_end,gr_N)
+    DT_PS=times[1]-times[0]
+    #first calculate g(r), get the N-H peak, estabilish the range of sh correlation f
+    gr_dr=(gr_end-gr_0)/gr_N
+
+    #get utility functions for converting from index to r value and back
+    gr_r2i,gr_i2r=get_conv_functs(gr_0,gr_dr)
+    
+    gofr=analyze_gofr(t,0,nts,gr_0,gr_end,gr_N,
+                      tmax=1,**gr_kw) #only g(r)
+    #from the histogram generate the g(r) -- divide by the volumes of the spherical shells
+    gr=hist2gofr(gr_N,gr_dr,gr_0,gofr)
+    
+        
+    #find nearest peak to 1.0 (N-H bond)
+    idx_spread_low,idx_spread_hi,spread_low,spread_hi,w23h,NH_thre,NH_peak_val,NH_peak_idx,peaks,NH = analyze_peak(gr,1.0,0.5,gr_r2i,gr_i2r)
+    
+    #print(f'width at 1/2 of height: {w23h}')
+    #calculate sh correlations of hydrogen peak
+    sh_low=spread_low-w23h*0.1
+    sh_hi=spread_hi+w23h*0.1
+    if do_sh:
+        sh=analyze_sh(t,0,nts,sh_low,sh_hi,1,tmax=int(0.5/DT_PS),sann=neigh,**analyze_sh_kw)
+    else:
+        sh=None
+    NH_peak=(NH_thre,spread_low,spread_hi,peaks,NH,w23h,NH_peak_val)
+    param_sh = (sh_low,sh_hi)
+    return times,param_gr,gofr,param_sh,sh,NH_peak
+
+def do_plots_gr_sh(times,param_gr,gofr,param_sh,sh,NH_peak,fig_ax=None,plot_gr_kw={},plot_sh_band=False):
+
+    nts,gr_0,gr_end,gr_N=param_gr
+    sh_low,sh_hi=param_sh
+    NH_thre,spread_low,spread_hi,peaks,NH,w23h,NH_peak_val=NH_peak
+
+    gr_dr=(gr_end-gr_0)/gr_N
+    #get utility functions for converting from index to r value and back
+    gr_r2i,gr_i2r=get_conv_functs(gr_0,gr_dr)
+    
+    fig_gr,ax_gr=plot_gofr(gr_0,gr_end,gofr,fig_ax=fig_ax,**plot_gr_kw)
+    ax_gr.grid()
+    if plot_sh_band:
+        if sh_low is not None: 
+            ax_gr.axvline(sh_low,color='r')
+        if sh_hi is not None:
+            ax_gr.axvline(sh_hi,color='r')
+    
+    #annotate N-N peak
+    
+    #from the histogram generate the g(r) -- divide by the volumes of the spherical shells
+    gr=hist2gofr(gr_N,gr_dr,gr_0,gofr)
+    def annotate_peak(r0,h,ax_gr):
+        _,_,NN_spread_low,NN_spread_hi,w2NN,NN_thre,NN_peak_val,NN_peak_idx,peaks,NN = analyze_peak(gr,r0,h,gr_r2i,gr_i2r)
+        ax_gr.hlines(NN_thre,NN_spread_low,NN_spread_hi)
+        
+        #ax_gr.annotate(f'{w2NN:.2f}',(peaks[0,NN]*0.95,NN_thre*1.05))
+        #ax_gr.annotate(f'{peaks[0,NN]:.2f}',(peaks[0,NN]*0.95,NN_peak_val*1.02))
+        ax_gr.annotate(f'{peaks[0,NN]:.2f}\n{w2NN:.2f}',(peaks[0,NN]*0.95,NN_thre*1.05))
+        return w2NN,peaks[0,NN]
+    #find nearest peak to 2.6 (N-N bond)
+    wNN,rNN=annotate_peak(2.6,0.5,ax_gr)
+    #find nearest peak to 1.7 (H-H bond)
+    wHH,rHH=annotate_peak(1.7,3.0/4,ax_gr)
+    #find nearest peak to 1.0 (N-H bond)
+    wNH,rNH=annotate_peak(1.0,0.5,ax_gr)
+
+    if sh is not None:
+        try:
+            fig_sh,ax_sh,axins_sh,fit_sh=plot_sh(sh_low,sh_hi,times,sh,0,1,0,log=False,pre_fit=0.4)
+        except:
+            try:
+                fig_sh,ax_sh,axins_sh,fit_sh=plot_sh(sh_low,sh_hi,times,sh,0,1,0,log=False,pre_fit=0.1)
+            except:
+                fig_sh,ax_sh,axins_sh,fit_sh=plot_sh(sh_low,sh_hi,times,sh,0,1,0,log=False)
+        ax_sh.grid()
+    else:
+        fig_sh,ax_sh,axins_sh,fit_sh=None,None,None,None
+    return fig_gr,ax_gr,fig_sh,ax_sh,axins_sh,fit_sh,wNN,rNN,wHH,rHH,wNH,rNH
+
+def do_compute_msd(t_unw,times,msd_kw={}):
+    nts=t_unw.get_nloaded_timesteps()
+    msd=analyze_msd(t_unw,0,nts,**msd_kw)
+    #compute slope
+    DT_PS=times[1]-times[0]
+    msd_start=max(min(int(0.3/DT_PS),msd.shape[0]-100),0)
+    coeffs=np.polyfit(times[msd_start:msd.shape[0]]-times[0],msd[msd_start:,0,:],1)
+    return msd,times,msd_start,coeffs
+
+def do_plots_msd(msd,times,msd_start,coeffs,do_fit=True,fig_ax=None,subplots_kw=DEFAULT_SUBPLOTS_KW):
+    DT_PS=times[1]-times[0]
+    fig,ax=plot_msd(times,msd,0,fig_ax=fig_ax,subplots_kw=subplots_kw)
+    ax.grid()
+    if do_fit:
+        t0=times[msd_start]-times[0]
+        tf=times[msd.shape[0]-1]-times[0]
+        lines=[[(t0,coeffs[0,0]*t0+coeffs[1,0]),(tf,coeffs[0,0]*tf+coeffs[1,0])],
+              [(t0,coeffs[0,1]*t0+coeffs[1,1]),(tf,coeffs[0,1]*tf+coeffs[1,1])]]
+        lc=mc.LineCollection(lines,zorder=-1)
+        ax.add_collection(lc)
+
+        ax.annotate(f'D={coeffs[0,0]/6:.2f}',lines[0][1])
+        ax.annotate(f'D={coeffs[0,1]/6:.2f}',lines[1][1])
+    return fig,ax
+
+def inspect(traj, only_cell=False,plot_traj=True,plot=True,
+            do_sh=True,do_density=False, plot_sh_h=True,
+            show_traj_dyn=False,dt='auto',
+            neigh=DEFAULT_NEIGH,
+            plot_st_kw={'transpose':True,'xmax':.20,'ymax':.60},
+            analyze_sh_kw={'tskip':50},
+            compute_steinhardt_kw={'skip':10},
+            msd_kw={},
+            gr_kw={'tskip':10},
+            nthreads=4,save_data=False,tskip=1,
+            atomic_density_kwargs={},
+            msd_plot_kw={},
+            subplots_kw=DEFAULT_SUBPLOTS_KW):
+    results={}
+    analyze_sh_kw['nthreads']=nthreads
+    compute_steinhardt_kw['nthreads']=nthreads
+    msd_kw['nthreads']=nthreads
+    gr_kw['nthreads']=nthreads
+
+
+    natoms=traj.numsites
+    #conversion factor from eV to K
+    k_b=8.617333262145e-5 #eV/K
+    eV_to_K=2/(3*k_b*natoms)
+
+    #print('traj arraynames = {}'.format(traj.get_arraynames()))
+    if 'ionic_temperature' in traj.get_arraynames():
+        temp=traj.get_array('ionic_temperature')
+        T_mean=temp.mean()
+        results['T']=T_mean
+    else:
+        T_mean=float('nan')
+    if 'pressure' in traj.get_arraynames():
+        press=traj.get_array('pressure')
+        press_mean=press.mean()
+        results['P']=press_mean
+    else:
+        press_mean = float('nan')
+    if dt is None and 'times' in traj.get_arraynames():
+        t=traj.get_array('times')
+    elif isinstance(dt,float):
+        t=np.arange(temp.shape[0])*dt
+    elif dt=='auto' and 'times' in traj.get_arraynames():
+        t=traj.get_array('times')
+        dt=(t[1]-t[0])
+        t=np.arange(temp.shape[0])*dt
+    def t_to_timestep(x):
+        return np.interp(x,t,np.arange(t.shape[0]))
+    def timestep_to_t(x):
+        return np.interp(x,np.arange(t.shape[0]),t)
+        
+    
+    DT_FS=(t[1]-t[0])*1e3
+    cell_0 =traj.get_array('cells')
+    volume=np.linalg.det(cell_0)
+    #print('cell(t=0) = {}'.format(cell_0))
+    #print('cell_volume(t=0) = {} A^3'.format(volume))
+    cell_0=traj.get_array('cells').mean(axis=0)
+    volume=np.linalg.det(cell_0)
+    results['V']=volume
+    if 'electronic_kinetic_energy' in traj.get_arraynames():
+        results['ekinc']=traj.get_array('electronic_kinetic_energy').mean()
+    if 'energy_constant_motion' in traj.get_arraynames(): 
+        results['e_constant']=traj.get_array('energy_constant_motion').mean()
+    results['DT_FS']=DT_FS
+
+    plt_fname_pre=FIGURE_PATH+'/inspect_result'
+    if 'ionic_temperature' in traj.get_arraynames() and 'pressure' in traj.get_arraynames():
+        display(HTML(f'<h1>{T_mean:.0f}K {press_mean:.0f}GPa</h1>'))
+        print('DT_FS = {:.3f}fs, T = {:.2f}K, P = {:.2f}GPa'.format(DT_FS,T_mean,press_mean))
+        plt_fname_pre=FIGURE_PATH+f'/{T_mean:.0f}K_{press_mean:.0f}GPa_{DT_FS:.3f}_'
+    print('traj pk = {}'.format(traj.pk))
+    plt_fname_suff='.pdf'
+    if traj.pk != None:
+        pickle_dump_name=f'traj_{traj.pk}'
+    else:
+        pickle_dump_name=f'traj_{T_mean:.2f}K{press_mean:.2f}GPa'
+
+
+    if plot_traj and plot:
+        print('cell_average = {}'.format(cell_0))
+        print('cell_average_volume = {} A^3'.format(volume))
+        plt_key(traj,'electronic_kinetic_energy',eV_to_K,ylabel='K',dt=dt)
+        plt_key(traj,'energy_constant_motion',dt=dt)
+        plt_key(traj,'ionic_temperature',ylabel='K',dt=dt)
+        plt_key(traj,'pressure',ylabel='GPa',dt=dt)
+        plt.show()
+    atraj,atraj_unw=get_analisi_traj_from_aiida(traj,tskip=tskip)
+
+
+    if show_traj_dyn:
+        traj_dyn=show_atraj(traj,atraj,wrap=False)
+        
+    
+    if not only_cell:
+
+        
+        if plot and do_density:
+            res=atomic_density(atraj)
+            plot_=density_field(*res,**atomic_density_kwargs)
+        
+        #histogram of steinhardt parameters
+        if plot_sh_h: 
+            sh_h_pickle=pickle_dump_name+'_sh_h.pickle'
+            sh_h = pickle_or_unpickle(sh_h_pickle)
+            if sh_h is None:
+                sh_h=compute_steinhardt(atraj,neigh=neigh,averaged=True,**compute_steinhardt_kw)
+                fig_shh,axs_shh=plt_steinhardt(sh_h,**plot_st_kw)
+                fig_shh.savefig(plt_fname_pre+'steinhardt'+plt_fname_suff)
+            
+
+        #g of r / spherical correlations
+        grsh_pickle=pickle_dump_name+ ('_gofr_sh.pickle' if do_sh else '_gofr.pickle')
+        gofrsh = pickle_or_unpickle(grsh_pickle)
+        if gofrsh is None:
+            gofrsh=do_compute_gr_sh(atraj,t[::tskip],do_sh=do_sh,neigh=neigh,analyze_sh_kw=analyze_sh_kw,gr_kw=gr_kw)
+            pickle_or_unpickle(grsh_pickle,analisi = gofrsh)
+                
+        #msd
+        msd_pickle=pickle_dump_name+'_msd.pickle'
+        msd = pickle_or_unpickle(msd_pickle)
+        if msd is None:
+            msd=do_compute_msd(atraj_unw,t[::tskip],msd_kw=msd_kw)
+            pickle_or_unpickle(msd_pickle,analisi = msd)
+
+        if save_data:
+            results['data_gofrsh']=gofrsh
+            results['data_msd']=msd
+        
+        
+        wNN,rNN,wHH,rHH,wNH,rNH=None,None,None,None,None,None
+        if plot:
+            fig_gr,ax_gr,fig_sh,ax_sh,axins_sh,fit_sh,wNN,rNN,wHH,rHH,wNH,rNH=do_plots_gr_sh(*gofrsh)
+            fig_gr.show()
+            fig_gr.savefig(plt_fname_pre+'gr'+plt_fname_suff)
+            if fig_sh is not None:
+                fig_sh.show()
+                fig_sh.savefig(plt_fname_pre+'sh'+plt_fname_suff)
+            fig_msd,ax_msd=do_plots_msd(*msd,**msd_plot_kw)
+            fig_msd.show()
+            fig_msd.savefig(plt_fname_pre+'msd'+plt_fname_suff)
+        
+        results['msd']=msd[3][0,:]
+        
+        NH_thre,spread_low,spread_hi,peaks,NH,w23h,NH_peak_val=gofrsh[5]
+        results['NH_peak_width']=w23h
+        results['NH_peak_pos']=peaks[0,NH]
+        results['NN_peak_width']=wNN
+        results['NN_peak_pos']=rNN
+        results['HH_peak_width']=wHH
+        results['HH_peak_pos']=rHH
+
+    cells_transition=atraj.get_box_copy()
+    cell_transition_ave=cells_transition.mean(axis=0)
+    print(f'average cell xx,yy,zz = {2*cell_transition_ave[3:6]}')
+    a = cell_transition_ave[3]/4+cell_transition_ave[4]/(3*3**.5)
+    hcpx = a*4
+    hcpy = a*3*3**.5
+    hcpz = a*2*6**.5
+    print(f'close packed ideal structure = {hcpx} {hcpy} {hcpz}')
+    print(f'close packed ideal structure delta = {hcpx-2*cell_transition_ave[3]} {hcpy-2*cell_transition_ave[4]} {hcpz-2*cell_transition_ave[5]}')
+    if cells_transition.shape[1]>6:
+        print(f'average cell xy,xz,yz = {cell_transition_ave[6:]}')
+    
+    if (cells_transition!=cells_transition[0]).any():
+        if plot:
+            fig, ax = plt.subplots(nrows=2,sharex=True,**subplots_kw)
+            lines=ax[0].plot(t[::tskip],cells_transition[:,3:6]*2)
+            for i,c in enumerate(['x','y','z']):
+                lines[i].set_label(c)
+            ax[0].plot(t[::tskip],(2*cells_transition[:,3:6]).prod(axis=1)**(1.0/3.0),label=r'V$^{1/3}$')
+            ax[0].grid()
+            ax[0].set_title('cell parameters: cell size (up) and cell tilt (down)')
+            ax[1].set_xlabel('t (ps)')
+            ax[0].set_ylabel('(A)')
+            ax[0].secondary_xaxis('top',functions=(t_to_timestep,timestep_to_t))
+            ax[0].legend()
+            if cells_transition.shape[1]>6:
+                lines=ax[1].plot(t[::tskip],cells_transition[:,6:])
+                ax[1].grid()
+                ax[1].set_ylabel('(A)')
+                for i,c in enumerate(['xy','xz','yz']):
+                    lines[i].set_label(c)
+                ax[1].legend()
+            fig.show()
+            fig.savefig(plt_fname_pre+'cell'+plt_fname_suff)
+        try:
+            uma=1.66e-27 #kg
+            mcell=(sum( [ 1 for i in traj.get_attribute('symbols') if i=='H']) + sum( [ 14 for i in traj.get_attribute('symbols') if i=='N']))*uma
+            def vs_C(traj,nsteps):
+                density=(mcell/np.linalg.det(traj.get_array('cells')[:nsteps:tskip]*1e-10)).mean()
+                CS,CSm=elastic_c(traj.get_array('ionic_temperature')[:nsteps:tskip].mean()*1.38064852e-23,
+                                 traj.get_array('cells')[:nsteps:tskip]*1e-10)
+                vs=((CS[0,0]+4.0/3*CS[3,3])*1e9/density)**.5
+                print ('sqrt((C_{xx,xx} + C_{xy,xy})/density) [m/s] ' ,vs)
+                return CS,CSm,vs,density
+            CSs,CSms,vss,ts,densities=([],[],[],[],[])
+            for i in range(10):
+                stop_step=traj.numsteps//tskip*(i+1)//10
+                ts.append(t[::tskip][stop_step-1])
+                CSi,CSmi,vsi,density=vs_C(traj,stop_step)
+                CSs.append(CSi)
+                CSms.append(CSmi)
+                vss.append(vsi)
+                densities.append(density)
+            CSs=np.array(CSs)
+            CSms=np.array(CSms)
+            vss=np.array(vss)
+            ts=np.array(ts)
+            if plot:
+                fig, ax = plt.subplots(**subplots_kw)
+                ax.plot(ts,vss)
+                ax.set_xlabel('t (ps)')
+                ax.set_ylabel('vs (m/s)')
+                ax.grid()
+                fig.show()
+                fig.savefig(plt_fname_pre+'vs'+plt_fname_suff)
+            results['Vs']=vss
+            results['CS_GPa']=CSs
+            results['density']=densities[-1]
+        except:
+            print('error in estimating elastic constant')
+    return atraj,atraj_unw, results
+
+def multiinspect(nodes,plot=False,prefix='',inspect_kw={}):
+    all_res=[]
+    for node in nodes:
+        _,_,res = inspect(node,plot=plot,**inspect_kw)
+        plt.show()
+        all_res.append(res)
+    return all_res, print_all(all_res,prefix=prefix)
+def print_all(all_res,prefix='',subplots_kw=DEFAULT_SUBPLOTS_KW):
+    Ts=[]
+    Ps=[]
+    MSDs=[]
+    Vss=[]
+    DTs=[]
+    CS_GPas=[]
+    rhos=[]
+    grp_pos=[]
+    grp_width=[]
+    for res in all_res:
+        if 'T' in res:
+            Ts.append(res['T'])
+        if 'P' in res:
+            Ps.append(res['P'])
+        MSDs.append(res['msd'])
+        DTs.append(res['DT_FS'])
+        if 'Vs' in res:
+            Vss.append(res['Vs'][-1])
+            CS_GPas.append(res['CS_GPa'][-1])
+        if 'density' in res:
+            rhos.append(res['density'])
+        grp_pos.append([res['NH_peak_pos'],res['NN_peak_pos'],res['HH_peak_pos']])
+        grp_width.append([res['NH_peak_width'],res['NN_peak_width'],res['HH_peak_width']])
+    MSDs=np.array(MSDs)
+    CS_GPas=np.array(CS_GPas)
+    rhos=np.array(rhos)
+    grp_pos=np.array(grp_pos)
+    grp_width=np.array(grp_width)
+    alist=[('NN peak r',grp_pos[:,1]),('NN peak width',grp_width[:,1]),('msd0',MSDs[:,0]),('msd1',MSDs[:,1])] + ([('Vs',Vss)] if len(Vss) > 0 else [])
+    try:
+        for k,arr in alist:
+            fig, ax = plt.subplots(nrows=1,**subplots_kw)
+            for i in range(len(Ts)):
+                 ax.annotate(f'dt={DTs[i]:.3f}', xy=(Ts[i], arr[i]),
+                     xytext=(-1, 1), textcoords="offset points",
+                     horizontalalignment="right")
+            ax.scatter(Ts,arr,label=k)
+            ax.set_xlabel('T (K)')
+            ax.set_ylabel(k)
+            ax.grid()
+            fname=FIGURE_PATH+'/summary_'+prefix+k.replace(' ', '_')+'.pdf'
+            fig.show()
+            fig.savefig(fname)
+        #some sqrt(elastic constants/density)
+        def plt_el(Ts,CS,density):
+            fig, ax = plt.subplots(nrows=1,**subplots_kw)
+#            for arr,label in [(((CS[:,0,0]+CS[:,1,1]+CS[:,2,2])/(3.0*density))**.5,'longitudinal'),(((CS[:,3,3]+CS[:,4,4]+CS[:,5,5])/(3.0*density))**.5,'shear')]:
+            for arr,label in [((CS[:,0,0]/density)**.5,'longitudinal'),((CS[:,3,3]/density)**.5,'shear')]:
+                for i in range(len(Ts)):
+                     ax.annotate(f'dt={DTs[i]:.3f}', xy=(Ts[i], arr[i]),
+                         xytext=(-1, 1), textcoords="offset points",
+                         horizontalalignment="right")
+                ax.scatter(Ts,arr,label=label)
+            ax.set_xlabel('T (K)')
+            ax.set_ylabel('v (m/s)')
+            ax.legend()
+            ax.grid()
+        if len(CS_GPas) > 0:
+            plt_el(Ts,CS_GPas*1e9,rhos)
+    except:
+        pass
+    
+    return Ts,Ps,MSDs,Vss
+
+

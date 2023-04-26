@@ -47,7 +47,7 @@
 #endif
 
 const static char * _info_msg=
-"cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2022\n=========\n"
+"cite as:\nRiccardo Bertossa, analisi\nhttps://github.com/rikigigi/analisi\n(c) 2017-2023\n=========\n"
  "COMPILED AT " __DATE__ " " __TIME__ " by " CMAKE_CXX_COMPILER " whith flags (Release)"
              CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_RELEASE " (Debug) " CMAKE_CXX_FLAGS  " " CMAKE_CXX_FLAGS_DEBUG " (build type was " CMAKE_BUILD_TYPE ")"
              " on a " CMAKE_SYSTEM " whith processor " CMAKE_SYSTEM_PROCESSOR
@@ -60,7 +60,7 @@ const static char * _info_msg=
 #ifdef XDR_FILE
 "\nWith gromacs XDR file conversion support"
 #endif
-"\nv0.5.0"
+"\nv0.5.1"
 ;
 
 

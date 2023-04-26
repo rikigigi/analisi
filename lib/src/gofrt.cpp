@@ -17,6 +17,7 @@
 #include <fstream>
 #include <sstream>
 #include "config.h"
+#include "mp.h"
 
 template <class TFLOAT,class T> Gofrt<TFLOAT,T>::Gofrt(T *t, TFLOAT rmin, TFLOAT rmax, unsigned int nbin, unsigned int tmax, unsigned int nthreads, unsigned int skip,unsigned int every, bool debug) :
     CalculateMultiThread_T {nthreads, skip, t->get_natoms(), every},
