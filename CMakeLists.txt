@@ -253,7 +253,12 @@ set(BOOST_LIB boost)
 endif()
 
 add_executable(all_tests tests/src/all_tests.cpp)
-target_link_libraries(all_tests ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures ${LRT} )
+target_link_libraries(all_tests PRIVATE ${PROJECT_NAME}_lib ${BOOST_LIB} test_fixtures ${LRT} )
+if(PYTHON_INTERFACE)
+if (${PYTHONLIBS_FOUND})
+target_link_libraries(all_tests PUBLIC pybind11::embed)
+endif()
+endif()
 
 set_property(TARGET all_tests PROPERTY CXX_STANDARD 17)
 
@@ -275,6 +280,7 @@ pybind11_add_module(pyanalisi
 	)
 target_link_libraries(pyanalisi PRIVATE ${PROJECT_NAME}_lib ${LTR} )
 set_property(TARGET pyanalisi PROPERTY CXX_STANDARD 17)
+install(TARGETS pyanalisi DESTINATION ${PYTHON_SITE_PACKAGES} COMPONENT python )
 endif()
 endif()
 
@@ -291,6 +297,11 @@ endif()
 
 if (BUILD_MMAP)
 target_link_libraries(${PROJECT_NAME} PUBLIC boost_program_options "${FFTW}" "${FFTW_MT}" "${XDR_FILE}" ${LTR})
+if(PYTHON_INTERFACE)
+if (${PYTHONLIBS_FOUND})
+target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::embed)
+endif()
+endif()
 endif()
 target_link_libraries(${PROJECT_NAME}_lib PRIVATE "${FFTW}" "${FFTW_MT}" "${XDR_FILE}")
 add_definitions(-DANALISI -DDEBUG)
@@ -350,5 +361,4 @@ CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_D
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
 message(STATUS "python install library = ${PYTHON_SITE_PACKAGES}" )
-install(TARGETS pyanalisi DESTINATION ${PYTHON_SITE_PACKAGES} COMPONENT python )
 

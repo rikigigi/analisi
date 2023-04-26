@@ -1,6 +1,4 @@
 #include "testtraiettoria.h"
-#include "trajectory.h"
-#include "trajectory_numpy.h"
 #include "config.h"
 
 template <class T>
@@ -91,9 +89,11 @@ size_t BaseTrajectory<T>::get_ntypes (){
 }
 
 #ifdef PYTHON_SUPPORT
+#include "trajectory_numpy.h"
 template class BaseTrajectory<Trajectory_numpy>;
 #endif
 
 #ifdef BUILD_MMAP
+#include "trajectory.h"
 template class BaseTrajectory<Trajectory>;
 #endif

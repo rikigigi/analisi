@@ -62,6 +62,11 @@ jobs:
         SOURCE_DIR: ${{github.workspace}}
         BUILD_DIR: ${{github.workspace}}/build
         PYTHONPATH: /usr/lib/python${{ matrix.python-version }}/dist-packages
+    - name: Build_nopython
+      run: |
+        cmake -B ${{github.workspace}}/build_nopython -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DPYTHON_INTERFACE:BOOL=OFF
+        cmake --build ${{github.workspace}}/build_nopython --config ${{env.BUILD_TYPE}}
+        ctest -C ${{env.BUILD_TYPE}}
   build_windows:
     # The CMake configure and build commands are platform agnostic and should work equally
     # well on Windows or Mac.  You can convert this to a matrix build if you need
