@@ -50,6 +50,9 @@
 
 #include "blockaverage.h"
 
+#include <thread>
+#include <chrono>
+
 namespace std{
 
 template<typename A, typename B>
@@ -168,6 +171,7 @@ int main(int argc, char ** argv)
     std::vector<double> factors_input;
     std::vector<std::string> headers,output_conversion_gro;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
+    std::array< size_t, 3 > start_stop_skip;
 
     options.add_options()
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "input file in binary LAMMPS format: id type xu yu zu vx vy vz")
@@ -205,7 +209,7 @@ int main(int argc, char ** argv)
             ("subBlock,k",boost::program_options::value<unsigned int>(&n_seg)->default_value(1),"optimization option for the green-kubo calculation. It is the number of sub-blocks when calculating averages inside the big block used to calculate the variance. The performance depends on the particular system used.")
             ("kk",boost::program_options::bool_switch(&bench)->default_value(false),"small benchmark to find a good value of -k")
             ("kk-range",boost::program_options::value<std::vector<unsigned int > >(&kk_l)->multitoken(),"range where the -k benchmark has to be performed")
-            ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"perform the conversion from txt to binary LAMMPS trajectory file. The name of the output binary file is specified here")
+            ("binary-convert",boost::program_options::value<std::string>(&output_conversion),"The name of the output binary file is specified here. If given alone, perform the conversion from txt to binary LAMMPS trajectory file. If --cut is specified, the input is a different binary trajectory.")
 #ifdef XDR_FILE	    
             ("binary-convert-gromacs",boost::program_options::value<std::vector<std::string>>(&output_conversion_gro)->multitoken(),"\
 	     perform the conversion from gromacs format to the LAMMPS binary. Here you have to specify the output LAMMPS binary and the input type file with format:\n id0 type0\n ...\nidN typeN\nwith atomic types in the same order of the trr gromacs file. The trr gromacs file is specified with -i.")
@@ -215,6 +219,7 @@ int main(int argc, char ** argv)
             ("spherical-harmonics-correlation,Y",boost::program_options::value<unsigned int>(&sph)->default_value(0),"perform the calculation of the correlation function of the atomic density expanded in spherical harmonics. Note that this is a very heavy computation, first do a small test (for example with a very high -S or a low -s value). Here you have to specify the number of different bins of the considered radial distances, specified with -F. The code will calculate a correlation function for each bin.")
             ("buffer-size",boost::program_options::value<unsigned int>(&buffer_size)->default_value(30),"Buffer size for sh frame values. This is machine dependend and can heavily influence the performance of the code")
             ("lt",boost::program_options::value<unsigned int> (&read_lines_thread)->default_value(200),"parameter to read faster the time series column formatted txt file. It specifies the number of lines to read in one after the other for each thread")
+	    ("cut",boost::program_options::value(&start_stop_skip)->multitoken(),"Specify [start stop skip] as parameters. Write a new binary trajectory by taking all the timesteps between index start and stop that satisfy (idx-start)%skip==0. Index of the first timestep is 0.")
 #ifdef EXPERIMENTAL
             ("spatial-correlator,A",boost::program_options::value(&nk)->default_value({0,0.0})->multitoken(),"Numero di punti della griglia ...")
             ("spatial-correlator-dir",boost::program_options::value(&kdir)->default_value({1.0,0.0,0.0})->multitoken(),"Direzione di k")
@@ -238,13 +243,25 @@ int main(int argc, char ** argv)
 
 
         boost::program_options::notify(vm);
-
-        if (argc<=1 || ( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="") ||vm.count("help")|| (vm.count("loginput")==0 && ( debug2 || heat_coeff ) ) || skip<=0 || stop_acf<0 || final<0 || (!sub_mean && (sub_mean_start!=0) ) || sub_mean_start<0 || !(kk_l.size()==0 || kk_l.size()==2)){
+        std::cerr <<"cm.count " << vm.count("cut") <<std::endl;
+        if ( argc<=1
+	     || ( (output_conversion!="" || output_conversion_gro.size()>0 ) && input=="")
+	     || ( output_conversion=="" && vm.count("cut") > 0 )
+	     || vm.count("help") 
+	     || (vm.count("loginput")==0 && ( debug2 || heat_coeff ) )
+	     || skip<=0 
+	     || stop_acf<0 
+	     || final<0 
+	     || (!sub_mean && (sub_mean_start!=0) ) 
+	     || sub_mean_start<0 
+	     || !(kk_l.size()==0 || kk_l.size()==2)
+	   ){
             std::cout << options << "\n";
             if (vm.count("help"))
                 return 0;
             return 1;
         }
+
 
         if (cvar_list.size()%2 != 0) {
             std::cout << "Error: covariance indexes list must contain an even number of elements\n";
@@ -269,7 +286,7 @@ int main(int argc, char ** argv)
 
     try {
 
-        if (output_conversion!="") {
+        if (output_conversion!="" && vm.count("cut") == 0 ) {
 
             ConvertiBinario conv(input,output_conversion);
             return 0;
@@ -284,6 +301,46 @@ int main(int argc, char ** argv)
                 return 0;
             }
         }
+
+	if (vm.count("cut") > 0 ) {
+	   if (start_stop_skip[2]==0) {
+              std::cerr << "Error: you must specify a positive skip"<<std::endl;
+	      return 1;
+	   }
+	   Trajectory t(input);
+	   if (start_stop_skip[1]==0) {
+              start_stop_skip[1]=t.get_ntimesteps();
+	   }
+	   std::cout << "dumping the trajectory from "<<start_stop_skip[0] << " to "<<
+		   start_stop_skip[1] << " every " << start_stop_skip[2] << " steps..."<<std::endl;
+
+	   size_t written;
+           auto thread_exception = std::exception_ptr();
+	   bool finished=false;
+	   auto dumper_thread = std::thread([&](){
+	          try {
+                    t.dump_every(0,start_stop_skip[0],start_stop_skip[1],start_stop_skip[2],output_conversion.c_str(),written);
+		    finished=true;
+		  } catch (...) {
+		    finished=true;
+		    thread_exception = std::current_exception();
+		  }
+	       }
+	   );
+           while(! finished) {
+               for (int i=0;i<100;++i) {
+                   if (finished) break;
+		   std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	       }
+               std::cout << "Written "<<written <<" steps"<<std::endl;
+           }
+
+	   dumper_thread.join();
+           if (thread_exception) {
+             std::rethrow_exception(thread_exception);
+	   }
+           return 0;
+	}
 
 
 
