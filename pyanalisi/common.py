@@ -49,7 +49,8 @@ import pyanalisi.pyanalisi as pa
 print(pa.info())
 
 from matplotlib import collections as mc
-from IPython.core.display import display, HTML
+from IPython.display import display
+from IPython.core.display import HTML
 import matplotlib.animation
 
 from .plotters import *
@@ -480,7 +481,7 @@ def plot_msd(times, res, cm, title='', res_var=None, fig_ax=None, subplots_kw=DE
     ax.legend()
     ax.set_title('{}MSD'.format(title))
     ax.set_xlabel('time (ps)')
-    ax.set_ylabel('$\AA^2/ps$')
+    ax.set_ylabel(r'$\AA^2/ps$')
     return fig, ax
 
 
@@ -598,10 +599,10 @@ def plot_sh(startr, endr, times, res, type1, type2, ibin, lmin=0, lmax=11, title
     if log:
         ax.set_yscale('log')
         axins.set_yscale('log')
-    ax.set_title('{}$r \in [{:.3f} ,{:.3f}[$'.format(title, startr + dr * ibin, startr + dr * (ibin + 1)))
+    ax.set_title('{}$r \\in [{:.3f} ,{:.3f}[$'.format(title, startr + dr * ibin, startr + dr * (ibin + 1)))
     ax.set_xlim(0, maxt)
     ax.set_xlabel('time (ps)')
-    ax.set_ylabel('$c_{{\ell}}^{{{0}\,{1}}}(t)/c_{{\ell}}^{{{0}\,{1}}}(0)$'.format(type1, type2))
+    ax.set_ylabel('$c_{{\\ell}}^{{{0}\\,{1}}}(t)/c_{{\\ell}}^{{{0}\\,{1}}}(0)$'.format(type1, type2))
     return fig, ax, axins, fits
 
 
@@ -616,7 +617,7 @@ def plot_gofr(startr, endr, res, title='', res_var=None, fig_ax=None, subplots_k
     for i in range(0, res.shape[1] // 2):
         plt_err(ax, (rm + rp) / 2, res[0, i, :] / vols,
                 (res_var[0, i, :] / (vols ** 4)) if res_var is not None else res_var)
-    ax.set_xlabel('$\AA$')
+    ax.set_xlabel(r'$\AA$')
     ax.set_ylabel('number of atoms in the shell / volume of the shell')
     ax.set_title('{}$g(r)$'.format(title))
     return fig, ax

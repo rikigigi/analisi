@@ -5,7 +5,7 @@ import matplotlib.colors as colors
 from matplotlib import cm
 import numpy as np
 import matplotlib
-from IPython.core.display import display, HTML
+from IPython.core.display import HTML
 
 class SteinPlot:
     @staticmethod
