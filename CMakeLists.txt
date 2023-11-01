@@ -74,6 +74,15 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 
 
+function(TRY_ADD_CXX_COMPILER_LINKER_FLAG FLAG TARGET)
+    
+	  set (_saved_CRL ${CMAKE_REQUIRED_LIBRARIES})
+	  set (CMAKE_REQUIRED_LIBRARIES ${FLAG})
+	  check_cxx_compiler_flag ("${FLAG}" ${TARGET})
+	  set (CMAKE_REQUIRED_LIBRARIES ${_saved_CRL})
+	  message(STATUS "checked ${FLAG}")
+endfunction()
+
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 #set(SAFE_CMAKE_REQUIRED_LINK_OPTIONS "${CMAKE_REQUIRED_LINK_OPTIONS}")
@@ -81,9 +90,9 @@ include(CheckCCompilerFlag)
 #CHECK_CXX_COMPILER_FLAG("-fsanitize=address" COMPILER_HAS_SANITIZER_ADDR)
 #set(CMAKE_REQUIRED_LINK_OPTIONS "${SAFE_CMAKE_REQUIRED_LINK_OPTIONS}")
 #unset(SAFE_CMAKE_REQUIRED_LINK_OPTIONS)
-CHECK_CXX_COMPILER_FLAG(" -fsanitize=address " COMPILER_HAS_SANITIZER_ADDR)
-CHECK_CXX_COMPILER_FLAG(" -fsanitize=leak " COMPILER_HAS_SANITIZER_LEAK)
-CHECK_CXX_COMPILER_FLAG(" -fsanitize=undefined " COMPILER_HAS_SANITIZER_UNDEF)
+TRY_ADD_CXX_COMPILER_LINKER_FLAG(" -fsanitize=address " COMPILER_HAS_SANITIZER_ADDR)
+TRY_ADD_CXX_COMPILER_LINKER_FLAG(" -fsanitize=leak " COMPILER_HAS_SANITIZER_LEAK)
+TRY_ADD_CXX_COMPILER_LINKER_FLAG(" -fsanitize=undefined " COMPILER_HAS_SANITIZER_UNDEF)
 #CHECK_CXX_COMPILER_FLAG(" -ffpe-trap=invalid,overflow " COMPILER_HAS_FTRAP)
 if (COMPILER_HAS_SANITIZER_ADDR)
     set(COMPILER_SANITIZE_FLAGS " ${COMPILER_SANITIZE_FLAGS} -fsanitize=address")
@@ -176,6 +185,7 @@ set (ANALISI_LIB
     lib/src/calcoliblocchi.cpp
     lib/src/convertibinario.cpp
     lib/src/convolution.cpp
+    lib/src/correlatorespaziale.cpp
     lib/src/cronometro.C
     lib/src/doubleround.cpp
     lib/src/gofrt.cpp
