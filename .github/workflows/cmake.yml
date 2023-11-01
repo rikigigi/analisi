@@ -103,5 +103,5 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         copy ${{github.workspace}}/build/${{env.BUILD_TYPE}}/pyanalisi* .
-        pip install pytest pytest-regressions pandas matplotlib numpy scipy testbook k3d
+        pip install pytest pytest-regressions pandas matplotlib numpy scipy testbook k3d ipykernel
         pytest -sv .
