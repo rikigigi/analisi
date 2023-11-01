@@ -111,6 +111,13 @@ public:
     void index_all();
     int * get_lammps_id();
     int *get_lammps_type();
+    /*
+     * write a new binary file by copying the timesteps starting at timestep index start to
+     * timestep index stop. This is the closed interval [start, stop] taking one every skip
+     * steps. Starts readint at offset and return the offset of the next timestep in the file
+     * constantly updates written to the number of timesteps written in the new file.
+     * */
+    size_t dump_every(size_t offset, const size_t start, const size_t stop, const size_t skip, const char * fname, size_t & written);
 private:
     std::map<int,unsigned int>id_map;
     size_t * timesteps; // puntatori (offset rispetto all'inizio) all'inizio di ogni timesteps

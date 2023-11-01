@@ -37,7 +37,7 @@
 #include <stdexcept>
 #include <sstream>
 #include "macros.h"
-
+#include <fstream>
 
 
 
@@ -314,6 +314,23 @@ size_t Trajectory::leggi_pezzo(const size_t &partenza /// offset da cui partire 
 
     return letti;
 
+}
+
+size_t Trajectory::dump_every(size_t offset, const size_t start, const size_t stop, const size_t skip, const char* fname, size_t & written) {
+    std::ofstream outfile(fname,std::ofstream::binary);
+    size_t timestep_size = 0;
+    written=0;
+    for (size_t i = 0; i<=stop && i<n_timesteps; ++i){
+	TimestepManager header;
+        Chunk * ch;
+	timestep_size = leggi_pezzo<false>(offset, header,ch);
+	if (i>=start && i<=stop && (i-start)%skip==0 ) {
+            outfile.write(file+offset,timestep_size);
+	    written+=1;
+	}
+	offset+=timestep_size;
+    }
+    return offset;
 }
 
 /**
