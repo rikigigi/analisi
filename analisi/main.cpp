@@ -53,6 +53,8 @@
 #include <thread>
 #include <chrono>
 
+#include "npy_writer.h"
+
 namespace std{
 
 template<typename A, typename B>
@@ -123,6 +125,25 @@ void validate (boost::any& v,
 }
 }
 
+//function that splits a string into two parts, the last one being ".npy", if present. If not, the second part is setted to ".npy"
+std::pair<std::string,std::string> split_npy(const std::string & s) {
+    std::string::size_type pos = s.find_last_of('.');
+    if (pos == std::string::npos || s.substr(pos) != ".npy") {
+        return std::make_pair(s,".npy");
+    } else {
+        return std::make_pair(s.substr(0,pos),s.substr(pos));
+    }
+}
+
+//functions that returns an array of open binary files for writing. Arguments: pair with prefix and suffix, and vector with infix
+std::vector<std::ofstream> open_files(const std::pair<std::string, std::string> & prefix_suffix, const std::vector<std::string> & infix) {
+    std::vector<std::ofstream> out;
+    for (const auto & i : infix) {
+        out.push_back(std::ofstream(prefix_suffix.first + i + prefix_suffix.second, std::ios::binary));
+    }
+    return out;
+}
+
 int main(int argc, char ** argv)
 {
 
@@ -172,10 +193,12 @@ int main(int argc, char ** argv)
     std::vector<std::string> headers,output_conversion_gro;
     std::vector< std::pair <unsigned int,unsigned int > > cvar;
     std::array< size_t, 3 > start_stop_skip;
+    std::string output_npy_fname;
 
     options.add_options()
             ("input,i",boost::program_options::value<std::string>(&input)->default_value(""), "input file in binary LAMMPS format: id type xu yu zu vx vy vz")
             ("loginput,l",boost::program_options::value<std::string>(&log_input),"column formatted file with headers. At the beginning of the file you can have free informations. When the program finds a line with only numbers, it assumes that data starts here, and that the line before contains the headers of the columns.")
+            ("npy", boost::program_options::value<std::string>(&output_npy_fname)->default_value(""), "output file in numpy format. If set, the data will not be written in the stdandard output")
             ("help,h", "help message")
             ("thread,N",boost::program_options::value<int>(&numero_thread)->default_value(omp_num_threads),"number of threads to use where supported (defaults to OMP_NUM_THREADS if present)")
             ("blocknumber,B",boost::program_options::value<int>(&blocknumber)->default_value(20),"number of blocks to use to calculate averages and variances and to split the reading of the trajectory")
@@ -500,19 +523,25 @@ int main(int argc, char ** argv)
                     std::cout << "# factor integral, factor correlation\n#"
                               << factor_conv << " " << factor_intToCorr <<  "\n";
                     std::cout << greenK_c.puntatoreCalcolo()->get_columns_description();
+                    //if (output_npy_fname == ""){
+                        for (unsigned int i=0;i<greenK.size();i++) {
+                            for (unsigned int j=0;j<narr;j++) {
+                                std::cout << greenK.media(j)[i]*factors[j] << " "
+                                        << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                            }
 
-                    for (unsigned int i=0;i<greenK.size();i++) {
-                        for (unsigned int j=0;j<narr;j++) {
-                            std::cout << greenK.media(j)[i]*factors[j] << " "
-                                      << greenK.varianza(j)[i]*factors[j]*factors[j] << " ";
+                            for (unsigned int j=0;j<greenK.n_cvar();j++){
+                                std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
+                            }
+                            std::cout  << "\n";
+
                         }
-
-                        for (unsigned int j=0;j<greenK.n_cvar();j++){
-                            std::cout << greenK.covarianza(j)[i]*factors[cvar[j].first]*factors[cvar[j].second] << " ";
-                        }
-                        std::cout  << "\n";
-
-                    }
+                    // } else {
+                    //     auto files = open_files(split_npy(output_npy_fname), {"_average","_variance","_covariance"});
+                    //     for (auto & f : files) {
+                    //         npy::write_npy(f,greenK.media(0),greenK.size(),{greenK.size(),narr});
+                    //     }
+                    // }
                     delete [] factors;
                 }
                 delete binary_traj;
@@ -537,11 +566,17 @@ int main(int argc, char ** argv)
                 {using MSD=MSD<Trajectory,fpe_>;\
                 BlockAverage<MSD,unsigned int,unsigned int,unsigned int,bool,bool,bool> Msd(&test,blocknumber);\
                 Msd.calculate(skip,stop_acf,numero_thread,msd_cm,msd_self,dumpGK);\
-                for (unsigned int i=0;i<Msd.media()->lunghezza()/test.get_ntypes()/f_cm;i++) {\
-                    for (unsigned int j=0;j<test.get_ntypes()*f_cm;j++)\
-                        std::cout << Msd.media()->elemento(i*test.get_ntypes()*f_cm+j) << " " <<\
-                                     Msd.varianza()->elemento(i*test.get_ntypes()*f_cm+j) << " ";\
+                auto shape = Msd.puntatoreCalcolo()->get_shape();\
+                if (output_npy_fname == ""){\
+                for (unsigned int i=0;i<shape[0];i++) {\
+                    for (unsigned int j=0;j<shape[1]*shape[2];j++)\
+                        std::cout << Msd.media()->elemento(i*shape[1]*shape[2]+j) << " " <<\
+                                     Msd.varianza()->elemento(i*shape[1]*shape[2]+j) << " ";\
                     std::cout << "\n";\
+                }}else{\
+                    auto files = open_files(split_npy(output_npy_fname), {"_average","_variance"});\
+                    npy::write_npy(files[0],Msd.media()->access_vdata(), Msd.media()->lunghezza(), shape);\
+                    npy::write_npy(files[1],Msd.varianza()->access_vdata(), Msd.varianza()->lunghezza(), shape);\
                 }}
                 if (fpe){
                     MSD_(true) //with fpe
@@ -560,27 +595,34 @@ int main(int argc, char ** argv)
                 BlockAverage<Gofrt<double,Trajectory>,double,double,unsigned int,unsigned int,unsigned int, unsigned int,unsigned int, bool>
                         gofr(&tr,blocknumber);
                 gofr.calculate(factors_input[0],factors_input[1],gofrt,stop_acf,numero_thread,skip,every,dumpGK);
-
-                unsigned int ntyp=tr.get_ntypes()*(tr.get_ntypes()+1);
-                unsigned int tmax=gofr.media()->lunghezza()/gofrt/ntyp;
+                const auto shape = gofr.puntatoreCalcolo()->get_shape();
+                const unsigned int nbin=shape[2];
+                const unsigned int ntyp=shape[1];  
+                const unsigned int tmax=shape[0];
 
                 std::cout << gofr.puntatoreCalcolo()->get_columns_description();
-                for (unsigned int t=0;t<tmax;t+=every) {
-                    for (unsigned int r=0;r<gofrt;r++) {
-                        std::cout << t << " " << r;
-                        for (unsigned int itype=0;itype<ntyp;itype++) {
-                            std::cout << " "<< gofr.media()->elemento(
-                                             t*ntyp*gofrt+
-                                             gofrt*itype+
-                                             r)
-                                      << " "<< gofr.varianza()->elemento(
-                                             t*ntyp*gofrt+
-                                             gofrt*itype+
-                                             r);
+                if (output_npy_fname==""){
+                    for (unsigned int t=0;t<tmax;t+=every) { //NB: it looks that if every is different from 1, the allocated array is a lot bigger tha necessary
+                        for (unsigned int r=0;r<gofrt;r++) {
+                            std::cout << t << " " << r;
+                            for (unsigned int itype=0;itype<ntyp;itype++) {
+                                std::cout << " "<< gofr.media()->elemento(
+                                                t*ntyp*gofrt+
+                                                gofrt*itype+
+                                                r)
+                                        << " "<< gofr.varianza()->elemento(
+                                                t*ntyp*gofrt+
+                                                gofrt*itype+
+                                                r);
+                            }
+                            std::cout << "\n";
                         }
-                        std::cout << "\n";
+                        std::cout << "\n\n";
                     }
-                    std::cout << "\n\n";
+                } else {
+                    auto files = open_files(split_npy(output_npy_fname), {"_average","_variance"});
+                    npy::write_npy(files[0],gofr.media()->access_vdata(), gofr.media()->lunghezza(), shape);
+                    npy::write_npy(files[1],gofr.varianza()->access_vdata(), gofr.varianza()->lunghezza(), shape);                    
                 }
 
 
@@ -590,7 +632,7 @@ int main(int argc, char ** argv)
                 }
                 std::cerr << "Calculation of spherical harmonic density correlation function is beginning (this can take a lot of time)...\n";
                 Trajectory tr(input);
-                tr.set_pbc_wrap(false); //è necessario impostare le pbc per far funzionare correttamente la distanza delle minime immagini
+                tr.set_pbc_wrap(false); //false to avoid discontinuities in the position differences over different timesteps
 
                 using SHC=SphericalCorrelations<10,double,Trajectory>;
                 SHC::rminmax_t rminmax;
@@ -604,19 +646,23 @@ int main(int argc, char ** argv)
 
                 sh.calculate(rminmax,sph,stop_acf,numero_thread,skip,buffer_size,dumpGK,{});
 
-                auto shape= sh.media()->get_shape();
+                const auto shape= sh.media()->get_shape();
 
                 std::cout << sh.puntatoreCalcolo()->get_columns_description();
-                auto line_size=shape[1]*shape[2]*shape[3]*shape[4];
-                for (unsigned int t=0;t<shape[0];t++) {
-                    for (unsigned int r=0;r<line_size;r++) {
-                        std::cout << sh.media()->elemento(t*line_size+r) << " "<<
-                                     sh.varianza()->elemento(t*line_size+r) << " ";
+                if (output_npy_fname==""){
+                    auto line_size=shape[1]*shape[2]*shape[3]*shape[4];
+                    for (unsigned int t=0;t<shape[0];t++) {
+                        for (unsigned int r=0;r<line_size;r++) {
+                            std::cout << sh.media()->elemento(t*line_size+r) << " "<<
+                                        sh.varianza()->elemento(t*line_size+r) << " ";
+                        }
+                        std::cout << std::endl;
                     }
-                    std::cout << std::endl;
+                } else {
+                    auto files = open_files(split_npy(output_npy_fname), {"_average","_variance"});
+                    npy::write_npy(files[0],sh.media()->access_vdata(), sh.media()->lunghezza(), shape);
+                    npy::write_npy(files[1],sh.varianza()->access_vdata(), sh.varianza()->lunghezza(), shape);
                 }
-
-
             }else if (vicini_r>0){
                 std::cerr << "Beginning of calculation of neighbour histogram\n";
                 Trajectory test(input);

@@ -24,14 +24,13 @@
 
 
 #include "lammps_struct.h"
-
 /**
- * Questa classe garantisce un accesso veloce ai timestep caricati con set_access_at
- * , che carica tutti i timestepa partendo da quello specificato in un numero pari a quello richiesto
- * con la funzione set_data_access_block_size in precedenza. Caricare nuovi pezzi costa nuove
- * allocazioni (e deallocazioni) di memoria e tempo cpu. Il file viene letto tramite la chiamata di sistema mmap.
- * Nel programma vengono allocati con new [] solo degli array dove vengono immagazzinati i dati
- * della finestra (quindi consumando meno memoria che nel caricamento del file in un unico colpo)
+ * This class ensures fast access to the timesteps loaded with set_access_at,
+ * which loads all timesteps starting from the specified one in a number equal to that requested
+ * with the set_data_access_block_size function previously. Loading new pieces incurs new
+ * memory allocations (and deallocations) and CPU time. The file is read using the mmap system call.
+ * In the program, only arrays are allocated with new [] where the data
+ * of the window are stored (thus consuming less memory than loading the file in one go).
 **/
 
 class Trajectory : public BaseTrajectory<Trajectory>
