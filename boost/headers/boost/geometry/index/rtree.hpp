@@ -3,10 +3,11 @@
 // R-tree implementation
 //
 // Copyright (c) 2008 Federico J. Fernandez.
-// Copyright (c) 2011-2019 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2023 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2020 Caian Benedicto, Campinas, Brazil.
 //
-// This file was modified by Oracle on 2019.
-// Modifications copyright (c) 2019 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2019-2021.
+// Modifications copyright (c) 2019-2021 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 //
 // Use, modification and distribution is subject to the Boost Software License,
@@ -18,13 +19,16 @@
 
 // STD
 #include <algorithm>
+#include <type_traits>
 
 // Boost
 #include <boost/container/new_allocator.hpp>
-#include <boost/move/move.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/core/invoke_swap.hpp>
 
 // Boost.Geometry
+#include <boost/geometry/core/static_assert.hpp>
+
 #include <boost/geometry/algorithms/detail/comparable_distance/interface.hpp>
 #include <boost/geometry/algorithms/detail/covered_by/interface.hpp>
 #include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
@@ -86,9 +90,20 @@
 #include <boost/geometry/index/detail/rtree/query_iterators.hpp>
 
 #ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
-// serialization
+#ifndef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_SERIALIZATION
+#define BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_SERIALIZATION
+#endif
+#ifndef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_ITERATORS
+#define BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_ITERATORS
+#endif
+#endif
+
+#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_SERIALIZATION
 #include <boost/geometry/index/detail/serialization.hpp>
 #endif
+
+#include <boost/geometry/util/range.hpp>
+#include <boost/geometry/util/type_traits.hpp>
 
 // TODO change the name to bounding_tree
 
@@ -111,7 +126,7 @@ algorithm with specific parameters like min and max number of elements in node.
 
 \par
 Predefined algorithms with compile-time parameters are:
-\li <tt>boost::geometry::index::linear</tt>,
+ \li <tt>boost::geometry::index::linear</tt>,
  \li <tt>boost::geometry::index::quadratic</tt>,
  \li <tt>boost::geometry::index::rstar</tt>.
 
@@ -122,14 +137,13 @@ Predefined algorithms with run-time parameters are:
  \li \c boost::geometry::index::dynamic_rstar.
 
 \par IndexableGetter
-The object of IndexableGetter type translates from Value to Indexable each time
-r-tree requires it. This means that this operation is done for each Value
-access. Therefore the IndexableGetter should return the Indexable by
-a reference type. The Indexable should not be calculated since it could harm
+An object of IndexableGetter type translates from Value to Indexable each time
+r-tree requires it. This operation is done for each Value access.
+The Indexable should not be calculated each time since it could harm
 the performance. The default IndexableGetter can translate all types adapted
 to Point, Box or Segment concepts (called Indexables). Furthermore, it can
-handle <tt>std::pair<Indexable, T></tt>, <tt>boost::tuple<Indexable, ...></tt>
-and <tt>std::tuple<Indexable, ...></tt> when possible. For example, for Value
+handle <tt>std::pair<Indexable, T></tt>, <tt>std::tuple<Indexable, ...></tt>
+and <tt>boost::tuple<Indexable, ...></tt>. For example, for Value
 of type <tt>std::pair<Box, int></tt>, the default IndexableGetter translates
 from <tt>std::pair<Box, int> const&</tt> to <tt>Box const&</tt>.
 
@@ -158,8 +172,6 @@ template
 >
 class rtree
 {
-    BOOST_COPYABLE_AND_MOVABLE(rtree)
-
 public:
     /*! \brief The type of Value stored in the container. */
     typedef Value value_type;
@@ -257,10 +269,10 @@ private:
         members_holder(IndGet const& ind_get,
                        ValEq const& val_eq,
                        Parameters const& parameters,
-                       BOOST_FWD_REF(Alloc) alloc)
+                       Alloc&& alloc)
             : translator_type(ind_get, val_eq)
             , Parameters(parameters)
-            , allocators_type(boost::forward<Alloc>(alloc))
+            , allocators_type(std::forward<Alloc>(alloc))
             , values_count(0)
             , leafs_level(0)
             , root(0)
@@ -294,7 +306,7 @@ private:
         node_pointer root;
     };
 
-    typedef typename members_holder::translator_type translator_type;    
+    typedef typename members_holder::translator_type translator_type;
     typedef typename members_holder::options_type options_type;
     typedef typename members_holder::allocators_type allocators_type;
     typedef typename members_holder::node node;
@@ -305,7 +317,7 @@ private:
     typedef typename members_holder::allocator_traits_type allocator_traits_type;
 
     friend class detail::rtree::utilities::view<rtree>;
-#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_SERIALIZATION
     friend class detail::rtree::private_view<rtree>;
     friend class detail::rtree::const_private_view<rtree>;
 #endif
@@ -398,13 +410,7 @@ public:
                  allocator_type const& allocator = allocator_type())
         : m_members(getter, equal, parameters, allocator)
     {
-        typedef detail::rtree::pack<members_holder> pack;
-        size_type vc = 0, ll = 0;
-        m_members.root = pack::apply(first, last, vc, ll,
-                                     m_members.parameters(), m_members.translator(),
-                                     m_members.allocators());
-        m_members.values_count = vc;
-        m_members.leafs_level = ll;
+        pack_construct(first, last, boost::container::new_allocator<void>());
     }
 
     /*!
@@ -431,13 +437,156 @@ public:
                           allocator_type const& allocator = allocator_type())
         : m_members(getter, equal, parameters, allocator)
     {
-        typedef detail::rtree::pack<members_holder> pack;
-        size_type vc = 0, ll = 0;
-        m_members.root = pack::apply(::boost::begin(rng), ::boost::end(rng), vc, ll,
-                                     m_members.parameters(), m_members.translator(),
-                                     m_members.allocators());
-        m_members.values_count = vc;
-        m_members.leafs_level = ll;
+        pack_construct(::boost::begin(rng), ::boost::end(rng), boost::container::new_allocator<void>());
+    }
+
+    /*!
+    \brief The constructor.
+
+    The tree is created using packing algorithm and a temporary packing allocator.
+
+    \param first             The beginning of the range of Values.
+    \param last              The end of the range of Values.
+    \param parameters        The parameters object.
+    \param getter            The function object extracting Indexable from Value.
+    \param equal             The function object comparing Values.
+    \param allocator         The allocator object for persistent data in the tree.
+    \param temp_allocator    The temporary allocator object used when packing.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Iterator, typename PackAlloc>
+    inline rtree(Iterator first, Iterator last,
+                 parameters_type const& parameters,
+                 indexable_getter const& getter,
+                 value_equal const& equal,
+                 allocator_type const& allocator,
+                 PackAlloc const& temp_allocator)
+        : m_members(getter, equal, parameters, allocator)
+    {
+        pack_construct(first, last, temp_allocator);
+    }
+
+    /*!
+    \brief The constructor.
+
+    The tree is created using packing algorithm and a temporary packing allocator.
+
+    \param rng               The range of Values.
+    \param parameters        The parameters object.
+    \param getter            The function object extracting Indexable from Value.
+    \param equal             The function object comparing Values.
+    \param allocator         The allocator object for persistent data in the tree.
+    \param temp_allocator    The temporary allocator object used when packing.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Range, typename PackAlloc>
+    inline explicit rtree(Range const& rng,
+                          parameters_type const& parameters,
+                          indexable_getter const& getter,
+                          value_equal const& equal,
+                          allocator_type const& allocator,
+                          PackAlloc const& temp_allocator)
+        : m_members(getter, equal, parameters, allocator)
+    {
+        pack_construct(::boost::begin(rng), ::boost::end(rng), temp_allocator);
+    }
+
+    /*!
+    \brief The constructor.
+
+    The tree is created using packing algorithm and a temporary packing allocator.
+
+    \param first        The beginning of the range of Values.
+    \param last         The end of the range of Values.
+    \param allocator    The allocator object for persistent data in the tree.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Iterator>
+    inline rtree(Iterator first, Iterator last,
+                 allocator_type const& allocator)
+        : m_members(indexable_getter(), value_equal(), parameters_type(), allocator)
+    {
+        pack_construct(first, last, boost::container::new_allocator<void>());
+    }
+
+    /*!
+    \brief The constructor.
+
+    The tree is created using packing algorithm and a temporary packing allocator.
+
+    \param rng          The range of Values.
+    \param allocator    The allocator object for persistent data in the tree.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Range>
+    inline explicit rtree(Range const& rng,
+                          allocator_type const& allocator)
+        : m_members(indexable_getter(), value_equal(), parameters_type(), allocator)
+    {
+        pack_construct(::boost::begin(rng), ::boost::end(rng), boost::container::new_allocator<void>());
+    }
+
+    /*!
+    \brief The constructor.
+
+    The tree is created using packing algorithm and a temporary packing allocator.
+
+    \param first             The beginning of the range of Values.
+    \param last              The end of the range of Values.
+    \param allocator         The allocator object for persistent data in the tree.
+    \param temp_allocator    The temporary allocator object used when packing.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Iterator, typename PackAlloc>
+    inline rtree(Iterator first, Iterator last,
+                 allocator_type const& allocator,
+                 PackAlloc const& temp_allocator)
+        : m_members(indexable_getter(), value_equal(), parameters_type(), allocator)
+    {
+        pack_construct(first, last, temp_allocator);
+    }
+
+    /*!
+    \brief The constructor.
+
+    The tree is created using packing algorithm and a temporary packing allocator.
+
+    \param rng               The range of Values.
+    \param allocator         The allocator object for persistent data in the tree.
+    \param temp_allocator    The temporary allocator object used when packing.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Range, typename PackAlloc>
+    inline explicit rtree(Range const& rng,
+                          allocator_type const& allocator,
+                          PackAlloc const& temp_allocator)
+        : m_members(indexable_getter(), value_equal(), parameters_type(), allocator)
+    {
+        pack_construct(::boost::begin(rng), ::boost::end(rng), temp_allocator);
     }
 
     /*!
@@ -454,7 +603,7 @@ public:
     /*!
     \brief  The copy constructor.
 
-    It uses parameters, translator and allocator from the source tree.
+    It uses parameters, observers and allocator from the source tree.
 
     \param src          The rtree which content will be copied.
 
@@ -475,7 +624,7 @@ public:
     /*!
     \brief The copy constructor.
 
-    It uses Parameters and translator from the source tree.
+    It uses parameters and observers from the source tree.
 
     \param src          The rtree which content will be copied.
     \param allocator    The allocator which will be used.
@@ -496,28 +645,28 @@ public:
     /*!
     \brief The moving constructor.
 
-    It uses parameters, translator and allocator from the source tree.
+    It uses parameters, observers and allocator from the source tree.
 
     \param src          The rtree which content will be moved.
 
     \par Throws
     Nothing.
     */
-    inline rtree(BOOST_RV_REF(rtree) src)
+    inline rtree(rtree&& src)
         : m_members(src.m_members.indexable_getter(),
                     src.m_members.equal_to(),
                     src.m_members.parameters(),
-                    boost::move(src.m_members.allocators()))
+                    std::move(src.m_members.allocators()))
     {
-        boost::swap(m_members.values_count, src.m_members.values_count);
-        boost::swap(m_members.leafs_level, src.m_members.leafs_level);
-        boost::swap(m_members.root, src.m_members.root);
+        boost::core::invoke_swap(m_members.values_count, src.m_members.values_count);
+        boost::core::invoke_swap(m_members.leafs_level, src.m_members.leafs_level);
+        boost::core::invoke_swap(m_members.root, src.m_members.root);
     }
 
     /*!
     \brief The moving constructor.
 
-    It uses parameters and translator from the source tree.
+    It uses parameters and observers from the source tree.
 
     \param src          The rtree which content will be moved.
     \param allocator    The allocator.
@@ -527,7 +676,7 @@ public:
     \li If Value copy constructor throws (only if allocators aren't equal).
     \li If allocation throws or returns invalid value (only if allocators aren't equal).
     */
-    inline rtree(BOOST_RV_REF(rtree) src, allocator_type const& allocator)
+    inline rtree(rtree&& src, allocator_type const& allocator)
         : m_members(src.m_members.indexable_getter(),
                     src.m_members.equal_to(),
                     src.m_members.parameters(),
@@ -535,9 +684,9 @@ public:
     {
         if ( src.m_members.allocators() == allocator )
         {
-            boost::swap(m_members.values_count, src.m_members.values_count);
-            boost::swap(m_members.leafs_level, src.m_members.leafs_level);
-            boost::swap(m_members.root, src.m_members.root);
+            boost::core::invoke_swap(m_members.values_count, src.m_members.values_count);
+            boost::core::invoke_swap(m_members.leafs_level, src.m_members.leafs_level);
+            boost::core::invoke_swap(m_members.root, src.m_members.root);
         }
         else
         {
@@ -548,7 +697,7 @@ public:
     /*!
     \brief The assignment operator.
 
-    It uses parameters and translator from the source tree.
+    It uses parameters and observers from the source tree.
 
     \param src          The rtree which content will be copied.
 
@@ -557,7 +706,7 @@ public:
     \li If allocation throws.
     \li If allocation throws or returns invalid value.
     */
-    inline rtree & operator=(BOOST_COPY_ASSIGN_REF(rtree) src)
+    inline rtree & operator=(rtree const& src)
     {
         if ( &src != this )
         {
@@ -567,11 +716,11 @@ public:
             // NOTE: if propagate is true for std allocators on darwin 4.2.1, glibc++
             // (allocators stored as base classes of members_holder)
             // copying them changes values_count, in this case it doesn't cause errors since data must be copied
-            
-            typedef boost::mpl::bool_<
+
+            typedef std::integral_constant<bool,
                 allocator_traits_type::propagate_on_container_copy_assignment::value
             > propagate;
-            
+
             if ( propagate::value && !(this_allocs == src_allocs) )
                 this->raw_destroy(*this);
             detail::assign_cond(this_allocs, src_allocs, propagate());
@@ -586,7 +735,7 @@ public:
     /*!
     \brief The moving assignment.
 
-    It uses parameters and translator from the source tree.
+    It uses parameters and observers from the source tree.
 
     \param src          The rtree which content will be moved.
 
@@ -595,13 +744,13 @@ public:
     \li If Value copy constructor throws.
     \li If allocation throws or returns invalid value.
     */
-    inline rtree & operator=(BOOST_RV_REF(rtree) src)
+    inline rtree & operator=(rtree&& src)
     {
         if ( &src != this )
         {
             allocators_type & this_allocs = m_members.allocators();
             allocators_type & src_allocs = src.m_members.allocators();
-            
+
             if ( this_allocs == src_allocs )
             {
                 this->raw_destroy(*this);
@@ -610,15 +759,15 @@ public:
                 m_members.equal_to() = src.m_members.equal_to();
                 m_members.parameters() = src.m_members.parameters();
 
-                boost::swap(m_members.values_count, src.m_members.values_count);
-                boost::swap(m_members.leafs_level, src.m_members.leafs_level);
-                boost::swap(m_members.root, src.m_members.root);
+                boost::core::invoke_swap(m_members.values_count, src.m_members.values_count);
+                boost::core::invoke_swap(m_members.leafs_level, src.m_members.leafs_level);
+                boost::core::invoke_swap(m_members.root, src.m_members.root);
 
                 // NOTE: if propagate is true for std allocators on darwin 4.2.1, glibc++
                 // (allocators stored as base classes of members_holder)
                 // moving them changes values_count
-                
-                typedef boost::mpl::bool_<
+
+                typedef std::integral_constant<bool,
                     allocator_traits_type::propagate_on_container_move_assignment::value
                 > propagate;
                 detail::move_cond(this_allocs, src_allocs, propagate());
@@ -638,7 +787,7 @@ public:
     /*!
     \brief Swaps contents of two rtrees.
 
-    Parameters, translator and allocators are swapped as well.
+    Parameters, observers and allocators are swapped as well.
 
     \param other    The rtree which content will be swapped with this rtree content.
 
@@ -647,22 +796,22 @@ public:
     */
     void swap(rtree & other)
     {
-        boost::swap(m_members.indexable_getter(), other.m_members.indexable_getter());
-        boost::swap(m_members.equal_to(), other.m_members.equal_to());
-        boost::swap(m_members.parameters(), other.m_members.parameters());
-        
+        boost::core::invoke_swap(m_members.indexable_getter(), other.m_members.indexable_getter());
+        boost::core::invoke_swap(m_members.equal_to(), other.m_members.equal_to());
+        boost::core::invoke_swap(m_members.parameters(), other.m_members.parameters());
+
         // NOTE: if propagate is true for std allocators on darwin 4.2.1, glibc++
         // (allocators stored as base classes of members_holder)
         // swapping them changes values_count
-        
-        typedef boost::mpl::bool_<
+
+        typedef std::integral_constant<bool,
             allocator_traits_type::propagate_on_container_swap::value
         > propagate;
         detail::swap_cond(m_members.allocators(), other.m_members.allocators(), propagate());
 
-        boost::swap(m_members.values_count, other.m_members.values_count);
-        boost::swap(m_members.leafs_level, other.m_members.leafs_level);
-        boost::swap(m_members.root, other.m_members.root);
+        boost::core::invoke_swap(m_members.values_count, other.m_members.values_count);
+        boost::core::invoke_swap(m_members.leafs_level, other.m_members.leafs_level);
+        boost::core::invoke_swap(m_members.root, other.m_members.root);
     }
 
     /*!
@@ -735,10 +884,11 @@ public:
         if ( !m_members.root )
             this->raw_create();
 
-        typedef boost::mpl::bool_
-            <
-                boost::is_convertible<ConvertibleOrRange, value_type>::value
-            > is_conv_t;
+        typedef std::is_convertible<ConvertibleOrRange, value_type> is_conv_t;
+        typedef range::detail::is_range<ConvertibleOrRange> is_range_t;
+        BOOST_GEOMETRY_STATIC_ASSERT((is_conv_t::value || is_range_t::value),
+            "The argument has to be convertible to Value type or be a Range.",
+            ConvertibleOrRange);
 
         this->insert_dispatch(conv_or_rng, is_conv_t());
     }
@@ -834,10 +984,11 @@ public:
         if ( !m_members.root )
             return 0;
 
-        typedef boost::mpl::bool_
-            <
-                boost::is_convertible<ConvertibleOrRange, value_type>::value
-            > is_conv_t;
+        typedef std::is_convertible<ConvertibleOrRange, value_type> is_conv_t;
+        typedef range::detail::is_range<ConvertibleOrRange> is_range_t;
+        BOOST_GEOMETRY_STATIC_ASSERT((is_conv_t::value || is_range_t::value),
+            "The argument has to be convertible to Value type or be a Range.",
+            ConvertibleOrRange);
 
         return this->remove_dispatch(conv_or_rng, is_conv_t());
     }
@@ -849,7 +1000,7 @@ public:
     Values will be returned only if all predicates are met.
 
     <b>Spatial predicates</b>
-    
+
     Spatial predicates may be generated by one of the functions listed below:
     \li \c boost::geometry::index::contains(),
     \li \c boost::geometry::index::covered_by(),
@@ -869,7 +1020,7 @@ public:
     \li <tt>! boost::geometry::index::within()</tt>
 
     <b>Satisfies predicate</b>
-    
+
     This is a special kind of predicate which allows to pass a user-defined function or function object which checks
     if Value should be returned by the query. It's generated by:
     \li \c boost::geometry::index::satisfies().
@@ -880,7 +1031,7 @@ public:
     in returning k values to the output iterator. Only one nearest predicate may be passed to the query.
     It may be generated by:
     \li \c boost::geometry::index::nearest().
-        
+
     <b>Connecting predicates</b>
 
     Predicates may be passed together connected with \c operator&&().
@@ -933,14 +1084,9 @@ public:
     template <typename Predicates, typename OutIter>
     size_type query(Predicates const& predicates, OutIter out_it) const
     {
-        if ( !m_members.root )
-            return 0;
-
-        static const unsigned distance_predicates_count = detail::predicates_count_distance<Predicates>::value;
-        static const bool is_distance_predicate = 0 < distance_predicates_count;
-        BOOST_MPL_ASSERT_MSG((distance_predicates_count <= 1), PASS_ONLY_ONE_DISTANCE_PREDICATE, (Predicates));
-
-        return query_dispatch(predicates, out_it, boost::mpl::bool_<is_distance_predicate>());
+        return m_members.root
+             ? query_dispatch(predicates, out_it)
+             : 0;
     }
 
     /*!
@@ -950,7 +1096,7 @@ public:
     For the information about predicates which may be passed to this method see query().
 
     \par Example
-    \verbatim    
+    \verbatim
     for ( Rtree::const_query_iterator it = tree.qbegin(bgi::nearest(pt, 10000)) ;
           it != tree.qend() ; ++it )
     {
@@ -982,7 +1128,7 @@ public:
     The modification of the rtree may invalidate the iterators.
 
     \param predicates   Predicates.
-    
+
     \return             The iterator pointing at the begin of the query range.
     */
     template <typename Predicates>
@@ -997,7 +1143,7 @@ public:
     This method returns an iterator which may be used to check if the query has ended.
 
     \par Example
-    \verbatim    
+    \verbatim
     for ( Rtree::const_query_iterator it = tree.qbegin(bgi::nearest(pt, 10000)) ;
           it != tree.qend() ; ++it )
     {
@@ -1026,7 +1172,7 @@ public:
 
     \warning
     The modification of the rtree may invalidate the iterators.
-    
+
     \return             The iterator pointing at the end of the query range.
     */
     const_query_iterator qend() const
@@ -1034,7 +1180,18 @@ public:
         return const_query_iterator();
     }
 
-#ifndef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+private:
+    template <typename Predicates>
+    using query_iterator_t = std::conditional_t
+        <
+            detail::predicates_count_distance<Predicates>::value == 0,
+            detail::rtree::iterators::spatial_query_iterator<members_holder, Predicates>,
+            detail::rtree::iterators::distance_query_iterator<members_holder, Predicates>
+        >;
+
+#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_ITERATORS
+public:
+#else
 private:
 #endif
     /*!
@@ -1042,7 +1199,7 @@ private:
 
     This method returns an iterator which may be used to perform iterative queries.
     For the information about predicates which may be passed to this method see query().
-    
+
     The type of the returned iterator depends on the type of passed Predicates but the iterator of this type
     may be assigned to the variable of const_query_iterator type. If you'd like to use the type of the iterator
     returned by this method you may get the type e.g. by using C++11 decltype or Boost.Typeof library.
@@ -1087,36 +1244,19 @@ private:
     The modification of the rtree may invalidate the iterators.
 
     \param predicates   Predicates.
-    
+
     \return             The iterator pointing at the begin of the query range.
     */
     template <typename Predicates>
-    typename boost::mpl::if_c<
-        detail::predicates_count_distance<Predicates>::value == 0,
-        detail::rtree::iterators::spatial_query_iterator<members_holder, Predicates>,
-        detail::rtree::iterators::distance_query_iterator<
-            members_holder, Predicates,
-            detail::predicates_find_distance<Predicates>::value
-        >
-    >::type
-    qbegin_(Predicates const& predicates) const
+    query_iterator_t<Predicates> qbegin_(Predicates const& predicates) const
     {
-        static const unsigned distance_predicates_count = detail::predicates_count_distance<Predicates>::value;
-        BOOST_MPL_ASSERT_MSG((distance_predicates_count <= 1), PASS_ONLY_ONE_DISTANCE_PREDICATE, (Predicates));
+        BOOST_GEOMETRY_STATIC_ASSERT((detail::predicates_count_distance<Predicates>::value <= 1),
+            "Only one distance predicate can be passed.",
+            Predicates);
 
-        typedef typename boost::mpl::if_c<
-            detail::predicates_count_distance<Predicates>::value == 0,
-            detail::rtree::iterators::spatial_query_iterator<members_holder, Predicates>,
-            detail::rtree::iterators::distance_query_iterator<
-                members_holder, Predicates,
-                detail::predicates_find_distance<Predicates>::value
-            >
-        >::type iterator_type;
-
-        if ( !m_members.root )
-            return iterator_type(m_members.parameters(), m_members.translator(), predicates);
-
-        return iterator_type(m_members.root, m_members.parameters(), m_members.translator(), predicates);
+        return m_members.root
+             ? query_iterator_t<Predicates>(m_members, predicates)
+             : query_iterator_t<Predicates>(predicates);
     }
 
     /*!
@@ -1124,7 +1264,7 @@ private:
 
     This method returns the iterator which may be used to perform iterative queries. For the information
     about the predicates which may be passed to this method see query().
-    
+
     The type of the returned iterator depends on the type of passed Predicates but the iterator of this type
     may be assigned to the variable of const_query_iterator type. If you'd like to use the type of the iterator
     returned by this method you may get the type e.g. by using C++11 decltype or Boost.Typeof library.
@@ -1148,33 +1288,17 @@ private:
     The modification of the rtree may invalidate the iterators.
 
     \param predicates   Predicates.
-    
+
     \return             The iterator pointing at the end of the query range.
     */
     template <typename Predicates>
-    typename boost::mpl::if_c<
-        detail::predicates_count_distance<Predicates>::value == 0,
-        detail::rtree::iterators::spatial_query_iterator<members_holder, Predicates>,
-        detail::rtree::iterators::distance_query_iterator<
-            members_holder, Predicates,
-            detail::predicates_find_distance<Predicates>::value
-        >
-    >::type
-    qend_(Predicates const& predicates) const
+    query_iterator_t<Predicates> qend_(Predicates const& predicates) const
     {
-        static const unsigned distance_predicates_count = detail::predicates_count_distance<Predicates>::value;
-        BOOST_MPL_ASSERT_MSG((distance_predicates_count <= 1), PASS_ONLY_ONE_DISTANCE_PREDICATE, (Predicates));
+        BOOST_GEOMETRY_STATIC_ASSERT((detail::predicates_count_distance<Predicates>::value <= 1),
+            "Only one distance predicate can be passed.",
+            Predicates);
 
-        typedef typename boost::mpl::if_c<
-            detail::predicates_count_distance<Predicates>::value == 0,
-            detail::rtree::iterators::spatial_query_iterator<members_holder, Predicates>,
-            detail::rtree::iterators::distance_query_iterator<
-                members_holder, Predicates,
-                detail::predicates_find_distance<Predicates>::value
-            >
-        >::type iterator_type;
-
-        return iterator_type(m_members.parameters(), m_members.translator(), predicates);
+        return query_iterator_t<Predicates>(m_members.parameters(), m_members.translator(), predicates);
     }
 
     /*!
@@ -1182,7 +1306,7 @@ private:
 
     This method returns the iterator which may be compared with the iterator returned by qbegin() in order to
     check if the query has ended.
-    
+
     The type of the returned iterator is different than the type returned by qbegin() but the iterator of this type
     may be assigned to the variable of const_query_iterator type. If you'd like to use the type of the iterator returned by this
     method, which most certainly will be faster than the type-erased iterator, you may get the type
@@ -1223,7 +1347,7 @@ private:
 
     \warning
     The modification of the rtree may invalidate the iterators.
-    
+
     \return             The iterator pointing at the end of the query range.
     */
     detail::rtree::iterators::end_query_iterator<value_type, allocators_type>
@@ -1275,10 +1399,9 @@ public:
     */
     const_iterator begin() const
     {
-        if ( !m_members.root )
-            return const_iterator();
-
-        return const_iterator(m_members.root);
+        return m_members.root
+             ? const_iterator(m_members.root)
+             : const_iterator();
     }
 
     /*!
@@ -1385,7 +1508,7 @@ public:
 
     /*!
     \brief Count Values or Indexables stored in the container.
-    
+
     For indexable_type it returns the number of values which indexables equals the parameter.
     For value_type it returns the number of values which equals the parameter.
 
@@ -1410,10 +1533,10 @@ public:
                 indexable_type
             >::type value_or_indexable;
 
-        static const bool is_void = boost::is_same<value_or_indexable, void>::value;
-        BOOST_MPL_ASSERT_MSG((! is_void),
-                             PASSED_OBJECT_NOT_CONVERTIBLE_TO_VALUE_NOR_INDEXABLE_TYPE,
-                             (ValueOrIndexable));
+        static const bool is_void = std::is_void<value_or_indexable>::value;
+        BOOST_GEOMETRY_STATIC_ASSERT((! is_void),
+            "The argument has to be convertible to Value or Indexable type.",
+            ValueOrIndexable);
 
         // NOTE: If an object of convertible but not the same type is passed
         // into the function, here a temporary will be created.
@@ -1671,7 +1794,7 @@ private:
     */
     template <typename ValueConvertible>
     inline void insert_dispatch(ValueConvertible const& val_conv,
-                                boost::mpl::bool_<true> const& /*is_convertible*/)
+                                std::true_type /*is_convertible*/)
     {
         this->raw_insert(val_conv);
     }
@@ -1686,12 +1809,8 @@ private:
     */
     template <typename Range>
     inline void insert_dispatch(Range const& rng,
-                                boost::mpl::bool_<false> const& /*is_convertible*/)
+                                std::false_type /*is_convertible*/)
     {
-        BOOST_MPL_ASSERT_MSG((detail::is_range<Range>::value),
-                             PASSED_OBJECT_IS_NOT_CONVERTIBLE_TO_VALUE_NOR_A_RANGE,
-                             (Range));
-
         typedef typename boost::range_const_iterator<Range>::type It;
         for ( It it = boost::const_begin(rng); it != boost::const_end(rng) ; ++it )
             this->raw_insert(*it);
@@ -1707,7 +1826,7 @@ private:
     */
     template <typename ValueConvertible>
     inline size_type remove_dispatch(ValueConvertible const& val_conv,
-                                     boost::mpl::bool_<true> const& /*is_convertible*/)
+                                     std::true_type /*is_convertible*/)
     {
         return this->raw_remove(val_conv);
     }
@@ -1722,12 +1841,8 @@ private:
     */
     template <typename Range>
     inline size_type remove_dispatch(Range const& rng,
-                                     boost::mpl::bool_<false> const& /*is_convertible*/)
+                                     std::false_type /*is_convertible*/)
     {
-        BOOST_MPL_ASSERT_MSG((detail::is_range<Range>::value),
-                             PASSED_OBJECT_IS_NOT_CONVERTIBLE_TO_VALUE_NOR_A_RANGE,
-                             (Range));
-
         size_type result = 0;
         typedef typename boost::range_const_iterator<Range>::type It;
         for ( It it = boost::const_begin(rng); it != boost::const_end(rng) ; ++it )
@@ -1741,15 +1856,16 @@ private:
     \par Exception-safety
     strong
     */
-    template <typename Predicates, typename OutIter>
-    size_type query_dispatch(Predicates const& predicates, OutIter out_it, boost::mpl::bool_<false> const& /*is_distance_predicate*/) const
+    template
+    <
+        typename Predicates, typename OutIter,
+        std::enable_if_t<(detail::predicates_count_distance<Predicates>::value == 0), int> = 0
+    >
+    size_type query_dispatch(Predicates const& predicates, OutIter out_it) const
     {
         detail::rtree::visitors::spatial_query<members_holder, Predicates, OutIter>
-            find_v(m_members.parameters(), m_members.translator(), predicates, out_it);
-
-        detail::rtree::apply_visitor(find_v, *m_members.root);
-
-        return find_v.found_count;
+            query(m_members, predicates, out_it);
+        return query.apply(m_members);
     }
 
     /*!
@@ -1758,24 +1874,23 @@ private:
     \par Exception-safety
     strong
     */
-    template <typename Predicates, typename OutIter>
-    size_type query_dispatch(Predicates const& predicates, OutIter out_it, boost::mpl::bool_<true> const& /*is_distance_predicate*/) const
+    template
+    <
+        typename Predicates, typename OutIter,
+        std::enable_if_t<(detail::predicates_count_distance<Predicates>::value > 0), int> = 0
+    >
+    size_type query_dispatch(Predicates const& predicates, OutIter out_it) const
     {
-        BOOST_GEOMETRY_INDEX_ASSERT(m_members.root, "The root must exist");
+        BOOST_GEOMETRY_STATIC_ASSERT((detail::predicates_count_distance<Predicates>::value == 1),
+                                     "Only one distance predicate can be passed.",
+                                     Predicates);
 
-        static const unsigned distance_predicate_index = detail::predicates_find_distance<Predicates>::value;
-        detail::rtree::visitors::distance_query<
-            members_holder,
-            Predicates,
-            distance_predicate_index,
-            OutIter
-        > distance_v(m_members.parameters(), m_members.translator(), predicates, out_it);
+        detail::rtree::visitors::distance_query<members_holder, Predicates>
+            distance_v(m_members, predicates);
 
-        detail::rtree::apply_visitor(distance_v, *m_members.root);
-
-        return distance_v.finish();
+        return distance_v.apply(m_members, out_it);
     }
-    
+
     /*!
     \brief Count elements corresponding to value or indexable.
 
@@ -1796,6 +1911,32 @@ private:
         detail::rtree::apply_visitor(count_v, *m_members.root);
 
         return count_v.found_count;
+    }
+
+    /*!
+    \brief The constructor TODO.
+
+    The tree is created using packing algorithm.
+
+    \param first             The beginning of the range of Values.
+    \param last              The end of the range of Values.
+    \param temp_allocator    The temporary allocator object to be used by the packing algorithm.
+
+    \par Throws
+    \li If allocator copy constructor throws.
+    \li If Value copy constructor or copy assignment throws.
+    \li If allocation throws or returns invalid value.
+    */
+    template<typename Iterator, typename PackAlloc>
+    inline void pack_construct(Iterator first, Iterator last, PackAlloc const& temp_allocator)
+    {
+        typedef detail::rtree::pack<members_holder> pack;
+        size_type vc = 0, ll = 0;
+        m_members.root = pack::apply(first, last, vc, ll,
+                                     m_members.parameters(), m_members.translator(),
+                                     m_members.allocators(), temp_allocator);
+        m_members.values_count = vc;
+        m_members.leafs_level = ll;
     }
 
     members_holder m_members;
@@ -1938,7 +2079,7 @@ This query function performs spatial and k-nearest neighbor searches. It allows 
 Values will be returned only if all predicates are met.
 
 <b>Spatial predicates</b>
-    
+
 Spatial predicates may be generated by one of the functions listed below:
 \li \c boost::geometry::index::contains(),
 \li \c boost::geometry::index::covered_by(),
@@ -1969,7 +2110,7 @@ If the nearest predicate is passed a k-nearest neighbor search will be performed
 in returning k values to the output iterator. Only one nearest predicate may be passed to the query.
 It may be generated by:
 \li \c boost::geometry::index::nearest().
-        
+
 <b>Connecting predicates</b>
 
 Predicates may be passed together connected with \c operator&&().
@@ -2019,7 +2160,7 @@ query(rtree<Value, Parameters, IndexableGetter, EqualTo, Allocator> const& tree,
 
 This method returns the iterator which may be used to perform iterative queries. For the information
 about the predicates which may be passed to this method see query().
-    
+
 \par Example
 \verbatim
 std::for_each(bgi::qbegin(tree, bgi::nearest(pt, 3)), bgi::qend(tree), do_something());
@@ -2039,7 +2180,7 @@ The modification of the rtree may invalidate the iterators.
 
 \param tree         The rtree.
 \param predicates   Predicates.
-    
+
 \return             The iterator pointing at the begin of the query range.
 */
 template <typename Value, typename Parameters, typename IndexableGetter, typename EqualTo, typename Allocator,
@@ -2055,7 +2196,7 @@ qbegin(rtree<Value, Parameters, IndexableGetter, EqualTo, Allocator> const& tree
 \brief Returns the query iterator pointing at the end of the query range.
 
 This method returns the iterator which may be used to check if the query has ended.
-    
+
 \par Example
 \verbatim
 std::for_each(bgi::qbegin(tree, bgi::nearest(pt, 3)), bgi::qend(tree), do_something());
@@ -2071,7 +2212,7 @@ Nothing
 The modification of the rtree may invalidate the iterators.
 
 \ingroup rtree_functions
-    
+
 \return             The iterator pointing at the end of the query range.
 */
 template <typename Value, typename Parameters, typename IndexableGetter, typename EqualTo, typename Allocator> inline

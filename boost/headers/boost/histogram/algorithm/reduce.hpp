@@ -7,7 +7,6 @@
 #ifndef BOOST_HISTOGRAM_ALGORITHM_REDUCE_HPP
 #define BOOST_HISTOGRAM_ALGORITHM_REDUCE_HPP
 
-#include <boost/assert.hpp>
 #include <boost/histogram/axis/traits.hpp>
 #include <boost/histogram/detail/axes.hpp>
 #include <boost/histogram/detail/make_default.hpp>
@@ -17,6 +16,7 @@
 #include <boost/histogram/indexed.hpp>
 #include <boost/histogram/unsafe_access.hpp>
 #include <boost/throw_exception.hpp>
+#include <cassert>
 #include <cmath>
 #include <initializer_list>
 #include <stdexcept>
@@ -32,9 +32,6 @@ namespace algorithm {
   implementation detail.
 */
 using reduce_command = detail::reduce_command;
-
-using reduce_option [[deprecated("use reduce_command instead")]] =
-    reduce_command; ///< deprecated
 
 /** Shrink command to be used in `reduce`.
 
@@ -111,7 +108,14 @@ inline reduce_command crop(unsigned iaxis, double lower, double upper) {
   Command is applied to corresponding axis in order of reduce arguments.
 
   Works like `shrink` (see shrink documentation for details), but counts in removed bins
-  are discarded, whether underflow and overflow bins are present or not.
+  are discarded, whether underflow and overflow bins are present or not. If the cropped
+  range goes beyond the axis range, then the content of the underflow
+  or overflow bin which overlaps with the range is kept.
+
+  If the counts in an existing underflow or overflow bin are discared by the crop, the
+  corresponding memory cells are not physically removed. Only their contents are set to
+  zero. This technical limitation may be lifted in the future, then crop may completely
+  remove the cropped memory cells.
 
   @param lower bin which contains lower is first to be kept.
   @param upper bin which contains upper is last to be kept, except if upper is equal to
@@ -323,6 +327,8 @@ inline reduce_command slice_and_rebin(axis::index_type begin, axis::index_type e
   exception. Histograms with  non-reducible axes can still be reduced along the
   other axes that are reducible.
 
+  An overload allows one to pass reduce_command as positional arguments.
+
   @param hist original histogram.
   @param options iterable sequence of reduce commands: `shrink`, `slice`, `rebin`,
   `shrink_and_rebin`, or `slice_and_rebin`. The element type of the iterable should be
@@ -333,105 +339,73 @@ Histogram reduce(const Histogram& hist, const Iterable& options) {
   using axis::index_type;
 
   const auto& old_axes = unsafe_access::axes(hist);
+  auto opts = detail::make_stack_buffer(old_axes, reduce_command{});
+  detail::normalize_reduce_commands(opts, options);
 
-  auto opts = detail::make_stack_buffer<reduce_command>(old_axes);
+  auto axes =
+      detail::axes_transform(old_axes, [&opts](std::size_t iaxis, const auto& a_in) {
+        using A = std::decay_t<decltype(a_in)>;
+        using AO = axis::traits::get_options<A>;
+        auto& o = opts[iaxis];
+        o.is_ordered = axis::traits::ordered(a_in);
+        if (o.merge > 0) { // option is set?
+          o.use_underflow_bin = AO::test(axis::option::underflow);
+          o.use_overflow_bin = AO::test(axis::option::overflow);
+          return detail::static_if_c<axis::traits::is_reducible<A>::value>(
+              [&o](const auto& a_in) {
+                if (o.range == reduce_command::range_t::none) {
+                  // no range restriction, pure rebin
+                  o.begin.index = 0;
+                  o.end.index = a_in.size();
+                } else {
+                  // range striction, convert values to indices as needed
+                  if (o.range == reduce_command::range_t::values) {
+                    const auto end_value = o.end.value;
+                    o.begin.index = axis::traits::index(a_in, o.begin.value);
+                    o.end.index = axis::traits::index(a_in, o.end.value);
+                    // end = index + 1, unless end_value equal to upper bin edge
+                    if (axis::traits::value_as<double>(a_in, o.end.index) != end_value)
+                      ++o.end.index;
+                  }
 
-  // check for invalid commands, merge commands, and set iaxis for positional commands
-  unsigned iaxis = 0;
-  for (const reduce_command& o_in : options) {
-    BOOST_ASSERT(o_in.merge > 0);
-    if (o_in.iaxis != reduce_command::unset && o_in.iaxis >= hist.rank())
-      BOOST_THROW_EXCEPTION(std::invalid_argument("invalid axis index"));
-    auto& o_out = opts[o_in.iaxis == reduce_command::unset ? iaxis : o_in.iaxis];
-    if (o_out.merge == 0) {
-      o_out = o_in;
-    } else {
-      // Some command was already set for this axis, see if we can combine commands.
-      // We can combine a rebin and non-rebin command.
-      if (!((o_in.range == reduce_command::range_t::none) ^
-            (o_out.range == reduce_command::range_t::none)) ||
-          (o_out.merge > 1 && o_in.merge > 1))
-        BOOST_THROW_EXCEPTION(std::invalid_argument(
-            "multiple conflicting reduce commands for axis " +
-            std::to_string(o_in.iaxis == reduce_command::unset ? iaxis : o_in.iaxis)));
-      if (o_in.range != reduce_command::range_t::none) {
-        o_out.range = o_in.range;
-        o_out.begin = o_in.begin;
-        o_out.end = o_in.end;
-      } else {
-        o_out.merge = o_in.merge;
-      }
-    }
-    ++iaxis;
-  }
+                  // crop flow bins if index range does not include them
+                  if (o.crop) {
+                    o.use_underflow_bin &= o.begin.index < 0;
+                    o.use_overflow_bin &= o.end.index > a_in.size();
+                  }
 
-  // make new axes container with default-constructed axis instances
-  auto axes = detail::make_default(old_axes);
-  detail::static_if<detail::is_tuple<decltype(axes)>>(
-      [](auto&, const auto&) {},
-      [](auto& axes, const auto& old_axes) {
-        axes.reserve(old_axes.size());
-        detail::for_each_axis(old_axes, [&axes](const auto& a) {
-          axes.emplace_back(detail::make_default(a));
-        });
-      },
-      axes, old_axes);
+                  // now limit [begin, end] to [0, size()]
+                  if (o.begin.index < 0) o.begin.index = 0;
+                  if (o.end.index > a_in.size()) o.end.index = a_in.size();
+                }
+                // shorten the index range to a multiple of o.merge;
+                // example [1, 4] with merge = 2 is reduced to [1, 3]
+                o.end.index -=
+                    (o.end.index - o.begin.index) % static_cast<index_type>(o.merge);
+                using A = std::decay_t<decltype(a_in)>;
+                return A(a_in, o.begin.index, o.end.index, o.merge);
+              },
+              [iaxis](const auto& a_in) {
+                return BOOST_THROW_EXCEPTION(std::invalid_argument(
+                           "axis " + std::to_string(iaxis) + " is not reducible")),
+                       a_in;
+              },
+              a_in);
+        } else {
+          // command was not set for this axis; fill noop values and copy original axis
+          o.use_underflow_bin = AO::test(axis::option::underflow);
+          o.use_overflow_bin = AO::test(axis::option::overflow);
+          o.merge = 1;
+          o.begin.index = 0;
+          o.end.index = a_in.size();
+          return a_in;
+        }
+      });
 
-  // override default-constructed axis instances with modified instances
-  iaxis = 0;
-  hist.for_each_axis([&](const auto& a_in) {
-    using A = std::decay_t<decltype(a_in)>;
-    using AO = axis::traits::get_options<A>;
-    auto& o = opts[iaxis];
-    o.is_ordered = axis::traits::ordered(a_in);
-    if (o.merge > 0) { // option is set?
-      o.use_underflow_bin = !o.crop && AO::test(axis::option::underflow);
-      o.use_overflow_bin = !o.crop && AO::test(axis::option::overflow);
-      detail::static_if_c<axis::traits::is_reducible<A>::value>(
-          [&o](auto&& a_out, const auto& a_in) {
-            using A = std::decay_t<decltype(a_in)>;
-            if (o.range == reduce_command::range_t::none) {
-              o.begin.index = 0;
-              o.end.index = a_in.size();
-            } else {
-              if (o.range == reduce_command::range_t::values) {
-                const auto end_value = o.end.value;
-                o.begin.index = axis::traits::index(a_in, o.begin.value);
-                o.end.index = axis::traits::index(a_in, o.end.value);
-                // end = index + 1, unless end_value is exactly equal to (upper) bin edge
-                if (axis::traits::value_as<double>(a_in, o.end.index) != end_value)
-                  ++o.end.index;
-              }
-              // limit [begin, end] to [0, size()]
-              if (o.begin.index < 0) o.begin.index = 0;
-              if (o.end.index > a_in.size()) o.end.index = a_in.size();
-            }
-            // shorten the index range to a multiple of o.merge;
-            // example [1, 4] with merge = 2 is reduced to [1, 3]
-            o.end.index -=
-                (o.end.index - o.begin.index) % static_cast<index_type>(o.merge);
-            a_out = A(a_in, o.begin.index, o.end.index, o.merge);
-          },
-          [iaxis](auto&&, const auto&) {
-            BOOST_THROW_EXCEPTION(std::invalid_argument("axis " + std::to_string(iaxis) +
-                                                        " is not reducible"));
-          },
-          axis::get<A>(detail::axis_get(axes, iaxis)), a_in);
-    } else {
-      // command was not set for this axis; fill noop values and copy original axis
-      o.use_underflow_bin = AO::test(axis::option::underflow);
-      o.use_overflow_bin = AO::test(axis::option::overflow);
-      o.merge = 1;
-      o.begin.index = 0;
-      o.end.index = a_in.size();
-      axis::get<A>(detail::axis_get(axes, iaxis)) = a_in;
-    }
-    ++iaxis;
-  });
-
-  auto idx = detail::make_stack_buffer<index_type>(axes);
   auto result =
       Histogram(std::move(axes), detail::make_default(unsafe_access::storage(hist)));
+
+  auto idx = detail::make_stack_buffer<index_type>(unsafe_access::axes(result));
   for (auto&& x : indexed(hist, coverage::all)) {
     auto i = idx.begin();
     auto o = opts.begin();
@@ -475,6 +449,8 @@ Histogram reduce(const Histogram& hist, const Iterable& options) {
   exception. It is safe to reduce histograms with some axis that are not reducible along
   the other axes. Trying to reducing a non-reducible axis triggers an invalid_argument
   exception.
+
+  An overload allows one to pass an iterable of reduce_command.
 
   @param hist original histogram.
   @param opt first reduce command; one of `shrink`, `slice`, `rebin`,

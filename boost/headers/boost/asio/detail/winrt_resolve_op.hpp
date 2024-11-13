@@ -2,7 +2,7 @@
 // detail/winrt_resolve_op.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,7 +22,7 @@
 #include <boost/asio/detail/bind_handler.hpp>
 #include <boost/asio/detail/fenced_block.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
+#include <boost/asio/detail/handler_work.hpp>
 #include <boost/asio/detail/memory.hpp>
 #include <boost/asio/detail/winrt_async_op.hpp>
 #include <boost/asio/ip/basic_resolver_results.hpp>
@@ -54,21 +54,25 @@ public:
           Windows::Networking::EndpointPair^>^>(
             &winrt_resolve_op::do_complete),
       query_(query),
-      handler_(BOOST_ASIO_MOVE_CAST(Handler)(handler)),
-      io_executor_(io_ex)
+      handler_(static_cast<Handler&&>(handler)),
+      work_(handler_, io_ex)
   {
-    handler_work<Handler, IoExecutor>::start(handler_, io_executor_);
   }
 
   static void do_complete(void* owner, operation* base,
       const boost::system::error_code&, std::size_t)
   {
     // Take ownership of the operation object.
+    BOOST_ASIO_ASSUME(base != 0);
     winrt_resolve_op* o(static_cast<winrt_resolve_op*>(base));
     ptr p = { boost::asio::detail::addressof(o->handler_), o, o };
-    handler_work<Handler, IoExecutor> w(o->handler_, o->io_executor_);
 
     BOOST_ASIO_HANDLER_COMPLETION((*o));
+
+    // Take ownership of the operation's outstanding work.
+    handler_work<Handler, IoExecutor> w(
+        static_cast<handler_work<Handler, IoExecutor>&&>(
+          o->work_));
 
     results_type results = results_type();
     if (!o->ec_)
@@ -109,7 +113,7 @@ public:
 private:
   query_type query_;
   Handler handler_;
-  IoExecutor io_executor_;
+  handler_work<Handler, IoExecutor> executor_;
 };
 
 } // namespace detail

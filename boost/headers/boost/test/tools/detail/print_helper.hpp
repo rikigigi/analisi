@@ -97,7 +97,7 @@ struct print_log_value {
     std::streamsize set_precision( std::ostream& ostr, mpl::false_ )
     {
         if( std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::radix == 2 )
-            return ostr.precision( 2 + std::numeric_limits<T>::digits * 301/1000 );
+            return ostr.precision( 2 + std::streamsize(std::numeric_limits<T>::digits) * 301/1000 );
         else if ( std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::radix == 10 ) {
 #ifdef BOOST_NO_CXX11_NUMERIC_LIMITS
             // (was BOOST_NO_NUMERIC_LIMITS_LOWEST but now deprecated).
@@ -120,7 +120,7 @@ struct print_log_value {
 
 //____________________________________________________________________________//
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 template<typename T, std::size_t N >
 struct print_log_value< T[N] > {
     void    operator()( std::ostream& ostr, T const* t )
@@ -149,6 +149,13 @@ struct BOOST_TEST_DECL print_log_value<char> {
 template<>
 struct BOOST_TEST_DECL print_log_value<unsigned char> {
     void    operator()( std::ostream& ostr, unsigned char t );
+};
+
+//____________________________________________________________________________//
+
+template<>
+struct BOOST_TEST_DECL print_log_value<wchar_t> {
+    void    operator()( std::ostream& ostr, wchar_t t );
 };
 
 //____________________________________________________________________________//
@@ -192,7 +199,7 @@ struct print_helper_t {
 
 //____________________________________________________________________________//
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 // Borland suffers premature pointer decay passing arrays by reference
 template<typename T, std::size_t N >
 struct print_helper_t< T[N] > {

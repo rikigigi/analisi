@@ -16,9 +16,14 @@
 #include <boost/spirit/home/lex/lexer/lexertl/iterator_tokenizer.hpp>
 #include <boost/spirit/home/lex/lexer/lexertl/semantic_action_data.hpp>
 #include <boost/spirit/home/lex/lexer/lexertl/wrap_action.hpp>
+#include <boost/spirit/home/support/assert_msg.hpp>
 #include <boost/mpl/bool.hpp>
 #include <iterator> // for std::iterator_traits
 
+#ifdef _MSC_VER
+#  pragma warning(push)
+#  pragma warning(disable: 4512) // assignment operator could not be generated.
+#endif
 namespace boost { namespace spirit { namespace lex { namespace lexertl
 { 
     namespace detail
@@ -88,15 +93,12 @@ namespace boost { namespace spirit { namespace lex { namespace lexertl
             template <typename Char>
             void set_state_name (Char const*) 
             {
-// some (random) versions of gcc instantiate this function even if it's not 
-// needed leading to false static asserts
-#if !defined(__GNUC__)
                 // If you see a compile time assertion below you're probably 
                 // using a token type not supporting lexer states (the 3rd 
                 // template parameter of the token is mpl::false_), but your 
                 // code uses state changes anyways.
-                BOOST_STATIC_ASSERT(false);
-#endif
+                BOOST_SPIRIT_ASSERT_FAIL(Char,
+                    tried_to_set_state_of_stateless_token, ());
             }
             char_type const* get_state_name() const 
             { 
@@ -193,7 +195,7 @@ namespace boost { namespace spirit { namespace lex { namespace lexertl
             std::size_t get_state() const { return 0; }
             void set_state(std::size_t) {}
 
-            void set_end(Iterator const& it) {}
+            void set_end(Iterator const&) {}
 
             Iterator& get_first() { return first_; }
             Iterator const& get_first() const { return first_; }
@@ -216,9 +218,6 @@ namespace boost { namespace spirit { namespace lex { namespace lexertl
             get_state_name_type get_state_name_;
 
             bool bol_;      // helper storing whether last character was \n
-
-            // silence MSVC warning C4512: assignment operator could not be generated
-            BOOST_DELETED_FUNCTION(static_data& operator= (static_data const&))
         };
 
         ///////////////////////////////////////////////////////////////////////
@@ -290,9 +289,6 @@ namespace boost { namespace spirit { namespace lex { namespace lexertl
         protected:
             std::size_t state_;
             std::size_t num_states_;
-
-            // silence MSVC warning C4512: assignment operator could not be generated
-            BOOST_DELETED_FUNCTION(static_data& operator= (static_data const&))
         };
 
         ///////////////////////////////////////////////////////////////////////
@@ -428,9 +424,6 @@ namespace boost { namespace spirit { namespace lex { namespace lexertl
             mutable TokenValue value_;  // token value to use
             mutable bool has_value_;    // 'true' if value_ is valid
             bool has_hold_;     // 'true' if hold_ is valid
-
-            // silence MSVC warning C4512: assignment operator could not be generated
-            BOOST_DELETED_FUNCTION(static_data& operator= (static_data const&))
         };
 
         ///////////////////////////////////////////////////////////////////////
@@ -567,11 +560,11 @@ namespace boost { namespace spirit { namespace lex { namespace lexertl
             mutable token_value_type value_;  // token value to use
             mutable bool has_value_;    // 'true' if value_ is valid
             bool has_hold_;     // 'true' if hold_ is valid
-
-            // silence MSVC warning C4512: assignment operator could not be generated
-            BOOST_DELETED_FUNCTION(static_data& operator= (static_data const&))
         };
     }
 }}}}
+#ifdef _MSC_VER
+#  pragma warning(pop)
+#endif
 
 #endif

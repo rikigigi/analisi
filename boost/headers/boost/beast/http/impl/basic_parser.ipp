@@ -82,7 +82,17 @@ basic_parser<isRequest>::
 put(net::const_buffer buffer,
     error_code& ec)
 {
-    BOOST_ASSERT(state_ != state::complete);
+    // If this goes off you have tried to parse more data after the parser
+    // has completed. A common cause of this is re-using a parser, which is
+    // not supported. If you need to re-use a parser, consider storing it
+    // in an optional. Then reset() and emplace() prior to parsing each new
+    // message.
+    BOOST_ASSERT(!is_done());
+    if (is_done())
+    {
+        BOOST_BEAST_ASSIGN_EC(ec, error::stale_parser);
+        return 0;
+    }
     auto p = static_cast<char const*>(buffer.data());
     auto n = buffer.size();
     auto const p0 = p;
@@ -94,7 +104,7 @@ loop:
     case state::nothing_yet:
         if(n == 0)
         {
-            ec = error::need_more;
+            BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
             return 0;
         }
         state_ = state::start_line;
@@ -113,7 +123,7 @@ loop:
             {
                 if(n >= header_limit_)
                 {
-                    ec = error::header_limit;
+                    BOOST_BEAST_ASSIGN_EC(ec, error::header_limit);
                     goto done;
                 }
                 if(p + 3 <= p1)
@@ -126,7 +136,7 @@ loop:
         n = static_cast<std::size_t>(p1 - p);
         if(p >= p1)
         {
-            ec = error::need_more;
+            BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
             goto done;
         }
         BOOST_FALLTHROUGH;
@@ -144,7 +154,7 @@ loop:
             {
                 if(n >= header_limit_)
                 {
-                    ec = error::header_limit;
+                    BOOST_BEAST_ASSIGN_EC(ec, error::header_limit);
                     goto done;
                 }
                 if(p + 3 <= p1)
@@ -154,6 +164,8 @@ loop:
             goto done;
         }
         finish_header(ec, is_request{});
+        if(ec)
+            goto done;
         break;
 
     case state::body0:
@@ -227,14 +239,14 @@ put_eof(error_code& ec)
     if( state_ == state::start_line ||
         state_ == state::fields)
     {
-        ec = error::partial_message;
+        BOOST_BEAST_ASSIGN_EC(ec, error::partial_message);
         return;
     }
     if(f_ & (flagContentLength | flagChunked))
     {
         if(state_ != state::complete)
         {
-            ec = error::partial_message;
+            BOOST_BEAST_ASSIGN_EC(ec, error::partial_message);
             return;
         }
         ec = {};
@@ -260,7 +272,7 @@ maybe_need_more(
         n = header_limit_;
     if(n < skip_ + 4)
     {
-        ec = error::need_more;
+        BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
         return;
     }
     auto const term =
@@ -270,10 +282,10 @@ maybe_need_more(
         skip_ = n - 3;
         if(skip_ + 4 > header_limit_)
         {
-            ec = error::header_limit;
+            BOOST_BEAST_ASSIGN_EC(ec, error::header_limit);
             return;
         }
-        ec = error::need_more;
+        BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
         return;
     }
     skip_ = 0;
@@ -308,18 +320,18 @@ parse_start_line(
         return;
     if(version < 10 || version > 11)
     {
-        ec = error::bad_version;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_version);
         return;
     }
 
     if(p + 2 > last)
     {
-        ec = error::need_more;
+        BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
         return;
     }
     if(p[0] != '\r' || p[1] != '\n')
     {
-        ec = error::bad_version;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_version);
         return;
     }
     p += 2;
@@ -356,19 +368,19 @@ parse_start_line(
         return;
     if(version < 10 || version > 11)
     {
-        ec = error::bad_version;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_version);
         return;
     }
 
     // SP
     if(p + 1 > last)
     {
-        ec = error::need_more;
+        BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
         return;
     }
     if(*p++ != ' ')
     {
-        ec = error::bad_version;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_version);
         return;
     }
 
@@ -409,13 +421,15 @@ parse_fields(char const*& in,
     {
         if(p + 2 > last)
         {
-            ec = error::need_more;
+            BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
             return;
         }
         if(p[0] == '\r')
         {
             if(p[1] != '\n')
-                ec = error::bad_line_ending;
+            {
+                BOOST_BEAST_ASSIGN_EC(ec, error::bad_line_ending);
+            }
             in = p + 2;
             return;
         }
@@ -447,9 +461,10 @@ finish_header(error_code& ec, std::true_type)
     }
     else if(f_ & flagContentLength)
     {
-        if(len_ > body_limit_)
+        if(body_limit_.has_value() &&
+           len_ > body_limit_)
         {
-            ec = error::body_limit;
+            BOOST_BEAST_ASSIGN_EC(ec, error::body_limit);
             return;
         }
         if(len_ > 0)
@@ -511,9 +526,10 @@ finish_header(error_code& ec, std::false_type)
             f_ |= flagHasBody;
             state_ = state::body0;
 
-            if(len_ > body_limit_)
+            if(body_limit_.has_value() &&
+               len_ > body_limit_)
             {
-                ec = error::body_limit;
+                BOOST_BEAST_ASSIGN_EC(ec, error::body_limit);
                 return;
             }
         }
@@ -573,12 +589,15 @@ basic_parser<isRequest>::
 parse_body_to_eof(char const*& p,
     std::size_t n, error_code& ec)
 {
-    if(n > body_limit_)
+    if(body_limit_.has_value())
     {
-        ec = error::body_limit;
-        return;
+        if (n > *body_limit_)
+        {
+            BOOST_BEAST_ASSIGN_EC(ec, error::body_limit);
+            return;
+        }
+        *body_limit_ -= n;
     }
-    body_limit_ = body_limit_ - n;
     ec = {};
     n = this->on_body_impl(string_view{p, n}, ec);
     p += n;
@@ -614,7 +633,7 @@ parse_chunk_header(char const*& p0,
     {
         if(n < skip_ + 2)
         {
-            ec = error::need_more;
+            BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
             return;
         }
         if(f_ & flagExpectCRLF)
@@ -624,7 +643,7 @@ parse_chunk_header(char const*& p0,
             // be parsed in one call instead of two.
             if(! parse_crlf(p))
             {
-                ec = error::bad_chunk;
+                BOOST_BEAST_ASSIGN_EC(ec, error::bad_chunk);
                 return;
             }
         }
@@ -633,7 +652,7 @@ parse_chunk_header(char const*& p0,
             return;
         if(! eol)
         {
-            ec = error::need_more;
+            BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
             skip_ = n - 1;
             return;
         }
@@ -643,24 +662,27 @@ parse_chunk_header(char const*& p0,
         std::uint64_t size;
         if(! parse_hex(p, size))
         {
-            ec = error::bad_chunk;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_chunk);
             return;
         }
         if(size != 0)
         {
-            if(size > body_limit_)
+            if (body_limit_.has_value())
             {
-                ec = error::body_limit;
-                return;
+                if (size > *body_limit_)
+                {
+                    BOOST_BEAST_ASSIGN_EC(ec, error::body_limit);
+                    return;
+                }
+                *body_limit_ -= size;
             }
-            body_limit_ -= size;
             auto const start = p;
             parse_chunk_extensions(p, pend, ec);
             if(ec)
                 return;
             if(p != eol -2 )
             {
-                ec = error::bad_chunk_extension;
+                BOOST_BEAST_ASSIGN_EC(ec, error::bad_chunk_extension);
                 return;
             }
             auto const ext = make_string(start, p);
@@ -679,9 +701,12 @@ parse_chunk_header(char const*& p0,
     }
     else
     {
-        BOOST_ASSERT(n >= 5);
+        BOOST_ASSERT(n >= 3);
         if(f_ & flagExpectCRLF)
+        {
+            BOOST_ASSERT(n >= 5);
             BOOST_VERIFY(parse_crlf(p));
+        }
         std::uint64_t size;
         BOOST_VERIFY(parse_hex(p, size));
         eol = find_eol(p, pend, ec);
@@ -693,7 +718,7 @@ parse_chunk_header(char const*& p0,
     {
         BOOST_ASSERT(n >= 3);
         skip_ = n - 3;
-        ec = error::need_more;
+        BOOST_BEAST_ASSIGN_EC(ec, error::need_more);
         return;
     }
 
@@ -703,7 +728,7 @@ parse_chunk_header(char const*& p0,
         return;
     if(p != eol - 2)
     {
-        ec = error::bad_chunk_extension;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_chunk_extension);
         return;
     }
     auto const ext = make_string(start, p);
@@ -754,7 +779,7 @@ do_field(field f,
         if(! validate_list(list))
         {
             // VFALCO Should this be a field specific error?
-            ec = error::bad_value;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_value);
             return;
         }
         for(auto const& s : list)
@@ -786,7 +811,12 @@ do_field(field f,
     {
         auto bad_content_length = [&ec]
         {
-            ec = error::bad_content_length;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_content_length);
+        };
+
+        auto multiple_content_length = [&ec]
+        {
+            BOOST_BEAST_ASSIGN_EC(ec, error::multiple_content_length);
         };
 
         // conflicting field
@@ -811,7 +841,7 @@ do_field(field f,
             if (existing.has_value())
             {
                 if (v != *existing)
-                    return bad_content_length();
+                    return multiple_content_length();
             }
             else
             {
@@ -836,14 +866,14 @@ do_field(field f,
         if(f_ & flagChunked)
         {
             // duplicate
-            ec = error::bad_transfer_encoding;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_transfer_encoding);
             return;
         }
 
         if(f_ & flagContentLength)
         {
             // conflicting field
-            ec = error::bad_transfer_encoding;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_transfer_encoding);
             return;
         }
 

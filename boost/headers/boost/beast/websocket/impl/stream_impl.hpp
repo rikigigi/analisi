@@ -30,7 +30,6 @@
 #include <boost/beast/core/static_buffer.hpp>
 #include <boost/beast/core/stream_traits.hpp>
 #include <boost/beast/core/detail/clamp.hpp>
-#include <boost/beast/version.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/core/empty_value.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -69,8 +68,9 @@ struct stream<NextLayer, deflateSupported>::impl_type
             impl_type>(this->detail::service::
                 impl_type::shared_from_this());
     }
-
-    net::steady_timer       timer;          // used for timeouts
+    using executor_type = typename std::decay<NextLayer>::type::executor_type;
+    typename net::steady_timer::rebind_executor<executor_type>::other
+                            timer;          // used for timeouts
     close_reason            cr;             // set from received close frame
     control_cb_type         ctrl_cb;        // control callback
 
@@ -129,7 +129,8 @@ struct stream<NextLayer, deflateSupported>::impl_type
             boost::empty_init_t{},
             std::forward<Args>(args)...)
         , detail::service::impl_type(
-            this->boost::empty_value<NextLayer>::get().get_executor().context())
+            this->get_context(
+                this->boost::empty_value<NextLayer>::get().get_executor()))
         , timer(this->boost::empty_value<NextLayer>::get().get_executor())
     {
         timeout_opt.handshake_timeout = none();
@@ -221,11 +222,13 @@ struct stream<NextLayer, deflateSupported>::impl_type
     // Called just before sending
     // the first frame of each message
     void
-    begin_msg()
+    begin_msg(std::size_t n_bytes)
     {
         wr_frag = wr_frag_opt;
         wr_compress =
-            this->pmd_enabled() && wr_compress_opt;
+            this->pmd_enabled() &&
+            wr_compress_opt &&
+            this->should_compress(n_bytes);
 
         // Maintain the write buffer
         if( this->pmd_enabled() ||
@@ -297,7 +300,7 @@ struct stream<NextLayer, deflateSupported>::impl_type
         if(initial_size == 0)
             return 1; // buffer is full
         return this->read_size_hint_pmd(
-            initial_size, rd_done, rd_remain, rd_fh);
+            initial_size, rd_done, rd_msg_max, rd_remain, rd_fh);
     }
 
     template<class DynamicBuffer>
@@ -340,7 +343,7 @@ struct stream<NextLayer, deflateSupported>::impl_type
         if(timed_out)
         {
             timed_out = false;
-            ec = beast::error::timeout;
+            BOOST_BEAST_ASSIGN_EC(ec, beast::error::timeout);
             return true;
         }
 
@@ -349,7 +352,7 @@ struct stream<NextLayer, deflateSupported>::impl_type
             status_ == status::failed)
         {
             //BOOST_ASSERT(ec_delivered);
-            ec = net::error::operation_aborted;
+            BOOST_BEAST_ASSIGN_EC(ec, net::error::operation_aborted);
             return true;
         }
 
@@ -361,7 +364,7 @@ struct stream<NextLayer, deflateSupported>::impl_type
         if(ec_delivered)
         {
             // No, so abort
-            ec = net::error::operation_aborted;
+            BOOST_BEAST_ASSIGN_EC(ec, net::error::operation_aborted);
             return true;
         }
 
@@ -420,6 +423,12 @@ struct stream<NextLayer, deflateSupported>::impl_type
             {
                 timer.expires_after(
                     timeout_opt.handshake_timeout);
+
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "websocket::check_stop_now"
+                    ));
+
                 timer.async_wait(
                     timeout_handler<Executor>(
                         ex, this->weak_from_this()));
@@ -436,6 +445,12 @@ struct stream<NextLayer, deflateSupported>::impl_type
                 else
                     timer.expires_after(
                         timeout_opt.idle_timeout);
+
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "websocket::check_stop_now"
+                    ));
+
                 timer.async_wait(
                     timeout_handler<Executor>(
                         ex, this->weak_from_this()));
@@ -453,6 +468,12 @@ struct stream<NextLayer, deflateSupported>::impl_type
                 idle_counter = 0;
                 timer.expires_after(
                     timeout_opt.handshake_timeout);
+
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "websocket::check_stop_now"
+                    ));
+
                 timer.async_wait(
                     timeout_handler<Executor>(
                         ex, this->weak_from_this()));
@@ -477,6 +498,22 @@ struct stream<NextLayer, deflateSupported>::impl_type
     }
 
 private:
+    template<class Executor>
+    static net::execution_context&
+    get_context(Executor const& ex,
+        typename std::enable_if< net::execution::is_executor<Executor>::value >::type* = 0)
+    {
+        return net::query(ex, net::execution::context);
+    }
+
+    template<class Executor>
+    static net::execution_context&
+    get_context(Executor const& ex,
+        typename std::enable_if< !net::execution::is_executor<Executor>::value >::type* = 0)
+    {
+        return ex.context();
+    }
+
     bool
     is_timer_set() const
     {
@@ -535,12 +572,26 @@ private:
                 if( impl.timeout_opt.keep_alive_pings &&
                     impl.idle_counter < 1)
                 {
-                    idle_ping_op<Executor>(sp, get_executor());
+                    {
+                        BOOST_ASIO_HANDLER_LOCATION((
+                            __FILE__, __LINE__,
+                            "websocket::timeout_handler"
+                            ));
 
+                        idle_ping_op<Executor>(sp, get_executor());
+                    }
                     ++impl.idle_counter;
                     impl.timer.expires_after(
                         impl.timeout_opt.idle_timeout / 2);
-                    impl.timer.async_wait(std::move(*this));
+
+                    {
+                        BOOST_ASIO_HANDLER_LOCATION((
+                            __FILE__, __LINE__,
+                            "websocket::timeout_handler"
+                            ));
+
+                        impl.timer.async_wait(std::move(*this));
+                    }
                     return;
                 }
 
@@ -581,16 +632,13 @@ build_request(
     req.method(http::verb::get);
     req.set(http::field::host, host);
     req.set(http::field::upgrade, "websocket");
-    req.set(http::field::connection, "upgrade");
+    req.set(http::field::connection, "Upgrade");
     detail::make_sec_ws_key(key);
-    req.set(http::field::sec_websocket_key, key);
+    req.set(http::field::sec_websocket_key, to_string_view(key));
     req.set(http::field::sec_websocket_version, "13");
     this->build_request_pmd(req);
     decorator_opt(req);
     decorator(req);
-    if(! req.count(http::field::user_agent))
-        req.set(http::field::user_agent,
-            BOOST_BEAST_VERSION_STRING);
     return req;
 }
 
@@ -606,7 +654,7 @@ on_response(
     auto const err =
         [&](error e)
         {
-            ec = e;
+            BOOST_BEAST_ASSIGN_EC(ec, e);
         };
     if(res.result() != http::status::switching_protocols)
         return err(error::upgrade_declined);
@@ -632,8 +680,8 @@ on_response(
         if(it == res.end())
             return err(error::no_sec_accept);
         detail::sec_ws_accept_type acc;
-        detail::make_sec_ws_accept(acc, key);
-        if(acc.compare(it->value()) != 0)
+        detail::make_sec_ws_accept(acc, to_string_view(key));
+        if (to_string_view(acc).compare(it->value()) != 0)
             return err(error::bad_sec_accept);
     }
 
@@ -700,14 +748,14 @@ parse_fh(
         if(rd_cont)
         {
             // new data frame when continuation expected
-            ec = error::bad_data_frame;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_data_frame);
             return false;
         }
         if(fh.rsv2 || fh.rsv3 ||
             ! this->rd_deflated(fh.rsv1))
         {
             // reserved bits not cleared
-            ec = error::bad_reserved_bits;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_reserved_bits);
             return false;
         }
         break;
@@ -716,13 +764,13 @@ parse_fh(
         if(! rd_cont)
         {
             // continuation without an active message
-            ec = error::bad_continuation;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_continuation);
             return false;
         }
         if(fh.rsv1 || fh.rsv2 || fh.rsv3)
         {
             // reserved bits not cleared
-            ec = error::bad_reserved_bits;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_reserved_bits);
             return false;
         }
         break;
@@ -731,25 +779,25 @@ parse_fh(
         if(detail::is_reserved(fh.op))
         {
             // reserved opcode
-            ec = error::bad_opcode;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_opcode);
             return false;
         }
         if(! fh.fin)
         {
             // fragmented control message
-            ec = error::bad_control_fragment;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_control_fragment);
             return false;
         }
         if(fh.len > 125)
         {
             // invalid length for control message
-            ec = error::bad_control_size;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_control_size);
             return false;
         }
         if(fh.rsv1 || fh.rsv2 || fh.rsv3)
         {
             // reserved bits not cleared
-            ec = error::bad_reserved_bits;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_reserved_bits);
             return false;
         }
         break;
@@ -757,13 +805,13 @@ parse_fh(
     if(role == role_type::server && ! fh.mask)
     {
         // unmasked frame from client
-        ec = error::bad_unmasked_frame;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_unmasked_frame);
         return false;
     }
     if(role == role_type::client && fh.mask)
     {
         // masked frame from server
-        ec = error::bad_masked_frame;
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_masked_frame);
         return false;
     }
     if(detail::is_control(fh.op) &&
@@ -786,7 +834,7 @@ parse_fh(
         if(fh.len < 126)
         {
             // length not canonical
-            ec = error::bad_size;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_size);
             return false;
         }
         break;
@@ -801,7 +849,7 @@ parse_fh(
         if(fh.len < 65536)
         {
             // length not canonical
-            ec = error::bad_size;
+            BOOST_BEAST_ASSIGN_EC(ec, error::bad_size);
             return false;
         }
         break;
@@ -834,17 +882,20 @@ parse_fh(
                 std::uint64_t>::max)() - fh.len)
             {
                 // message size exceeds configured limit
-                ec = error::message_too_big;
+                BOOST_BEAST_ASSIGN_EC(ec, error::message_too_big);
                 return false;
             }
         }
+        // The final size of a deflated frame is unknown. In certain cases,
+        // post-inflation, it might shrink and become <= rd_msg_max.
+        // Therefore, we will verify the size during the inflation process.
         if(! this->rd_deflated())
         {
             if(rd_msg_max && beast::detail::sum_exceeds(
                 rd_size, fh.len, rd_msg_max))
             {
                 // message size exceeds configured limit
-                ec = error::message_too_big;
+                BOOST_BEAST_ASSIGN_EC(ec, error::message_too_big);
                 return false;
             }
         }

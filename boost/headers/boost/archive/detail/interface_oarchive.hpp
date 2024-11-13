@@ -18,6 +18,7 @@
 #include <cstddef> // NULL
 #include <boost/cstdint.hpp>
 #include <boost/mpl/bool.hpp>
+#include <boost/detail/workaround.hpp>
 
 #include <boost/archive/detail/auto_link_archive.hpp>
 #include <boost/archive/detail/oserializer.hpp>
@@ -35,7 +36,7 @@ template<class Archive>
 class interface_oarchive
 {
 protected:
-    interface_oarchive(){};
+    interface_oarchive() {}
 public:
     /////////////////////////////////////////////////////////
     // archive public interface
@@ -44,7 +45,7 @@ public:
 
     // return a pointer to the most derived class
     Archive * This(){
-        return static_cast<Archive *>(this);
+        return static_cast<Archive*>(this);
     }
 
     template<class T>

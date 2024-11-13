@@ -10,8 +10,8 @@
     LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 =============================================================================*/
 
-#if !defined(CPP_RE2C_LEXER_HPP_B81A2629_D5B1_4944_A97D_60254182B9A8_INCLUDED)
-#define CPP_RE2C_LEXER_HPP_B81A2629_D5B1_4944_A97D_60254182B9A8_INCLUDED
+#if !defined(BOOST_CPP_RE2C_LEXER_HPP_B81A2629_D5B1_4944_A97D_60254182B9A8_INCLUDED)
+#define BOOST_CPP_RE2C_LEXER_HPP_B81A2629_D5B1_4944_A97D_60254182B9A8_INCLUDED
 
 #include <string>
 #include <cstdio>
@@ -22,7 +22,6 @@
 
 #include <boost/concept_check.hpp>
 #include <boost/assert.hpp>
-#include <boost/spirit/include/classic_core.hpp>
 
 #include <boost/wave/wave_config.hpp>
 #include <boost/wave/language_support.hpp>
@@ -88,7 +87,7 @@ public:
     }
 #endif
 
-// error reporting from the re2c generated lexer
+    // error reporting from the re2c generated lexer
     static int report_error(Scanner<IteratorT> const* s, int code, char const *, ...);
 
 private:
@@ -152,6 +151,14 @@ lexer<IteratorT, PositionT, TokenT>::lexer(IteratorT const &first,
     scanner.act_in_cpp0x_mode = boost::wave::need_cpp0x(language_);
 #else
     scanner.act_in_cpp0x_mode = false;
+#endif
+
+#if BOOST_WAVE_SUPPORT_CPP2A != 0
+    scanner.act_in_cpp2a_mode = boost::wave::need_cpp2a(language_);
+    scanner.act_in_cpp0x_mode = boost::wave::need_cpp2a(language_)
+        || boost::wave::need_cpp0x(language_);
+#else
+    scanner.act_in_cpp2a_mode = false;
 #endif
 }
 
@@ -240,8 +247,8 @@ lexer<IteratorT, PositionT, TokenT>::get(TokenT& result)
         break;
 
     case T_EOF:
-    // T_EOF is returned as a valid token, the next call will return T_EOI,
-    // i.e. the actual end of input
+        // T_EOF is returned as a valid token, the next call will return T_EOI,
+        // i.e. the actual end of input
         at_eof = true;
         value.clear();
         break;
@@ -266,7 +273,8 @@ lexer<IteratorT, PositionT, TokenT>::get(TokenT& result)
     case T_ANY_TRIGRAPH:
         if (boost::wave::need_convert_trigraphs(language)) {
             value = impl::convert_trigraph(
-                string_type((char const *)scanner.tok));
+                string_type((char const *)scanner.tok,
+                            scanner.cur-scanner.tok));
         }
         else {
             value = string_type((char const *)scanner.tok,
@@ -307,17 +315,18 @@ lexer<IteratorT, PositionT, TokenT>::report_error(Scanner<IteratorT> const *s, i
     BOOST_ASSERT(0 != s);
     BOOST_ASSERT(0 != msg);
 
-    using namespace std;    // some system have vsprintf in namespace std
+    using namespace std;    // some systems have vsnprintf in namespace std
 
-    char buffer[200];           // should be large enough
+    constexpr std::size_t bufsize = 200;            // should be large enough
+    char buffer[bufsize];
     va_list params;
     va_start(params, msg);
-    vsprintf(buffer, msg, params);
+    vsnprintf(buffer, bufsize, msg, params);
     va_end(params);
 
     BOOST_WAVE_LEXER_THROW_VAR(lexing_exception, errcode, buffer, s->line,
         s->column, s->file_name);
-//    BOOST_UNREACHABLE_RETURN(0);
+    //    BOOST_UNREACHABLE_RETURN(0);
     return 0;
 }
 
@@ -342,11 +351,11 @@ public:
     {}
     virtual ~lex_functor() {}
 
-// get the next token from the input stream
-    token_type& get(token_type& result) { return re2c_lexer.get(result); }
-    void set_position(PositionT const &pos) { re2c_lexer.set_position(pos); }
+    // get the next token from the input stream
+    token_type& get(token_type& result) BOOST_OVERRIDE { return re2c_lexer.get(result); }
+    void set_position(PositionT const &pos) BOOST_OVERRIDE { re2c_lexer.set_position(pos); }
 #if BOOST_WAVE_SUPPORT_PRAGMA_ONCE != 0
-    bool has_include_guards(std::string& guard_name) const
+    bool has_include_guards(std::string& guard_name) const BOOST_OVERRIDE
         { return re2c_lexer.has_include_guards(guard_name); }
 #endif
 
@@ -420,4 +429,4 @@ new_lexer_gen<IteratorT, PositionT, TokenT>::new_lexer(IteratorT const &first,
 #include BOOST_ABI_SUFFIX
 #endif
 
-#endif // !defined(CPP_RE2C_LEXER_HPP_B81A2629_D5B1_4944_A97D_60254182B9A8_INCLUDED)
+#endif // !defined(BOOST_CPP_RE2C_LEXER_HPP_B81A2629_D5B1_4944_A97D_60254182B9A8_INCLUDED)

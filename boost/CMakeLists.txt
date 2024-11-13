@@ -11,6 +11,7 @@ add_library(boost_program_options STATIC ${SRC})
 set_property(TARGET boost_program_options PROPERTY POSITION_INDEPENDENT_CODE ON)
 #target_link_library(boost_program_options boost)
 set_target_properties(boost_program_options PROPERTIES
-         VERSION 1.73.0
+         VERSION 1.86.0
 )
 target_include_directories(boost_program_options PUBLIC headers/ )
+target_compile_features(boost_program_options PUBLIC cxx_std_11)

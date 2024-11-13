@@ -18,7 +18,10 @@
 #include <algorithm>
 #include <iterator>
 
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/size.hpp>
+#include <boost/range/value_type.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <boost/geometry/core/assert.hpp>
@@ -39,6 +42,7 @@
 #include <boost/geometry/algorithms/convert.hpp>
 #include <boost/geometry/algorithms/not_implemented.hpp>
 
+#include <boost/geometry/util/condition.hpp>
 
 namespace boost { namespace geometry
 {
@@ -70,7 +74,7 @@ static inline bool is_entering(Turn const& turn,
 
 template <typename Turn, typename Operation>
 static inline bool is_staying_inside(Turn const& turn,
-                                     Operation const& operation, 
+                                     Operation const& operation,
                                      bool entered)
 {
     if ( !entered )
@@ -243,7 +247,7 @@ protected:
                               linear::get(oit));
             }
         }
-        else if ( FollowIsolatedPoints
+        else if ( BOOST_GEOMETRY_CONDITION(FollowIsolatedPoints)
                   && is_isolated_point(*it, *op_it, entered) )
         {
             detail::turns::debug_turn(*it, *op_it, "-> Isolated point");
@@ -253,7 +257,7 @@ protected:
                     typename pointlike::type
                 >(it->point, pointlike::get(oit));
         }
-        else if ( FollowContinueTurns
+        else if ( BOOST_GEOMETRY_CONDITION(FollowContinueTurns)
                   && is_staying_inside(*it, *op_it, entered) )
         {
             detail::turns::debug_turn(*it, *op_it, "-> Staying inside");
@@ -323,21 +327,17 @@ public:
         for (TurnIterator it = first; it != beyond; ++it)
         {
             oit = process_turn(it, boost::begin(it->operations),
-                               entered, enter_count, 
+                               entered, enter_count,
                                linestring,
                                current_piece, current_segment_id,
                                oit,
                                strategy);
         }
 
-#if ! defined(BOOST_GEOMETRY_OVERLAY_NO_THROW)
         if (enter_count != 0)
         {
-            BOOST_THROW_EXCEPTION(inconsistent_turns_exception());
+           return oit;
         }
-#else
-        BOOST_GEOMETRY_ASSERT(enter_count == 0);
-#endif
 
         return process_end(entered, linestring,
                            current_segment_id, current_piece,

@@ -1,6 +1,7 @@
 // Boost.Geometry
 
-// Copyright (c) 2018, Oracle and/or its affiliates.
+// Copyright (c) 2018-2023, Oracle and/or its affiliates.
+// Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Use, modification and distribution is subject to the Boost Software License,
@@ -13,18 +14,14 @@
 #include <boost/config.hpp>
 #include <boost/geometry/core/exception.hpp>
 #include <boost/throw_exception.hpp>
-#include <boost/type_traits/is_integral.hpp>
-#include <boost/type_traits/is_signed.hpp>
-
-#include <cstdlib>
-#include <string>
+#include <boost/type_traits/remove_cv.hpp>
 
 namespace boost { namespace geometry
 {
 
 class bad_str_cast : public geometry::exception
 {
-    virtual char const* what() const throw()
+    char const* what() const noexcept override
     {
         return "Unable to convert from string.";
     }
@@ -37,8 +34,8 @@ namespace detail
 template
 <
     typename T,
-    bool IsIntegral = boost::is_integral<T>::value,
-    bool IsSigned = boost::is_signed<T>::value
+    bool IsIntegral = std::is_integral<T>::value,
+    bool IsSigned = std::is_signed<T>::value
 >
 struct str_cast_traits_strtox
 {
@@ -75,11 +72,6 @@ struct str_cast_traits_strtox<T, false, false>
     }
 };
 
-// Assuming a compiler supporting r-value references
-// supports long long and strtoll, strtoull, strtof, strtold
-// If it's MSVC enable in MSVC++ 12.0 aka Visual Studio 2013
-// TODO: in MSVC-11.0 _strtoi64() intrinsic could be used
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && (!defined(_MSC_VER) || (_MSC_VER >= 1800))
 template <>
 struct str_cast_traits_strtox<long long, true, true>
 {
@@ -115,7 +107,6 @@ struct str_cast_traits_strtox<long double, false, false>
         return strtold(str, str_end);
     }
 };
-#endif // C++11 strtox supported
 
 template <typename T>
 struct str_cast_traits_generic

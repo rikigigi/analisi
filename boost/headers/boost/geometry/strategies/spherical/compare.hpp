@@ -2,9 +2,10 @@
 
 // Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
-// This file was modified by Oracle on 2017, 2018, 2019.
-// Modifications copyright (c) 2017-2019, Oracle and/or its affiliates.
+// This file was modified by Oracle on 2017-2023.
+// Modifications copyright (c) 2017-2023, Oracle and/or its affiliates.
 
+// Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Use, modification and distribution is subject to the Boost Software License,
@@ -15,10 +16,7 @@
 #define BOOST_GEOMETRY_STRATEGIES_SPHERICAL_COMPARE_HPP
 
 
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/min.hpp>
-
-#include <boost/type_traits/is_same.hpp>
+#include <type_traits>
 
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/coordinate_dimension.hpp>
@@ -48,14 +46,14 @@ namespace detail
 
 template <std::size_t I, typename P>
 static inline typename geometry::coordinate_type<P>::type
-get(P const& p, boost::true_type /*same units*/)
+get(P const& p, std::true_type /*same units*/)
 {
     return geometry::get<I>(p);
 }
 
 template <std::size_t I, typename P>
 static inline typename geometry::coordinate_type<P>::type
-get(P const& p, boost::false_type /*different units*/)
+get(P const& p, std::false_type /*different units*/)
 {
     return geometry::get_as_radian<I>(p);
 }
@@ -63,6 +61,7 @@ get(P const& p, boost::false_type /*different units*/)
 template
 <
     typename ComparePolicy,
+    typename EqualsPolicy,
     typename Point1,
     typename Point2,
     std::size_t DimensionCount
@@ -73,18 +72,18 @@ struct spherical_latitude
     typedef typename geometry::detail::cs_angular_units<Point1>::type units1_type;
     typedef typename geometry::coordinate_type<Point2>::type coordinate2_type;
     typedef typename geometry::detail::cs_angular_units<Point2>::type units2_type;
-    typedef typename boost::is_same<units1_type, units2_type>::type same_units_type;
+    typedef std::is_same<units1_type, units2_type> same_units_type;
 
     template <typename T1, typename T2>
     static inline bool apply(Point1 const& left, Point2 const& right,
                              T1 const& l1, T2 const& r1)
     {
         // latitudes equal
-        if (math::equals(l1, r1))
+        if (EqualsPolicy::apply(l1, r1))
         {
             return compare::detail::compare_loop
                 <
-                    ComparePolicy, 2, DimensionCount
+                    ComparePolicy, EqualsPolicy, 2, DimensionCount
                 >::apply(left, right);
         }
         else
@@ -105,10 +104,11 @@ struct spherical_latitude
 template
 <
     typename ComparePolicy,
+    typename EqualsPolicy,
     typename Point1,
     typename Point2
 >
-struct spherical_latitude<ComparePolicy, Point1, Point2, 1>
+struct spherical_latitude<ComparePolicy, EqualsPolicy, Point1, Point2, 1>
 {
     template <typename T1, typename T2>
     static inline bool apply(Point1 const& left, Point2 const& right,
@@ -121,7 +121,7 @@ struct spherical_latitude<ComparePolicy, Point1, Point2, 1>
     {
         return compare::detail::compare_loop
             <
-                ComparePolicy, 1, 1
+                ComparePolicy, EqualsPolicy, 1, 1
             >::apply(left, right);
     }
 };
@@ -129,6 +129,7 @@ struct spherical_latitude<ComparePolicy, Point1, Point2, 1>
 template
 <
     typename ComparePolicy,
+    typename EqualsPolicy,
     typename Point1,
     typename Point2,
     std::size_t DimensionCount
@@ -139,10 +140,10 @@ struct spherical_longitude
     typedef typename geometry::detail::cs_angular_units<Point1>::type units1_type;
     typedef typename geometry::coordinate_type<Point2>::type coordinate2_type;
     typedef typename geometry::detail::cs_angular_units<Point2>::type units2_type;
-    typedef typename boost::is_same<units1_type, units2_type>::type same_units_type;
-    typedef typename boost::mpl::if_<same_units_type, units1_type, geometry::radian>::type units_type;
+    typedef std::is_same<units1_type, units2_type> same_units_type;
+    typedef std::conditional_t<same_units_type::value, units1_type, geometry::radian> units_type;
 
-    static const bool is_equatorial = ! boost::is_same
+    static const bool is_equatorial = ! std::is_same
                                         <
                                             typename geometry::cs_tag<Point1>::type,
                                             geometry::spherical_polar_tag
@@ -168,18 +169,18 @@ struct spherical_longitude
 
         bool is_left_at_antimeridian = false;
         bool is_right_at_antimeridian = false;
-        
+
             // longitudes equal
-        if (math::equals(l0, r0)
+        if (EqualsPolicy::apply(l0, r0)
                // both at antimeridian
             || are_both_at_antimeridian(l0, r0, is_left_at_antimeridian, is_right_at_antimeridian)
                // both at pole
-            || (math::equals(l1, r1)
+            || (EqualsPolicy::apply(l1, r1)
                 && math::is_latitude_pole<units_type, is_equatorial>(l1)))
         {
             return spherical_latitude
                 <
-                    ComparePolicy, Point1, Point2, DimensionCount
+                    ComparePolicy, EqualsPolicy, Point1, Point2, DimensionCount
                 >::apply(left, right, l1, r1);
         }
         // if left is at antimeridian and right is not at antimeridian
@@ -217,16 +218,17 @@ struct spherical_longitude
 template
 <
     typename ComparePolicy,
+    typename EqualsPolicy,
     int Dimension = -1
 >
 struct spherical
-    : cartesian<ComparePolicy, Dimension>
+    : cartesian<ComparePolicy, EqualsPolicy, Dimension>
 {};
 
 #ifndef DOXYGEN_NO_STRATEGY_SPECIALIZATIONS
 // all dimensions starting from longitude
-template <typename ComparePolicy>
-struct spherical<ComparePolicy, -1>
+template <typename ComparePolicy, typename EqualsPolicy>
+struct spherical<ComparePolicy, EqualsPolicy, -1>
 {
     template <typename Point1, typename Point2>
     static inline bool apply(Point1 const& left, Point2 const& right)
@@ -234,41 +236,43 @@ struct spherical<ComparePolicy, -1>
         return compare::detail::spherical_longitude
             <
                 ComparePolicy,
+                EqualsPolicy,
                 Point1,
                 Point2,
-                boost::mpl::min
+                std::conditional_t
                     <
-                        geometry::dimension<Point1>,
-                        geometry::dimension<Point2>
-                    >::type::value
+                        (dimension<Point1>::value < dimension<Point2>::value),
+                        std::integral_constant<std::size_t, dimension<Point1>::value>,
+                        std::integral_constant<std::size_t, dimension<Point2>::value>
+                    >::value
             >::apply(left, right);
     }
 };
 
 // only longitudes (and latitudes to check poles)
-template <typename ComparePolicy>
-struct spherical<ComparePolicy, 0>
+template <typename ComparePolicy, typename EqualsPolicy>
+struct spherical<ComparePolicy, EqualsPolicy, 0>
 {
     template <typename Point1, typename Point2>
     static inline bool apply(Point1 const& left, Point2 const& right)
     {
         return compare::detail::spherical_longitude
             <
-                ComparePolicy, Point1, Point2, 1
+                ComparePolicy, EqualsPolicy, Point1, Point2, 1
             >::apply(left, right);
     }
 };
 
 // only latitudes
-template <typename ComparePolicy>
-struct spherical<ComparePolicy, 1>
+template <typename ComparePolicy, typename EqualsPolicy>
+struct spherical<ComparePolicy, EqualsPolicy, 1>
 {
     template <typename Point1, typename Point2>
     static inline bool apply(Point1 const& left, Point2 const& right)
     {
         return compare::detail::spherical_latitude
             <
-                ComparePolicy, Point1, Point2, 2
+                ComparePolicy, EqualsPolicy, Point1, Point2, 2
             >::apply(left, right);
     }
 };
@@ -280,44 +284,48 @@ namespace services
 {
 
 
-template <typename ComparePolicy, typename Point1, typename Point2, int Dimension>
+template <typename ComparePolicy, typename EqualsPolicy, typename Point1, typename Point2, int Dimension>
 struct default_strategy
     <
-        ComparePolicy, Point1, Point2, Dimension,
+        ComparePolicy, EqualsPolicy,
+        Point1, Point2, Dimension,
         spherical_tag, spherical_tag
     >
 {
-    typedef compare::spherical<ComparePolicy, Dimension> type;
+    typedef compare::spherical<ComparePolicy, EqualsPolicy, Dimension> type;
 };
 
-template <typename ComparePolicy, typename Point1, typename Point2, int Dimension>
+template <typename ComparePolicy, typename EqualsPolicy, typename Point1, typename Point2, int Dimension>
 struct default_strategy
     <
-        ComparePolicy, Point1, Point2, Dimension,
+        ComparePolicy, EqualsPolicy,
+        Point1, Point2, Dimension,
         spherical_polar_tag, spherical_polar_tag
     >
 {
-    typedef compare::spherical<ComparePolicy, Dimension> type;
+    typedef compare::spherical<ComparePolicy, EqualsPolicy, Dimension> type;
 };
 
-template <typename ComparePolicy, typename Point1, typename Point2, int Dimension>
+template <typename ComparePolicy, typename EqualsPolicy, typename Point1, typename Point2, int Dimension>
 struct default_strategy
     <
-        ComparePolicy, Point1, Point2, Dimension,
+        ComparePolicy, EqualsPolicy,
+        Point1, Point2, Dimension,
         spherical_equatorial_tag, spherical_equatorial_tag
     >
 {
-    typedef compare::spherical<ComparePolicy, Dimension> type;
+    typedef compare::spherical<ComparePolicy, EqualsPolicy, Dimension> type;
 };
 
-template <typename ComparePolicy, typename Point1, typename Point2, int Dimension>
+template <typename ComparePolicy, typename EqualsPolicy, typename Point1, typename Point2, int Dimension>
 struct default_strategy
     <
-        ComparePolicy, Point1, Point2, Dimension,
+        ComparePolicy, EqualsPolicy,
+        Point1, Point2, Dimension,
         geographic_tag, geographic_tag
     >
 {
-    typedef compare::spherical<ComparePolicy, Dimension> type;
+    typedef compare::spherical<ComparePolicy, EqualsPolicy, Dimension> type;
 };
 
 

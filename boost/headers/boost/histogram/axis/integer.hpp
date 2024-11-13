@@ -13,6 +13,7 @@
 #include <boost/histogram/axis/option.hpp>
 #include <boost/histogram/detail/convert_integer.hpp>
 #include <boost/histogram/detail/limits.hpp>
+#include <boost/histogram/detail/relaxed_equal.hpp>
 #include <boost/histogram/detail/replace_type.hpp>
 #include <boost/histogram/detail/static_if.hpp>
 #include <boost/histogram/fwd.hpp>
@@ -28,40 +29,27 @@ namespace boost {
 namespace histogram {
 namespace axis {
 
-/**
-  Axis for an interval of integer values with unit steps.
+/** Axis for an interval of integer values with unit steps.
 
-  Binning is a O(1) operation. This axis bins faster than a regular axis.
+  Binning is a O(1) operation. This axis bins even faster than a regular axis.
 
-  @tparam Value input value type. Must be integer or floating point.
-  @tparam MetaData type to store meta data.
-  @tparam Options see boost::histogram::axis::option (all values allowed).
+  The options `growth` and `circular` are mutually exclusive. If the axis uses
+  integers and either `growth` or `circular` are set, the axis cannot have
+  the options `underflow` or `overflow` set.
+
+  @tparam Value     input value type. Must be integer or floating point.
+  @tparam MetaData  type to store meta data.
+  @tparam Options   see boost::histogram::axis::option.
  */
 template <class Value, class MetaData, class Options>
 class integer : public iterator_mixin<integer<Value, MetaData, Options>>,
-                public metadata_base<MetaData> {
+                public metadata_base_t<MetaData> {
   // these must be private, so that they are not automatically inherited
   using value_type = Value;
-  using metadata_type = typename metadata_base<MetaData>::metadata_type;
+  using metadata_base = metadata_base_t<MetaData>;
+  using metadata_type = typename metadata_base::metadata_type;
   using options_type =
       detail::replace_default<Options, decltype(option::underflow | option::overflow)>;
-
-  static_assert(std::is_integral<value_type>::value ||
-                    std::is_floating_point<value_type>::value,
-                "integer axis requires floating point or integral type");
-
-  static_assert(!options_type::test(option::circular | option::growth) ||
-                    (options_type::test(option::circular) ^
-                     options_type::test(option::growth)),
-                "circular and growth options are mutually exclusive");
-
-  static_assert(std::is_floating_point<value_type>::value ||
-                    (!options_type::test(option::circular) &&
-                     !options_type::test(option::growth)) ||
-                    (!options_type::test(option::overflow) &&
-                     !options_type::test(option::underflow)),
-                "circular or growing integer axis with integral type "
-                "cannot have entries in underflow or overflow bins");
 
   using local_index_type = std::conditional_t<std::is_integral<value_type>::value,
                                               index_type, real_index_type>;
@@ -70,16 +58,38 @@ public:
   constexpr integer() = default;
 
   /** Construct over semi-open integer interval [start, stop).
-   *
-   * \param start    first integer of covered range.
-   * \param stop     one past last integer of covered range.
-   * \param meta     description of the axis.
+
+    @param start    first integer of covered range.
+    @param stop     one past last integer of covered range.
+    @param meta     description of the axis (optional).
+    @param options  see boost::histogram::axis::option (optional).
+
+    The constructor throws `std::invalid_argument` if start is not less than stop.
+
+    The arguments meta and alloc are passed by value. If you move either of them into the
+    axis and the constructor throws, their values are lost. Do not move if you cannot
+    guarantee that the bin description is not valid.
    */
-  integer(value_type start, value_type stop, metadata_type meta = {})
-      : metadata_base<MetaData>(std::move(meta))
+  integer(value_type start, value_type stop, metadata_type meta = {},
+          options_type options = {})
+      : metadata_base(std::move(meta))
       , size_(static_cast<index_type>(stop - start))
       , min_(start) {
-    if (!(stop >= start))
+    static_assert(
+        std::is_integral<value_type>::value || std::is_floating_point<value_type>::value,
+        "integer axis requires floating point or integral type");
+
+    static_assert(!(options.test(option::circular) && options.test(option::growth)),
+                  "circular and growth options are mutually exclusive");
+
+    static_assert(
+        std::is_floating_point<value_type>::value ||
+            !((options.test(option::growth) || options.test(option::circular)) &&
+              (options.test(option::overflow) || options.test(option::underflow))),
+        "circular or growing integer axis with integral type "
+        "cannot have entries in underflow or overflow bins");
+
+    if (!(stop >= start)) // double negation so it works with NaN
       BOOST_THROW_EXCEPTION(std::invalid_argument("stop >= start required"));
   }
 
@@ -94,25 +104,9 @@ public:
 
   /// Return index for value argument.
   index_type index(value_type x) const noexcept {
-    return detail::static_if<std::is_floating_point<value_type>>(
-        [this](const auto z) -> index_type {
-          // need to handle NaN, cannot simply cast to int and call int-implementation
-          if (options_type::test(option::circular)) {
-            if (std::isfinite(z))
-              return static_cast<index_type>(std::floor(z) -
-                                             std::floor(z / this->size()) * this->size());
-          } else if (z < this->size())
-            return z >= 0 ? static_cast<index_type>(z) : -1;
-          return this->size();
-        },
-        [this](const auto z) -> index_type {
-          if (options_type::test(option::circular))
-            return static_cast<index_type>(z - std::floor(float(z) / this->size()) *
-                                                   this->size());
-          if (z < this->size()) return z >= 0 ? z : -1;
-          return this->size();
-        },
-        x - min_);
+    return index_impl(options_type::test(axis::option::circular),
+                      std::is_floating_point<value_type>{},
+                      static_cast<double>(x - min_));
   }
 
   /// Returns index and shift (if axis has grown) for the passed argument.
@@ -167,14 +161,19 @@ public:
 
   /// Whether the axis is inclusive (see axis::traits::is_inclusive).
   static constexpr bool inclusive() noexcept {
-    return (options() & option::underflow || options() & option::overflow) ||
-           (std::is_integral<value_type>::value &&
-            (options() & (option::growth | option::circular)));
+    // If axis has underflow and overflow, it is inclusive.
+    // If axis is growing or circular:
+    // - it is inclusive if value_type is an integer.
+    // - it is not inclusive if value_type is floating point, because of nan and inf.
+    constexpr bool full_flow = options_type().test(option::underflow | option::overflow);
+    return full_flow || (std::is_integral<value_type>::value &&
+                         (options() & (option::growth | option::circular)));
   }
 
   template <class V, class M, class O>
   bool operator==(const integer<V, M, O>& o) const noexcept {
-    return size() == o.size() && min_ == o.min_ && metadata_base<MetaData>::operator==(o);
+    return size() == o.size() && min_ == o.min_ &&
+           detail::relaxed_equal{}(this->metadata(), o.metadata());
   }
 
   template <class V, class M, class O>
@@ -190,6 +189,24 @@ public:
   }
 
 private:
+  // axis not circular
+  template <class B>
+  index_type index_impl(std::false_type, B, double z) const noexcept {
+    if (z < size()) return z >= 0 ? static_cast<index_type>(z) : -1;
+    return size();
+  }
+
+  // value_type is integer, axis circular
+  index_type index_impl(std::true_type, std::false_type, double z) const noexcept {
+    return static_cast<index_type>(z - std::floor(z / size()) * size());
+  }
+
+  // value_type is floating point, must handle +/-infinite or nan, axis circular
+  index_type index_impl(std::true_type, std::true_type, double z) const noexcept {
+    if (std::isfinite(z)) return index_impl(std::true_type{}, std::false_type{}, z);
+    return z < size() ? -1 : size();
+  }
+
   index_type size_{0};
   value_type min_{0};
 
@@ -200,12 +217,18 @@ private:
 #if __cpp_deduction_guides >= 201606
 
 template <class T>
-integer(T, T)->integer<detail::convert_integer<T, index_type>, null_type>;
+integer(T, T) -> integer<detail::convert_integer<T, index_type>, null_type>;
 
 template <class T, class M>
 integer(T, T, M)
-    ->integer<detail::convert_integer<T, index_type>,
-              detail::replace_type<std::decay_t<M>, const char*, std::string>>;
+    -> integer<detail::convert_integer<T, index_type>,
+               detail::replace_type<std::decay_t<M>, const char*, std::string>>;
+
+template <class T, class M, unsigned B>
+integer(T, T, M, const option::bitset<B>&)
+    -> integer<detail::convert_integer<T, index_type>,
+               detail::replace_type<std::decay_t<M>, const char*, std::string>,
+               option::bitset<B>>;
 
 #endif
 

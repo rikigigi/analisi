@@ -50,47 +50,6 @@ struct allocate_stable_state final
 
 } // detail
 
-template<
-    class Handler,
-    class Executor1,
-    class Allocator,
-    class Function>
-void asio_handler_invoke(
-    Function&& f,
-    async_base<Handler, Executor1, Allocator>* p)
-{
-    using net::asio_handler_invoke;
-    asio_handler_invoke(f,
-        p->get_legacy_handler_pointer());
-}
-
-template<
-    class Handler,
-    class Executor1,
-    class Allocator>
-void*
-asio_handler_allocate(
-    std::size_t size,
-    async_base<Handler, Executor1, Allocator>* p)
-{
-    using net::asio_handler_allocate;
-    return asio_handler_allocate(size,
-        p->get_legacy_handler_pointer());
-}
-
-template<
-    class Handler,
-    class Executor1,
-    class Allocator>
-void
-asio_handler_deallocate(
-    void* mem, std::size_t size,
-    async_base<Handler, Executor1, Allocator>* p)
-{
-    using net::asio_handler_deallocate;
-    asio_handler_deallocate(mem, size,
-        p->get_legacy_handler_pointer());
-}
 
 template<
     class Handler,
@@ -100,7 +59,7 @@ bool
 asio_handler_is_continuation(
     async_base<Handler, Executor1, Allocator>* p)
 {
-    using net::asio_handler_is_continuation;
+    using boost::asio::asio_handler_is_continuation;
     return asio_handler_is_continuation(
         p->get_legacy_handler_pointer());
 }

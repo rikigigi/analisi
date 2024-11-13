@@ -2,14 +2,16 @@
 #define BOOST_ARCHIVE_DETAIL_ISERIALIZER_HPP
 
 // MS compatible compilers support #pragma once
-#if defined(_MSC_VER)
+#if defined(BOOST_MSVC)
 # pragma once
-#pragma inline_depth(511)
+#if !defined(__clang__)
+#pragma inline_depth(255)
 #pragma inline_recursion(on)
+#endif
 #endif
 
 #if defined(__MWERKS__)
-#pragma inline_depth(511)
+#pragma inline_depth(255)
 #endif
 
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
@@ -120,7 +122,7 @@ template<class Archive, class T>
 class iserializer : public basic_iserializer
 {
 private:
-    virtual void destroy(/*const*/ void *address) const {
+    void destroy(/*const*/ void *address) const BOOST_OVERRIDE {
         boost::serialization::access::destroy(static_cast<T *>(address));
     }
 public:
@@ -132,29 +134,29 @@ public:
             >::get_const_instance()
         )
     {}
-    virtual BOOST_DLLEXPORT void load_object_data(
+    BOOST_DLLEXPORT void load_object_data(
         basic_iarchive & ar,
         void *x,
         const unsigned int file_version
-    ) const BOOST_USED;
-    virtual bool class_info() const {
+    ) const BOOST_OVERRIDE BOOST_USED;
+    bool class_info() const BOOST_OVERRIDE {
         return boost::serialization::implementation_level< T >::value
             >= boost::serialization::object_class_info;
     }
-    virtual bool tracking(const unsigned int /* flags */) const {
+    bool tracking(const unsigned int /* flags */) const BOOST_OVERRIDE {
         return boost::serialization::tracking_level< T >::value
                 == boost::serialization::track_always
             || ( boost::serialization::tracking_level< T >::value
                 == boost::serialization::track_selectively
                 && serialized_as_pointer());
     }
-    virtual version_type version() const {
+    version_type version() const BOOST_OVERRIDE {
         return version_type(::boost::serialization::version< T >::value);
     }
-    virtual bool is_polymorphic() const {
+    bool is_polymorphic() const BOOST_OVERRIDE {
         return boost::is_polymorphic< T >::value;
     }
-    virtual ~iserializer(){};
+    ~iserializer() BOOST_OVERRIDE {}
 };
 
 #ifdef BOOST_MSVC
@@ -167,12 +169,12 @@ BOOST_DLLEXPORT void iserializer<Archive, T>::load_object_data(
     void *x,
     const unsigned int file_version
 ) const {
-    // note: we now comment this out. Before we permited archive
+    // note: we now comment this out. Before we permitted archive
     // version # to be very large.  Now we don't.  To permit
     // readers of these old archives, we have to suppress this
     // code.  Perhaps in the future we might re-enable it but
     // permit its suppression with a runtime switch.
-    #if 0
+    #if 1
     // trap case where the program cannot handle the current version
     if(file_version > static_cast<const unsigned int>(version()))
         boost::serialization::throw_exception(
@@ -182,7 +184,7 @@ BOOST_DLLEXPORT void iserializer<Archive, T>::load_object_data(
             )
         );
     #endif
-    // make sure call is routed through the higest interface that might
+    // make sure call is routed through the highest interface that might
     // be specialized by the user.
     boost::serialization::serialize_adl(
         boost::serialization::smart_cast_reference<Archive &>(ar),
@@ -289,26 +291,26 @@ class pointer_iserializer :
     public basic_pointer_iserializer
 {
 private:
-    virtual void * heap_allocation() const {
+    void * heap_allocation() const BOOST_OVERRIDE {
         detail::heap_allocation<T> h;
         T * t = h.get();
         h.release();
         return t;
     }
-    virtual const basic_iserializer & get_basic_serializer() const {
+    const basic_iserializer & get_basic_serializer() const BOOST_OVERRIDE {
         return boost::serialization::singleton<
             iserializer<Archive, T>
         >::get_const_instance();
     }
-    BOOST_DLLEXPORT virtual void load_object_ptr(
+    BOOST_DLLEXPORT void load_object_ptr(
         basic_iarchive & ar,
         void * x,
         const unsigned int file_version
-    ) const BOOST_USED;
+    ) const BOOST_OVERRIDE BOOST_USED;
 public:
-    // this should alway be a singleton so make the constructor protected
+    // this should always be a singleton so make the constructor protected
     pointer_iserializer();
-    ~pointer_iserializer();
+    ~pointer_iserializer() BOOST_OVERRIDE;
 };
 
 #ifdef BOOST_MSVC
@@ -390,7 +392,7 @@ struct load_non_pointer_type {
         template<class T>
         static void invoke(Archive & ar, const T & t){
             // short cut to user's serializer
-            // make sure call is routed through the higest interface that might
+            // make sure call is routed through the highest interface that might
             // be specialized by the user.
             boost::serialization::serialize_adl(
                 ar,
@@ -573,7 +575,7 @@ struct load_array_type {
 
         // convert integers to correct enum to load
         // determine number of elements in the array. Consider the
-        // fact that some machines will align elements on boundries
+        // fact that some machines will align elements on boundaries
         // other than characters.
         std::size_t current_count = sizeof(t) / (
             static_cast<char *>(static_cast<void *>(&t[1]))
@@ -587,7 +589,7 @@ struct load_array_type {
                     boost::archive::archive_exception::array_size_too_short
                 )
             );
-        // explict template arguments to pass intel C++ compiler
+        // explicit template arguments to pass intel C++ compiler
         ar >> serialization::make_array<
             value_type,
             boost::serialization::collection_size_type

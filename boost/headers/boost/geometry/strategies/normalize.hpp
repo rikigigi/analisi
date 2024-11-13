@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2015-2018, Oracle and/or its affiliates.
+// Copyright (c) 2015-2020, Oracle and/or its affiliates.
 
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
@@ -12,8 +12,7 @@
 #define BOOST_GEOMETRY_STRATEGIES_NORMALIZE_HPP
 
 #include <cstddef>
-
-#include <boost/numeric/conversion/cast.hpp>
+#include <type_traits>
 
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/coordinate_system.hpp>
@@ -24,6 +23,7 @@
 
 #include <boost/geometry/util/normalize_spheroidal_coordinates.hpp>
 #include <boost/geometry/util/normalize_spheroidal_box_coordinates.hpp>
+#include <boost/geometry/util/numeric_cast.hpp>
 
 #include <boost/geometry/views/detail/indexed_point_view.hpp>
 
@@ -56,7 +56,7 @@ struct assign_loop
                              PointIn const& point_in,
                              PointOut& point_out)
     {
-        geometry::set<Dimension>(point_out, boost::numeric_cast
+        geometry::set<Dimension>(point_out, util::numeric_cast
             <
                 typename coordinate_type<PointOut>::type
             >(geometry::get<Dimension>(point_in)));
@@ -89,7 +89,7 @@ struct assign_loop<0, DimensionCount>
                              PointIn const& point_in,
                              PointOut& point_out)
     {
-        geometry::set<0>(point_out, boost::numeric_cast
+        geometry::set<0>(point_out, util::numeric_cast
             <
                 typename coordinate_type<PointOut>::type
             >(longitude));
@@ -110,7 +110,7 @@ struct assign_loop<1, DimensionCount>
                              PointIn const& point_in,
                              PointOut& point_out)
     {
-        geometry::set<1>(point_out, boost::numeric_cast
+        geometry::set<1>(point_out, util::numeric_cast
             <
                 typename coordinate_type<PointOut>::type
             >(latitude));
@@ -229,14 +229,11 @@ struct spherical_point
         detail::normalize_point
             <
                 PointIn, PointOut,
-                boost::mpl::not_
+                (! std::is_same
                     <
-                        boost::is_same
-                            <
-                                typename cs_tag<PointIn>::type,
-                                spherical_polar_tag
-                            >
-                    >::value
+                        typename cs_tag<PointIn>::type,
+                        spherical_polar_tag
+                    >::value)
             >::apply(point_in, point_out);
     }
 };
@@ -249,14 +246,11 @@ struct spherical_box
         detail::normalize_box
             <
                 BoxIn, BoxOut,
-                boost::mpl::not_
+                (! std::is_same
                     <
-                        boost::is_same
-                            <
-                                typename cs_tag<BoxIn>::type,
-                                spherical_polar_tag
-                            >
-                    >::value
+                        typename cs_tag<BoxIn>::type,
+                        spherical_polar_tag
+                    >::value)
             >::apply(box_in, box_out);
     }
 };

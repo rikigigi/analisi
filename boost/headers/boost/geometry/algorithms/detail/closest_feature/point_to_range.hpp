@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2014, Oracle and/or its affiliates.
-
+// Copyright (c) 2014-2021, Oracle and/or its affiliates.
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
+// Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Licensed under the Boost Software License version 1.0.
 // http://www.boost.org/users/license.html
@@ -12,7 +12,8 @@
 
 #include <utility>
 
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
 
 #include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/closure.hpp>
@@ -34,15 +35,14 @@ template
 <
     typename Point,
     typename Range,
-    closure_selector Closure,
-    typename Strategy
+    closure_selector Closure
 >
 class point_to_point_range
 {
 protected:
     typedef typename boost::range_iterator<Range const>::type iterator_type;
 
-    template <typename Distance>
+    template <typename Strategy, typename Distance>
     static inline void apply(Point const& point,
                              iterator_type first,
                              iterator_type last,
@@ -96,7 +96,7 @@ protected:
 public:
     typedef typename std::pair<iterator_type, iterator_type> return_type;
 
-    template <typename Distance>
+    template <typename Strategy, typename Distance>
     static inline return_type apply(Point const& point,
                                     iterator_type first,
                                     iterator_type last,
@@ -109,6 +109,7 @@ public:
         return std::make_pair(it_min1, it_min2);
     }
 
+    template <typename Strategy>
     static inline return_type apply(Point const& point,
                                     iterator_type first,
                                     iterator_type last,
@@ -124,7 +125,7 @@ public:
         return apply(point, first, last, strategy, dist_min);
     }
 
-    template <typename Distance>
+    template <typename Strategy, typename Distance>
     static inline return_type apply(Point const& point,
                                     Range const& range,
                                     Strategy const& strategy,
@@ -137,6 +138,7 @@ public:
                      dist_min);
     }
 
+    template <typename Strategy>
     static inline return_type apply(Point const& point,
                                     Range const& range,
                                     Strategy const& strategy)
@@ -148,15 +150,15 @@ public:
 
 
 // specialization for open ranges
-template <typename Point, typename Range, typename Strategy>
-class point_to_point_range<Point, Range, open, Strategy>
-    : point_to_point_range<Point, Range, closed, Strategy>
+template <typename Point, typename Range>
+class point_to_point_range<Point, Range, open>
+    : point_to_point_range<Point, Range, closed>
 {
 private:
-    typedef point_to_point_range<Point, Range, closed, Strategy> base_type;
+    typedef point_to_point_range<Point, Range, closed> base_type;
     typedef typename base_type::iterator_type iterator_type;
 
-    template <typename Distance>
+    template <typename Strategy, typename Distance>
     static inline void apply(Point const& point,
                              iterator_type first,
                              iterator_type last,
@@ -186,12 +188,12 @@ private:
             it_min1 = it_back;
             it_min2 = first;
         }
-    }    
+    }
 
 public:
     typedef typename std::pair<iterator_type, iterator_type> return_type;
 
-    template <typename Distance>
+    template <typename Strategy, typename Distance>
     static inline return_type apply(Point const& point,
                                     iterator_type first,
                                     iterator_type last,
@@ -205,6 +207,7 @@ public:
         return std::make_pair(it_min1, it_min2);
     }
 
+    template <typename Strategy>
     static inline return_type apply(Point const& point,
                                     iterator_type first,
                                     iterator_type last,
@@ -222,7 +225,7 @@ public:
         return apply(point, first, last, strategy, dist_min);
     }
 
-    template <typename Distance>
+    template <typename Strategy, typename Distance>
     static inline return_type apply(Point const& point,
                                     Range const& range,
                                     Strategy const& strategy,
@@ -235,6 +238,7 @@ public:
                      dist_min);
     }
 
+    template <typename Strategy>
     static inline return_type apply(Point const& point,
                                     Range const& range,
                                     Strategy const& strategy)

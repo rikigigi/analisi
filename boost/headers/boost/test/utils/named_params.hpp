@@ -126,16 +126,16 @@ report_access_to_invalid_parameter( bool v )
 
 struct nil {
     template<typename T>
-#if defined(__GNUC__) || defined(__HP_aCC) || defined(__EDG__) || defined(__SUNPRO_CC)
+#if defined(__GNUC__) || defined(__HP_aCC) || defined(__EDG__) || defined(__SUNPRO_CC) || defined(BOOST_EMBTC)
     operator T() const
 #else
     operator T const&() const
 #endif
-    { nfp_detail::report_access_to_invalid_parameter(true); static T* v = 0; return *v; }
+    { nfp_detail::report_access_to_invalid_parameter(true); BOOST_TEST_UNREACHABLE_RETURN(*static_cast<T*>(0)); }
 
     template<typename T>
     T any_cast() const
-    { nfp_detail::report_access_to_invalid_parameter(true); static typename remove_reference<T>::type* v = 0; return *v; }
+    { nfp_detail::report_access_to_invalid_parameter(true); BOOST_TEST_UNREACHABLE_RETURN(*static_cast<typename std::remove_reference<T>::type*>(0)); }
 
     template<typename Arg1>
     nil operator()( Arg1 const& )

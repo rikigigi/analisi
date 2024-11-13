@@ -78,7 +78,7 @@ typename Dist::value_type
       const typename Dist::value_type& multiplier,
       typename Dist::value_type adder,
       const Tolerance& tol,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    typedef typename Dist::value_type value_type;
    typedef typename Dist::policy_type policy_type;
@@ -100,7 +100,7 @@ typename Dist::value_type
       guess = min_bound;
 
    value_type fa = f(guess);
-   boost::uintmax_t count = max_iter - 1;
+   std::uintmax_t count = max_iter - 1;
    value_type fb(fa), a(guess), b =0; // Compiler warning C4701: potentially uninitialized local variable 'b' used
 
    if(fa == 0)
@@ -147,7 +147,7 @@ typename Dist::value_type
    // we're assuming that "guess" is likely to be accurate
    // to the nearest int or so:
    //
-   else if(adder != 0)
+   else if((adder != 0) && (a + adder != a))
    {
       //
       // If we're looking for a large result, then bump "adder" up
@@ -215,7 +215,7 @@ typename Dist::value_type
          while(((boost::math::sign)(fb) == (boost::math::sign)(fa)) && (a != b))
          {
             if(count == 0)
-               return policies::raise_evaluation_error(function, "Unable to bracket root, last nearest value was %1%", b, policy_type());
+               return policies::raise_evaluation_error(function, "Unable to bracket root, last nearest value was %1%", b, policy_type()); // LCOV_EXCL_LINE
             a = b;
             fa = fb;
             b *= multiplier;
@@ -242,7 +242,7 @@ typename Dist::value_type
                return 0;
             }
             if(count == 0)
-               return policies::raise_evaluation_error(function, "Unable to bracket root, last nearest value was %1%", a, policy_type());
+               return policies::raise_evaluation_error(function, "Unable to bracket root, last nearest value was %1%", a, policy_type()); // LCOV_EXCL_LINE
             b = a;
             fb = fa;
             a /= multiplier;
@@ -276,6 +276,11 @@ typename Dist::value_type
    //
    std::pair<value_type, value_type> r = toms748_solve(f, a, b, fa, fb, tol, count, policy_type());
    max_iter += count;
+   if (max_iter >= policies::get_max_root_iterations<policy_type>())
+   {
+      return policies::raise_evaluation_error<value_type>(function, "Unable to locate solution in a reasonable time:" // LCOV_EXCL_LINE
+         " either there is no answer to quantile or the answer is infinite.  Current best guess is %1%", r.first, policy_type()); // LCOV_EXCL_LINE
+   }
    BOOST_MATH_INSTRUMENT_CODE("max_iter = " << max_iter << " count = " << count);
    return (r.first + r.second) / 2;
 }
@@ -302,21 +307,19 @@ inline typename Dist::value_type round_to_floor(const Dist& d, typename Dist::va
    //
    while(result != 0)
    {
-      cc = result - 1;
+      cc = floor(float_prior(result));
       if(cc < support(d).first)
          break;
       pp = c ? cdf(complement(d, cc)) : cdf(d, cc);
-      if(pp == p)
-         result = cc;
-      else if(c ? pp > p : pp < p)
+      if(c ? pp > p : pp < p)
          break;
-      result -= 1;
+      result = cc;
    }
 
    return result;
 }
 
-#ifdef BOOST_MSVC
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4127)
 #endif
@@ -336,21 +339,19 @@ inline typename Dist::value_type round_to_ceil(const Dist& d, typename Dist::val
    //
    while(true)
    {
-      cc = result + 1;
+      cc = ceil(float_next(result));
       if(cc > support(d).second)
          break;
       pp = c ? cdf(complement(d, cc)) : cdf(d, cc);
-      if(pp == p)
-         result = cc;
-      else if(c ? pp < p : pp > p)
+      if(c ? pp < p : pp > p)
          break;
-      result += 1;
+      result = cc;
    }
 
    return result;
 }
 
-#ifdef BOOST_MSVC
+#ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 //
@@ -370,7 +371,7 @@ inline typename Dist::value_type
       const typename Dist::value_type& multiplier,
       const typename Dist::value_type& adder,
       const policies::discrete_quantile<policies::real>&,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    if(p > 0.5)
    {
@@ -401,7 +402,7 @@ inline typename Dist::value_type
       const typename Dist::value_type& multiplier,
       const typename Dist::value_type& adder,
       const policies::discrete_quantile<policies::integer_round_outwards>&,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    typedef typename Dist::value_type value_type;
    BOOST_MATH_STD_USING
@@ -444,7 +445,7 @@ inline typename Dist::value_type
       const typename Dist::value_type& multiplier,
       const typename Dist::value_type& adder,
       const policies::discrete_quantile<policies::integer_round_inwards>&,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    typedef typename Dist::value_type value_type;
    BOOST_MATH_STD_USING
@@ -487,7 +488,7 @@ inline typename Dist::value_type
       const typename Dist::value_type& multiplier,
       const typename Dist::value_type& adder,
       const policies::discrete_quantile<policies::integer_round_down>&,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    typedef typename Dist::value_type value_type;
    BOOST_MATH_STD_USING
@@ -515,7 +516,7 @@ inline typename Dist::value_type
       const typename Dist::value_type& multiplier,
       const typename Dist::value_type& adder,
       const policies::discrete_quantile<policies::integer_round_up>&,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    BOOST_MATH_STD_USING
    typename Dist::value_type pp = c ? 1 - p : p;
@@ -542,7 +543,7 @@ inline typename Dist::value_type
       const typename Dist::value_type& multiplier,
       const typename Dist::value_type& adder,
       const policies::discrete_quantile<policies::integer_round_nearest>&,
-      boost::uintmax_t& max_iter)
+      std::uintmax_t& max_iter)
 {
    typedef typename Dist::value_type value_type;
    BOOST_MATH_STD_USING

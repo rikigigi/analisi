@@ -19,6 +19,7 @@
 #include <boost/atomic/detail/config.hpp>
 #include <boost/atomic/detail/bitwise_fp_cast.hpp>
 #include <boost/atomic/detail/fp_operations_fwd.hpp>
+#include <boost/atomic/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
@@ -28,9 +29,9 @@ namespace boost {
 namespace atomics {
 namespace detail {
 
-//! Generic implementation of floating point operations
+//! Emulated implementation of floating point operations
 template< typename Base, typename Value, std::size_t Size >
-struct emulated_fp_operations :
+struct fp_operations_emulated :
     public Base
 {
     typedef Base base_type;
@@ -38,8 +39,9 @@ struct emulated_fp_operations :
     typedef Value value_type;
     typedef typename base_type::scoped_lock scoped_lock;
 
-    static BOOST_FORCEINLINE value_type fetch_add(storage_type volatile& storage, value_type v, memory_order) BOOST_NOEXCEPT
+    static value_type fetch_add(storage_type volatile& storage, value_type v, memory_order) BOOST_NOEXCEPT
     {
+        static_assert(!base_type::is_interprocess, "Boost.Atomic: operation invoked on a non-lock-free inter-process atomic object");
         storage_type& s = const_cast< storage_type& >(storage);
         scoped_lock lock(&storage);
         value_type old_val = atomics::detail::bitwise_fp_cast< value_type >(s);
@@ -48,8 +50,9 @@ struct emulated_fp_operations :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE value_type fetch_sub(storage_type volatile& storage, value_type v, memory_order) BOOST_NOEXCEPT
+    static value_type fetch_sub(storage_type volatile& storage, value_type v, memory_order) BOOST_NOEXCEPT
     {
+        static_assert(!base_type::is_interprocess, "Boost.Atomic: operation invoked on a non-lock-free inter-process atomic object");
         storage_type& s = const_cast< storage_type& >(storage);
         scoped_lock lock(&storage);
         value_type old_val = atomics::detail::bitwise_fp_cast< value_type >(s);
@@ -61,12 +64,14 @@ struct emulated_fp_operations :
 
 template< typename Base, typename Value, std::size_t Size >
 struct fp_operations< Base, Value, Size, false > :
-    public emulated_fp_operations< Base, Value, Size >
+    public fp_operations_emulated< Base, Value, Size >
 {
 };
 
 } // namespace detail
 } // namespace atomics
 } // namespace boost
+
+#include <boost/atomic/detail/footer.hpp>
 
 #endif // BOOST_ATOMIC_DETAIL_FP_OPS_EMULATED_HPP_INCLUDED_

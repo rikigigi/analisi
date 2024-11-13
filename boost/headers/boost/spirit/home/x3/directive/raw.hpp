@@ -11,7 +11,7 @@
 #include <boost/spirit/home/x3/core/parser.hpp>
 #include <boost/spirit/home/x3/support/traits/move_to.hpp>
 #include <boost/spirit/home/x3/support/traits/pseudo_attribute.hpp>
-#include <boost/range/iterator_range.hpp>
+#include <boost/range/iterator_range_core.hpp>
 
 namespace boost { namespace spirit { namespace x3
 {
@@ -25,7 +25,7 @@ namespace boost { namespace spirit { namespace x3
     {
         typedef unary_parser<Subject, raw_directive<Subject> > base_type;
         typedef raw_attribute_type attribute_type;
-        static bool const handles_container = Subject::handles_container;
+        static bool const handles_container = true;
         typedef Subject subject_type;
 
         constexpr raw_directive(Subject const& subject)

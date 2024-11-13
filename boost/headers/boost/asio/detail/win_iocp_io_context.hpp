@@ -2,7 +2,7 @@
 // detail/win_iocp_io_context.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -110,10 +110,10 @@ public:
   }
 
   // Return whether a handler can be dispatched immediately.
-  bool can_dispatch()
-  {
-    return thread_call_stack::contains(this) != 0;
-  }
+  BOOST_ASIO_DECL bool can_dispatch();
+
+  /// Capture the current exception so it can be rethrown from a run function.
+  BOOST_ASIO_DECL void capture_current_exception();
 
   // Request invocation of the given operation and return immediately. Assumes
   // that work_started() has not yet been called for the operation.
@@ -198,6 +198,12 @@ public:
       typename timer_queue<Time_Traits>::per_timer_data& timer,
       std::size_t max_cancelled = (std::numeric_limits<std::size_t>::max)());
 
+  // Cancel the timer operations associated with the given key.
+  template <typename Time_Traits>
+  void cancel_timer_by_key(timer_queue<Time_Traits>& queue,
+      typename timer_queue<Time_Traits>::per_timer_data* timer,
+      void* cancellation_key);
+
   // Move the timer operations associated with the given timer.
   template <typename Time_Traits>
   void move_timer(timer_queue<Time_Traits>& queue,
@@ -222,7 +228,8 @@ private:
   // Dequeues at most one operation from the I/O completion port, and then
   // executes it. Returns the number of operations that were dequeued (i.e.
   // either 0 or 1).
-  BOOST_ASIO_DECL size_t do_one(DWORD msec, boost::system::error_code& ec);
+  BOOST_ASIO_DECL size_t do_one(DWORD msec,
+      win_iocp_thread_info& this_thread, boost::system::error_code& ec);
 
   // Helper to calculate the GetQueuedCompletionStatus timeout.
   BOOST_ASIO_DECL static DWORD get_gqcs_timeout();
@@ -266,11 +273,13 @@ private:
 
   enum
   {
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600)
     // Timeout to use with GetQueuedCompletionStatus on older versions of
     // Windows. Some versions of windows have a "bug" where a call to
     // GetQueuedCompletionStatus can appear stuck even though there are events
     // waiting on the queue. Using a timeout helps to work around the issue.
     default_gqcs_timeout = 500,
+#endif // !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600)
 
     // Maximum waitable timer timeout, in milliseconds.
     max_timeout_msec = 5 * 60 * 1000,

@@ -3,10 +3,10 @@
 // R-tree linear split algorithm implementation
 //
 // Copyright (c) 2008 Federico J. Fernandez.
-// Copyright (c) 2011-2014 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2022 Adam Wulkiewicz, Lodz, Poland.
 //
-// This file was modified by Oracle on 2019.
-// Modifications copyright (c) 2019 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2019-2020.
+// Modifications copyright (c) 2019-2020 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 //
 // Use, modification and distribution is subject to the Boost Software License,
@@ -16,8 +16,11 @@
 #ifndef BOOST_GEOMETRY_INDEX_DETAIL_RTREE_LINEAR_REDISTRIBUTE_ELEMENTS_HPP
 #define BOOST_GEOMETRY_INDEX_DETAIL_RTREE_LINEAR_REDISTRIBUTE_ELEMENTS_HPP
 
+#include <type_traits>
+
 #include <boost/core/ignore_unused.hpp>
-#include <boost/type_traits/is_unsigned.hpp>
+
+#include <boost/geometry/core/static_assert.hpp>
 
 #include <boost/geometry/index/detail/algorithms/bounds.hpp>
 #include <boost/geometry/index/detail/algorithms/content.hpp>
@@ -34,13 +37,13 @@ namespace detail { namespace rtree {
 namespace linear {
 
 template <typename R, typename T>
-inline R difference_dispatch(T const& from, T const& to, ::boost::mpl::bool_<false> const& /*is_unsigned*/)
+inline R difference_dispatch(T const& from, T const& to, std::false_type /*is_unsigned*/)
 {
     return to - from;
 }
 
 template <typename R, typename T>
-inline R difference_dispatch(T const& from, T const& to, ::boost::mpl::bool_<true> const& /*is_unsigned*/)
+inline R difference_dispatch(T const& from, T const& to, std::true_type /*is_unsigned*/)
 {
     return from <= to ? R(to - from) : -R(from - to);
 }
@@ -48,13 +51,11 @@ inline R difference_dispatch(T const& from, T const& to, ::boost::mpl::bool_<tru
 template <typename R, typename T>
 inline R difference(T const& from, T const& to)
 {
-    BOOST_MPL_ASSERT_MSG(!boost::is_unsigned<R>::value, RESULT_CANT_BE_UNSIGNED, (R));
+    BOOST_GEOMETRY_STATIC_ASSERT((! std::is_unsigned<R>::value),
+        "Result can not be an unsigned type.",
+        R);
 
-    typedef ::boost::mpl::bool_<
-        boost::is_unsigned<T>::value
-    > is_unsigned;
-
-    return difference_dispatch<R>(from, to, is_unsigned());
+    return difference_dispatch<R>(from, to, std::is_unsigned<T>());
 }
 
 // TODO: awulkiew
@@ -87,11 +88,12 @@ struct find_greatest_normalized_separation
     typedef typename rtree::element_indexable_type<element_type, Translator>::type indexable_type;
     typedef typename coordinate_type<indexable_type>::type coordinate_type;
 
-    typedef typename boost::mpl::if_c<
-        boost::is_integral<coordinate_type>::value,
-        double,
-        coordinate_type
-    >::type separation_type;
+    typedef std::conditional_t
+        <
+            std::is_integral<coordinate_type>::value,
+            double,
+            coordinate_type
+        > separation_type;
 
     typedef typename geometry::point_type<indexable_type>::type point_type;
     typedef geometry::model::box<point_type> bounds_type;
@@ -112,50 +114,52 @@ struct find_greatest_normalized_separation
         BOOST_GEOMETRY_INDEX_ASSERT(elements.size() == elements_count, "unexpected number of elements");
         BOOST_GEOMETRY_INDEX_ASSERT(2 <= elements_count, "unexpected number of elements");
 
-        typename index::detail::strategy_type<Parameters>::type const&
-            strategy = index::detail::get_strategy(parameters);
+        auto const& strategy = index::detail::get_strategy(parameters);
 
         // find the lowest low, highest high
-        bounded_view_type bounded_indexable_0(rtree::element_indexable(elements[0], translator),
-                                              strategy);
+        indexable_type const& indexable_0 = rtree::element_indexable(elements[0], translator);
+        bounded_view_type const bounded_indexable_0(indexable_0, strategy);
         coordinate_type lowest_low = geometry::get<min_corner, DimensionIndex>(bounded_indexable_0);
         coordinate_type highest_high = geometry::get<max_corner, DimensionIndex>(bounded_indexable_0);
 
         // and the lowest high
         coordinate_type lowest_high = highest_high;
         size_t lowest_high_index = 0;
-        for ( size_t i = 1 ; i < elements_count ; ++i )
+        for (size_t i = 1 ; i < elements_count ; ++i)
         {
-            bounded_view_type bounded_indexable(rtree::element_indexable(elements[i], translator),
-                                                strategy);
+            indexable_type const& indexable_i = rtree::element_indexable(elements[i], translator);
+            bounded_view_type const bounded_indexable(indexable_i, strategy);
             coordinate_type min_coord = geometry::get<min_corner, DimensionIndex>(bounded_indexable);
             coordinate_type max_coord = geometry::get<max_corner, DimensionIndex>(bounded_indexable);
 
-            if ( max_coord < lowest_high )
+            if (max_coord < lowest_high)
             {
                 lowest_high = max_coord;
                 lowest_high_index = i;
             }
 
-            if ( min_coord < lowest_low )
+            if (min_coord < lowest_low)
+            {
                 lowest_low = min_coord;
+            }
 
-            if ( highest_high < max_coord )
+            if (highest_high < max_coord)
+            {
                 highest_high = max_coord;
+            }
         }
 
         // find the highest low
         size_t highest_low_index = lowest_high_index == 0 ? 1 : 0;
-        bounded_view_type bounded_indexable_hl(rtree::element_indexable(elements[highest_low_index], translator),
-                                               strategy);
+        indexable_type const& indexable_hl = rtree::element_indexable(elements[highest_low_index], translator);
+        bounded_view_type const bounded_indexable_hl(indexable_hl, strategy);
         coordinate_type highest_low = geometry::get<min_corner, DimensionIndex>(bounded_indexable_hl);
-        for ( size_t i = highest_low_index ; i < elements_count ; ++i )
+        for (size_t i = highest_low_index ; i < elements_count ; ++i)
         {
-            bounded_view_type bounded_indexable(rtree::element_indexable(elements[i], translator),
-                                                strategy);
+            indexable_type const& indexable = rtree::element_indexable(elements[i], translator);
+            bounded_view_type const bounded_indexable(indexable, strategy);
             coordinate_type min_coord = geometry::get<min_corner, DimensionIndex>(bounded_indexable);
-            if ( highest_low < min_coord &&
-                 i != lowest_high_index )
+            if (highest_low < min_coord && i != lowest_high_index)
             {
                 highest_low = min_coord;
                 highest_low_index = i;
@@ -163,12 +167,14 @@ struct find_greatest_normalized_separation
         }
 
         coordinate_type const width = highest_high - lowest_low;
-        
+
         // highest_low - lowest_high
         separation = difference<separation_type>(lowest_high, highest_low);
         // BOOST_GEOMETRY_INDEX_ASSERT(0 <= width);
-        if ( std::numeric_limits<coordinate_type>::epsilon() < width )
+        if (std::numeric_limits<coordinate_type>::epsilon() < width)
+        {
             separation /= width;
+        }
 
         seed1 = highest_low_index;
         seed2 = lowest_high_index;
@@ -444,7 +450,7 @@ struct redistribute_elements<MembersHolder, linear_tag>
                             content2 = enlarged_content2;
                         }
                     }
-                
+
                     BOOST_GEOMETRY_INDEX_ASSERT(0 < remaining, "unexpected value");
                     --remaining;
                 }

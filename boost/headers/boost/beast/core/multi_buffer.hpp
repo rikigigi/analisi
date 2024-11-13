@@ -127,7 +127,7 @@ class basic_multi_buffer
         beast::detail::allocator_traits<rebind_type>;
 
     using list_type = typename boost::intrusive::make_list<
-        element, boost::intrusive::constant_time_size<true>>::type;
+        element, boost::intrusive::constant_time_size<false>>::type;
 
     using iter = typename list_type::iterator;
 
@@ -166,11 +166,6 @@ public:
     using const_buffers_type = subrange<false>;
 
     using mutable_buffers_type = subrange<true>;
-
-#ifdef BOOST_BEAST_ALLOW_DEPRECATED
-    using mutable_data_type = subrange<true>;
-#endif
-
 #endif
 
     /// The type of allocator used.

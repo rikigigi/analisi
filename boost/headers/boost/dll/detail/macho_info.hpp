@@ -1,5 +1,5 @@
 // Copyright 2014 Renato Tegon Forti, Antony Polukhin.
-// Copyright 2015-2019 Antony Polukhin.
+// Copyright Antony Polukhin, 2015-2024.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -16,6 +16,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <string> // for std::getline
+#include <vector>
 
 #include <boost/cstdint.hpp>
 
@@ -250,7 +252,7 @@ private:
                 }
 
                 fs.seekg(symbh.stroff + symbol.n_strx);
-                getline(fs, symbol_name, '\0');
+                std::getline(fs, symbol_name, '\0');
                 if (symbol_name.empty()) {
                     continue;
                 }

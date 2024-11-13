@@ -46,7 +46,7 @@ public:
     dataflow_exception(exception_code c = other_exception) : code(c)
     {}
 
-    virtual const char *what( ) const throw( )
+    const char *what( ) const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE
     {
         const char *msg = "unknown exception code";
         switch(code){

@@ -25,6 +25,7 @@
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/collection_size_type.hpp>
 #include <boost/serialization/item_version_type.hpp>
+#include <boost/serialization/library_version_type.hpp>
 
 namespace boost{
 namespace serialization {
@@ -47,13 +48,13 @@ inline void save_unordered_collection(Archive & ar, const Container &s)
     /* should only be necessary to create archives of previous versions
      * which is not currently supported.  So for now comment this out
      */
-    boost::archive::library_version_type library_version(
+    boost::serialization::library_version_type library_version(
         ar.get_library_version()
     );
     // retrieve number of elements
 	ar << BOOST_SERIALIZATION_NVP(count);
 	ar << BOOST_SERIALIZATION_NVP(bucket_count);
-    if(boost::archive::library_version_type(3) < library_version){
+    if(boost::serialization::library_version_type(3) < library_version){
         // record number of elements
         // make sure the target type is registered so we can retrieve
         // the version when we load

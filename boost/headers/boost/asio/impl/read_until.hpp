@@ -2,7 +2,7 @@
 // impl/read_until.hpp
 // ~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -19,14 +19,13 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include <boost/asio/associated_allocator.hpp>
-#include <boost/asio/associated_executor.hpp>
+#include <boost/asio/associator.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/buffers_iterator.hpp>
+#include <boost/asio/detail/base_from_cancellation_state.hpp>
 #include <boost/asio/detail/bind_handler.hpp>
-#include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
+#include <boost/asio/detail/handler_tracking.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 #include <boost/asio/detail/limits.hpp>
 #include <boost/asio/detail/non_const_lvalue.hpp>
@@ -70,36 +69,53 @@ namespace detail
     }
     return std::make_pair(last1, false);
   }
+
+#if !defined(BOOST_ASIO_NO_EXTENSIONS)
+#if defined(BOOST_ASIO_HAS_BOOST_REGEX)
+  struct regex_match_flags
+  {
+    template <typename T>
+    operator T() const
+    {
+      return T::match_default | T::match_partial;
+    }
+  };
+#endif // !defined(BOOST_ASIO_NO_EXTENSIONS)
+#endif // defined(BOOST_ASIO_HAS_BOOST_REGEX)
 } // namespace detail
 
 #if !defined(BOOST_ASIO_NO_DYNAMIC_BUFFER_V1)
 
 template <typename SyncReadStream, typename DynamicBuffer_v1>
 inline std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers, char delim,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    DynamicBuffer_v1&& buffers, char delim,
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers), delim, ec);
+      static_cast<DynamicBuffer_v1&&>(buffers), delim, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
 }
 
 template <typename SyncReadStream, typename DynamicBuffer_v1>
 std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    DynamicBuffer_v1&& buffers,
     char delim, boost::system::error_code& ec,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
-  typename decay<DynamicBuffer_v1>::type b(
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers));
+  decay_t<DynamicBuffer_v1> b(
+      static_cast<DynamicBuffer_v1&&>(buffers));
 
   std::size_t search_position = 0;
   for (;;)
@@ -145,31 +161,35 @@ std::size_t read_until(SyncReadStream& s,
 
 template <typename SyncReadStream, typename DynamicBuffer_v1>
 inline std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    DynamicBuffer_v1&& buffers,
     BOOST_ASIO_STRING_VIEW_PARAM delim,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers), delim, ec);
+      static_cast<DynamicBuffer_v1&&>(buffers), delim, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
 }
 
 template <typename SyncReadStream, typename DynamicBuffer_v1>
 std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    DynamicBuffer_v1&& buffers,
     BOOST_ASIO_STRING_VIEW_PARAM delim, boost::system::error_code& ec,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
-  typename decay<DynamicBuffer_v1>::type b(
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers));
+  decay_t<DynamicBuffer_v1> b(
+      static_cast<DynamicBuffer_v1&&>(buffers));
 
   std::size_t search_position = 0;
   for (;;)
@@ -225,33 +245,35 @@ std::size_t read_until(SyncReadStream& s,
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
 #if defined(BOOST_ASIO_HAS_BOOST_REGEX)
 
-template <typename SyncReadStream, typename DynamicBuffer_v1>
-inline std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    const boost::regex& expr,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+template <typename SyncReadStream, typename DynamicBuffer_v1, typename Traits>
+inline std::size_t read_until(SyncReadStream& s, DynamicBuffer_v1&& buffers,
+    const boost::basic_regex<char, Traits>& expr,
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers), expr, ec);
+      static_cast<DynamicBuffer_v1&&>(buffers), expr, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
 }
 
-template <typename SyncReadStream, typename DynamicBuffer_v1>
-std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    const boost::regex& expr, boost::system::error_code& ec,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+template <typename SyncReadStream, typename DynamicBuffer_v1, typename Traits>
+std::size_t read_until(SyncReadStream& s, DynamicBuffer_v1&& buffers,
+    const boost::basic_regex<char, Traits>& expr, boost::system::error_code& ec,
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
-  typename decay<DynamicBuffer_v1>::type b(
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers));
+  decay_t<DynamicBuffer_v1> b(
+      static_cast<DynamicBuffer_v1&&>(buffers));
 
   std::size_t search_position = 0;
   for (;;)
@@ -266,10 +288,10 @@ std::size_t read_until(SyncReadStream& s,
 
     // Look for a match.
     boost::match_results<iterator,
-      typename std::vector<boost::sub_match<iterator> >::allocator_type>
+      typename std::vector<boost::sub_match<iterator>>::allocator_type>
         match_results;
-    if (regex_search(start_pos, end, match_results, expr,
-          boost::match_default | boost::match_partial))
+    if (regex_search(start_pos, end, match_results,
+          expr, detail::regex_match_flags()))
     {
       if (match_results[0].matched)
       {
@@ -311,17 +333,21 @@ std::size_t read_until(SyncReadStream& s,
 template <typename SyncReadStream,
     typename DynamicBuffer_v1, typename MatchCondition>
 inline std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    DynamicBuffer_v1&& buffers,
     MatchCondition match_condition,
-    typename enable_if<
+    constraint_t<
       is_match_condition<MatchCondition>::value
-        && is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >,
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+      static_cast<DynamicBuffer_v1&&>(buffers),
       match_condition, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
@@ -330,16 +356,20 @@ inline std::size_t read_until(SyncReadStream& s,
 template <typename SyncReadStream,
     typename DynamicBuffer_v1, typename MatchCondition>
 std::size_t read_until(SyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    DynamicBuffer_v1&& buffers,
     MatchCondition match_condition, boost::system::error_code& ec,
-    typename enable_if<
+    constraint_t<
       is_match_condition<MatchCondition>::value
-        && is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >,
+    constraint_t<
+      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >)
 {
-  typename decay<DynamicBuffer_v1>::type b(
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers));
+  decay_t<DynamicBuffer_v1> b(
+      static_cast<DynamicBuffer_v1&&>(buffers));
 
   std::size_t search_position = 0;
   for (;;)
@@ -423,16 +453,18 @@ inline std::size_t read_until(SyncReadStream& s,
 
 #if defined(BOOST_ASIO_HAS_BOOST_REGEX)
 
-template <typename SyncReadStream, typename Allocator>
+template <typename SyncReadStream, typename Allocator, typename Traits>
 inline std::size_t read_until(SyncReadStream& s,
-    boost::asio::basic_streambuf<Allocator>& b, const boost::regex& expr)
+    boost::asio::basic_streambuf<Allocator>& b,
+    const boost::basic_regex<char, Traits>& expr)
 {
   return read_until(s, basic_streambuf_ref<Allocator>(b), expr);
 }
 
-template <typename SyncReadStream, typename Allocator>
+template <typename SyncReadStream, typename Allocator, typename Traits>
 inline std::size_t read_until(SyncReadStream& s,
-    boost::asio::basic_streambuf<Allocator>& b, const boost::regex& expr,
+    boost::asio::basic_streambuf<Allocator>& b,
+    const boost::basic_regex<char, Traits>& expr,
     boost::system::error_code& ec)
 {
   return read_until(s, basic_streambuf_ref<Allocator>(b), expr, ec);
@@ -443,7 +475,7 @@ inline std::size_t read_until(SyncReadStream& s,
 template <typename SyncReadStream, typename Allocator, typename MatchCondition>
 inline std::size_t read_until(SyncReadStream& s,
     boost::asio::basic_streambuf<Allocator>& b, MatchCondition match_condition,
-    typename enable_if<is_match_condition<MatchCondition>::value>::type*)
+    constraint_t<is_match_condition<MatchCondition>::value>)
 {
   return read_until(s, basic_streambuf_ref<Allocator>(b), match_condition);
 }
@@ -452,7 +484,7 @@ template <typename SyncReadStream, typename Allocator, typename MatchCondition>
 inline std::size_t read_until(SyncReadStream& s,
     boost::asio::basic_streambuf<Allocator>& b,
     MatchCondition match_condition, boost::system::error_code& ec,
-    typename enable_if<is_match_condition<MatchCondition>::value>::type*)
+    constraint_t<is_match_condition<MatchCondition>::value>)
 {
   return read_until(s, basic_streambuf_ref<Allocator>(b), match_condition, ec);
 }
@@ -464,13 +496,13 @@ inline std::size_t read_until(SyncReadStream& s,
 template <typename SyncReadStream, typename DynamicBuffer_v2>
 inline std::size_t read_until(SyncReadStream& s,
     DynamicBuffer_v2 buffers, char delim,
-    typename enable_if<
+    constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers), delim, ec);
+      static_cast<DynamicBuffer_v2&&>(buffers), delim, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
 }
@@ -478,9 +510,9 @@ inline std::size_t read_until(SyncReadStream& s,
 template <typename SyncReadStream, typename DynamicBuffer_v2>
 std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
     char delim, boost::system::error_code& ec,
-    typename enable_if<
+    constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >)
 {
   DynamicBuffer_v2& b = buffers;
 
@@ -533,13 +565,13 @@ std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
 template <typename SyncReadStream, typename DynamicBuffer_v2>
 inline std::size_t read_until(SyncReadStream& s,
     DynamicBuffer_v2 buffers, BOOST_ASIO_STRING_VIEW_PARAM delim,
-    typename enable_if<
+    constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers), delim, ec);
+      static_cast<DynamicBuffer_v2&&>(buffers), delim, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
 }
@@ -547,9 +579,9 @@ inline std::size_t read_until(SyncReadStream& s,
 template <typename SyncReadStream, typename DynamicBuffer_v2>
 std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
     BOOST_ASIO_STRING_VIEW_PARAM delim, boost::system::error_code& ec,
-    typename enable_if<
+    constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >)
 {
   DynamicBuffer_v2& b = buffers;
 
@@ -611,26 +643,26 @@ std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
 #if defined(BOOST_ASIO_HAS_BOOST_REGEX)
 
-template <typename SyncReadStream, typename DynamicBuffer_v2>
-inline std::size_t read_until(SyncReadStream& s,
-    DynamicBuffer_v2 buffers, const boost::regex& expr,
-    typename enable_if<
+template <typename SyncReadStream, typename DynamicBuffer_v2, typename Traits>
+inline std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
+    const boost::basic_regex<char, Traits>& expr,
+    constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers), expr, ec);
+      static_cast<DynamicBuffer_v2&&>(buffers), expr, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
 }
 
-template <typename SyncReadStream, typename DynamicBuffer_v2>
+template <typename SyncReadStream, typename DynamicBuffer_v2, typename Traits>
 std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
-    const boost::regex& expr, boost::system::error_code& ec,
-    typename enable_if<
+    const boost::basic_regex<char, Traits>& expr, boost::system::error_code& ec,
+    constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >)
 {
   DynamicBuffer_v2& b = buffers;
 
@@ -648,10 +680,10 @@ std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
 
     // Look for a match.
     boost::match_results<iterator,
-      typename std::vector<boost::sub_match<iterator> >::allocator_type>
+      typename std::vector<boost::sub_match<iterator>>::allocator_type>
         match_results;
-    if (regex_search(start_pos, end, match_results, expr,
-          boost::match_default | boost::match_partial))
+    if (regex_search(start_pos, end, match_results,
+          expr, detail::regex_match_flags()))
     {
       if (match_results[0].matched)
       {
@@ -697,14 +729,16 @@ template <typename SyncReadStream,
     typename DynamicBuffer_v2, typename MatchCondition>
 inline std::size_t read_until(SyncReadStream& s,
     DynamicBuffer_v2 buffers, MatchCondition match_condition,
-    typename enable_if<
+    constraint_t<
       is_match_condition<MatchCondition>::value
-        && is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >,
+    constraint_t<
+      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    >)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read_until(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+      static_cast<DynamicBuffer_v2&&>(buffers),
       match_condition, ec);
   boost::asio::detail::throw_error(ec, "read_until");
   return bytes_transferred;
@@ -714,10 +748,12 @@ template <typename SyncReadStream,
     typename DynamicBuffer_v2, typename MatchCondition>
 std::size_t read_until(SyncReadStream& s, DynamicBuffer_v2 buffers,
     MatchCondition match_condition, boost::system::error_code& ec,
-    typename enable_if<
+    constraint_t<
       is_match_condition<MatchCondition>::value
-        && is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >,
+    constraint_t<
+      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    >)
 {
   DynamicBuffer_v2& b = buffers;
 
@@ -781,24 +817,27 @@ namespace detail
   template <typename AsyncReadStream,
       typename DynamicBuffer_v1, typename ReadHandler>
   class read_until_delim_op_v1
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
     template <typename BufferSequence>
     read_until_delim_op_v1(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
+        BufferSequence&& buffers,
         char delim, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         delim_(delim),
         start_(0),
         search_position_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_delim_op_v1(const read_until_delim_op_v1& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         delim_(other.delim_),
         start_(other.start_),
@@ -808,17 +847,18 @@ namespace detail
     }
 
     read_until_delim_op_v1(read_until_delim_op_v1&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(other.buffers_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v1&&>(other.buffers_)),
         delim_(other.delim_),
         start_(other.start_),
         search_position_(other.search_position_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -871,13 +911,22 @@ namespace detail
           if (!start && bytes_to_read == 0)
             break;
 
-          // Start a new asynchronous read op_v1eration to obtain more data.
-          stream_.async_read_some(buffers_.prepare(bytes_to_read),
-              BOOST_ASIO_MOVE_CAST(read_until_delim_op_v1)(*this));
+          // Start a new asynchronous read operation to obtain more data.
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.prepare(bytes_to_read),
+                static_cast<read_until_delim_op_v1&&>(*this));
+          }
           return; default:
           buffers_.commit(bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -888,7 +937,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -903,26 +952,6 @@ namespace detail
 
   template <typename AsyncReadStream,
       typename DynamicBuffer_v1, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_delim_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_delim_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_delim_op_v1<AsyncReadStream,
         DynamicBuffer_v1, ReadHandler>* this_handler)
@@ -930,26 +959,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_delim_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_delim_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -963,14 +972,14 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler, typename DynamicBuffer_v1>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v1&& buffers,
         char delim) const
     {
       // If you get an error on the following line it means that your handler
@@ -979,9 +988,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_delim_op_v1<AsyncReadStream,
-        typename decay<DynamicBuffer_v1>::type,
-          typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+        decay_t<DynamicBuffer_v1>,
+          decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v1&&>(buffers),
             delim, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -992,86 +1001,60 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v1,
+    typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_delim_op_v1<AsyncReadStream,
       DynamicBuffer_v1, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
       const detail::read_until_delim_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+        DynamicBuffer_v1, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_delim_op_v1<AsyncReadStream,
-      DynamicBuffer_v1, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
+  static auto get(
       const detail::read_until_delim_op_v1<AsyncReadStream,
         DynamicBuffer_v1, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    char delim, BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_delim_v1<AsyncReadStream>(s),
-      handler, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers), delim);
-}
 
 namespace detail
 {
   template <typename AsyncReadStream,
       typename DynamicBuffer_v1, typename ReadHandler>
   class read_until_delim_string_op_v1
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
     template <typename BufferSequence>
     read_until_delim_string_op_v1(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
+        BufferSequence&& buffers,
         const std::string& delim, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         delim_(delim),
         start_(0),
         search_position_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_delim_string_op_v1(const read_until_delim_string_op_v1& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         delim_(other.delim_),
         start_(other.start_),
@@ -1081,17 +1064,18 @@ namespace detail
     }
 
     read_until_delim_string_op_v1(read_until_delim_string_op_v1&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(other.buffers_)),
-        delim_(BOOST_ASIO_MOVE_CAST(std::string)(other.delim_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v1&&>(other.buffers_)),
+        delim_(static_cast<std::string&&>(other.delim_)),
         start_(other.start_),
         search_position_(other.search_position_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -1155,13 +1139,22 @@ namespace detail
           if (!start && bytes_to_read == 0)
             break;
 
-          // Start a new asynchronous read op_v1eration to obtain more data.
-          stream_.async_read_some(buffers_.prepare(bytes_to_read),
-              BOOST_ASIO_MOVE_CAST(read_until_delim_string_op_v1)(*this));
+          // Start a new asynchronous read operation to obtain more data.
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.prepare(bytes_to_read),
+                static_cast<read_until_delim_string_op_v1&&>(*this));
+          }
           return; default:
           buffers_.commit(bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -1172,7 +1165,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -1187,26 +1180,6 @@ namespace detail
 
   template <typename AsyncReadStream,
       typename DynamicBuffer_v1, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_delim_string_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_delim_string_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_delim_string_op_v1<AsyncReadStream,
         DynamicBuffer_v1, ReadHandler>* this_handler)
@@ -1214,26 +1187,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_delim_string_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_delim_string_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -1247,14 +1200,14 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler, typename DynamicBuffer_v1>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v1&& buffers,
         const std::string& delim) const
     {
       // If you get an error on the following line it means that your handler
@@ -1263,9 +1216,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_delim_string_op_v1<AsyncReadStream,
-        typename decay<DynamicBuffer_v1>::type,
-          typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+        decay_t<DynamicBuffer_v1>,
+          decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v1&&>(buffers),
             delim, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -1276,64 +1229,33 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v1,
+    typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_delim_string_op_v1<AsyncReadStream,
       DynamicBuffer_v1, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
-      const detail::read_until_delim_string_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
+      const detail::read_until_delim_string_op_v1<
+        AsyncReadStream, DynamicBuffer_v1, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_delim_string_op_v1<AsyncReadStream,
-      DynamicBuffer_v1, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
-      const detail::read_until_delim_string_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+  static auto get(
+      const detail::read_until_delim_string_op_v1<
+        AsyncReadStream, DynamicBuffer_v1, ReadHandler>& h,
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    BOOST_ASIO_STRING_VIEW_PARAM delim,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_delim_string_v1<AsyncReadStream>(s),
-      handler, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
-      static_cast<std::string>(delim));
-}
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
 #if defined(BOOST_ASIO_HAS_BOOST_REGEX)
@@ -1343,24 +1265,26 @@ namespace detail
   template <typename AsyncReadStream, typename DynamicBuffer_v1,
       typename RegEx, typename ReadHandler>
   class read_until_expr_op_v1
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
-    template <typename BufferSequence>
-    read_until_expr_op_v1(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
-        const boost::regex& expr, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+    template <typename BufferSequence, typename Traits>
+    read_until_expr_op_v1(AsyncReadStream& stream, BufferSequence&& buffers,
+        const boost::basic_regex<char, Traits>& expr, ReadHandler& handler)
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         expr_(expr),
         start_(0),
         search_position_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_expr_op_v1(const read_until_expr_op_v1& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         expr_(other.expr_),
         start_(other.start_),
@@ -1370,17 +1294,18 @@ namespace detail
     }
 
     read_until_expr_op_v1(read_until_expr_op_v1&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(other.buffers_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v1&&>(other.buffers_)),
         expr_(other.expr_),
         start_(other.start_),
         search_position_(other.search_position_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -1402,10 +1327,10 @@ namespace detail
 
             // Look for a match.
             boost::match_results<iterator,
-              typename std::vector<boost::sub_match<iterator> >::allocator_type>
+              typename std::vector<boost::sub_match<iterator>>::allocator_type>
                 match_results;
-            bool match = regex_search(start_pos, end, match_results, expr_,
-                boost::match_default | boost::match_partial);
+            bool match = regex_search(start_pos, end,
+                match_results, expr_, regex_match_flags());
             if (match && match_results[0].matched)
             {
               // Full match. We're done.
@@ -1447,13 +1372,22 @@ namespace detail
           if (!start && bytes_to_read == 0)
             break;
 
-          // Start a new asynchronous read op_v1eration to obtain more data.
-          stream_.async_read_some(buffers_.prepare(bytes_to_read),
-              BOOST_ASIO_MOVE_CAST(read_until_expr_op_v1)(*this));
+          // Start a new asynchronous read operation to obtain more data.
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.prepare(bytes_to_read),
+                static_cast<read_until_expr_op_v1&&>(*this));
+          }
           return; default:
           buffers_.commit(bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -1464,7 +1398,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -1479,26 +1413,6 @@ namespace detail
 
   template <typename AsyncReadStream, typename DynamicBuffer_v1,
       typename RegEx, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_expr_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, RegEx, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v1,
-      typename RegEx, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_expr_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, RegEx, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v1,
-      typename RegEx, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_expr_op_v1<AsyncReadStream,
         DynamicBuffer_v1, RegEx, ReadHandler>* this_handler)
@@ -1506,26 +1420,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename RegEx, typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_expr_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, RegEx, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename RegEx, typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_expr_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, RegEx, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -1539,14 +1433,14 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler, typename DynamicBuffer_v1, typename RegEx>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers, const RegEx& expr) const
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v1&& buffers, const RegEx& expr) const
     {
       // If you get an error on the following line it means that your handler
       // does not meet the documented type requirements for a ReadHandler.
@@ -1554,9 +1448,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_expr_op_v1<AsyncReadStream,
-        typename decay<DynamicBuffer_v1>::type,
-          RegEx, typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+        decay_t<DynamicBuffer_v1>,
+          RegEx, decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v1&&>(buffers),
             expr, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -1567,63 +1461,33 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename RegEx, typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v1,
+    typename RegEx, typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_expr_op_v1<AsyncReadStream,
       DynamicBuffer_v1, RegEx, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
       const detail::read_until_expr_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, RegEx, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+        DynamicBuffer_v1, RegEx, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename RegEx, typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_expr_op_v1<AsyncReadStream,
-      DynamicBuffer_v1, RegEx, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
+  static auto get(
       const detail::read_until_expr_op_v1<AsyncReadStream,
         DynamicBuffer_v1, RegEx, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    const boost::regex& expr,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_expr_v1<AsyncReadStream>(s),
-      handler, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers), expr);
-}
 
 #endif // defined(BOOST_ASIO_HAS_BOOST_REGEX)
 
@@ -1632,24 +1496,27 @@ namespace detail
   template <typename AsyncReadStream, typename DynamicBuffer_v1,
       typename MatchCondition, typename ReadHandler>
   class read_until_match_op_v1
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
     template <typename BufferSequence>
     read_until_match_op_v1(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
+        BufferSequence&& buffers,
         MatchCondition match_condition, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         match_condition_(match_condition),
         start_(0),
         search_position_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_match_op_v1(const read_until_match_op_v1& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         match_condition_(other.match_condition_),
         start_(other.start_),
@@ -1659,17 +1526,18 @@ namespace detail
     }
 
     read_until_match_op_v1(read_until_match_op_v1&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(other.buffers_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v1&&>(other.buffers_)),
         match_condition_(other.match_condition_),
         start_(other.start_),
         search_position_(other.search_position_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -1732,13 +1600,22 @@ namespace detail
           if (!start && bytes_to_read == 0)
             break;
 
-          // Start a new asynchronous read op_v1eration to obtain more data.
-          stream_.async_read_some(buffers_.prepare(bytes_to_read),
-              BOOST_ASIO_MOVE_CAST(read_until_match_op_v1)(*this));
+          // Start a new asynchronous read operation to obtain more data.
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.prepare(bytes_to_read),
+                static_cast<read_until_match_op_v1&&>(*this));
+          }
           return; default:
           buffers_.commit(bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -1749,7 +1626,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -1764,26 +1641,6 @@ namespace detail
 
   template <typename AsyncReadStream, typename DynamicBuffer_v1,
       typename MatchCondition, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_match_op_v1<AsyncReadStream, DynamicBuffer_v1,
-        MatchCondition, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v1,
-      typename MatchCondition, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_match_op_v1<AsyncReadStream, DynamicBuffer_v1,
-        MatchCondition, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v1,
-      typename MatchCondition, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_match_op_v1<AsyncReadStream, DynamicBuffer_v1,
         MatchCondition, ReadHandler>* this_handler)
@@ -1791,28 +1648,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename MatchCondition,
-      typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_match_op_v1<AsyncReadStream, DynamicBuffer_v1,
-        MatchCondition, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v1, typename MatchCondition,
-      typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_match_op_v1<AsyncReadStream, DynamicBuffer_v1,
-      MatchCondition, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -1826,15 +1661,15 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler,
         typename DynamicBuffer_v1, typename MatchCondition>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v1&& buffers,
         MatchCondition match_condition) const
     {
       // If you get an error on the following line it means that your handler
@@ -1843,9 +1678,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_match_op_v1<AsyncReadStream,
-        typename decay<DynamicBuffer_v1>::type,
-          MatchCondition, typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+        decay_t<DynamicBuffer_v1>,
+          MatchCondition, decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v1&&>(buffers),
             match_condition, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -1856,126 +1691,34 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename MatchCondition, typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v1,
+    typename MatchCondition, typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_match_op_v1<AsyncReadStream,
       DynamicBuffer_v1, MatchCondition, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
       const detail::read_until_match_op_v1<AsyncReadStream,
-        DynamicBuffer_v1, MatchCondition, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+        DynamicBuffer_v1, MatchCondition, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    typename MatchCondition, typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_match_op_v1<AsyncReadStream,
-      DynamicBuffer_v1, MatchCondition, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
+  static auto get(
       const detail::read_until_match_op_v1<AsyncReadStream,
         DynamicBuffer_v1, MatchCondition, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream,
-    typename DynamicBuffer_v1, typename MatchCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    MatchCondition match_condition, BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_match_condition<MatchCondition>::value
-        && is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_match_v1<AsyncReadStream>(s), handler,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers), match_condition);
-}
-
-#if !defined(BOOST_ASIO_NO_IOSTREAM)
-
-template <typename AsyncReadStream, typename Allocator,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    boost::asio::basic_streambuf<Allocator>& b,
-    char delim, BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
-{
-  return async_read_until(s, basic_streambuf_ref<Allocator>(b),
-      delim, BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
-}
-
-template <typename AsyncReadStream, typename Allocator,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    boost::asio::basic_streambuf<Allocator>& b,
-    BOOST_ASIO_STRING_VIEW_PARAM delim,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
-{
-  return async_read_until(s, basic_streambuf_ref<Allocator>(b),
-      delim, BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
-}
-
-#if defined(BOOST_ASIO_HAS_BOOST_REGEX)
-
-template <typename AsyncReadStream, typename Allocator,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    boost::asio::basic_streambuf<Allocator>& b, const boost::regex& expr,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
-{
-  return async_read_until(s, basic_streambuf_ref<Allocator>(b),
-      expr, BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
-}
-
-#endif // defined(BOOST_ASIO_HAS_BOOST_REGEX)
-
-template <typename AsyncReadStream, typename Allocator, typename MatchCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    boost::asio::basic_streambuf<Allocator>& b,
-    MatchCondition match_condition, BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<is_match_condition<MatchCondition>::value>::type*)
-{
-  return async_read_until(s, basic_streambuf_ref<Allocator>(b),
-      match_condition, BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
-}
-
-#endif // !defined(BOOST_ASIO_NO_IOSTREAM)
 #endif // !defined(BOOST_ASIO_NO_EXTENSIONS)
 #endif // !defined(BOOST_ASIO_NO_DYNAMIC_BUFFER_V1)
 
@@ -1984,25 +1727,28 @@ namespace detail
   template <typename AsyncReadStream,
       typename DynamicBuffer_v2, typename ReadHandler>
   class read_until_delim_op_v2
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
     template <typename BufferSequence>
     read_until_delim_op_v2(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
+        BufferSequence&& buffers,
         char delim, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         delim_(delim),
         start_(0),
         search_position_(0),
         bytes_to_read_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_delim_op_v2(const read_until_delim_op_v2& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         delim_(other.delim_),
         start_(other.start_),
@@ -2013,18 +1759,19 @@ namespace detail
     }
 
     read_until_delim_op_v2(read_until_delim_op_v2&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(other.buffers_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v2&&>(other.buffers_)),
         delim_(other.delim_),
         start_(other.start_),
         search_position_(other.search_position_),
         bytes_to_read_(other.bytes_to_read_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -2079,15 +1826,24 @@ namespace detail
           if (!start && bytes_to_read_ == 0)
             break;
 
-          // Start a new asynchronous read op_v2eration to obtain more data.
+          // Start a new asynchronous read operation to obtain more data.
           pos = buffers_.size();
           buffers_.grow(bytes_to_read_);
-          stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
-              BOOST_ASIO_MOVE_CAST(read_until_delim_op_v2)(*this));
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
+                static_cast<read_until_delim_op_v2&&>(*this));
+          }
           return; default:
           buffers_.shrink(bytes_to_read_ - bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -2098,7 +1854,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -2114,26 +1870,6 @@ namespace detail
 
   template <typename AsyncReadStream,
       typename DynamicBuffer_v2, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_delim_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_delim_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_delim_op_v2<AsyncReadStream,
         DynamicBuffer_v2, ReadHandler>* this_handler)
@@ -2141,26 +1877,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_delim_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_delim_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -2174,14 +1890,14 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler, typename DynamicBuffer_v2>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v2) buffers, char delim) const
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v2&& buffers, char delim) const
     {
       // If you get an error on the following line it means that your handler
       // does not meet the documented type requirements for a ReadHandler.
@@ -2189,9 +1905,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_delim_op_v2<AsyncReadStream,
-        typename decay<DynamicBuffer_v2>::type,
-          typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+        decay_t<DynamicBuffer_v2>,
+          decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v2&&>(buffers),
             delim, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -2202,85 +1918,61 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v2,
+    typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_delim_op_v2<AsyncReadStream,
       DynamicBuffer_v2, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
       const detail::read_until_delim_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+        DynamicBuffer_v2, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_delim_op_v2<AsyncReadStream,
-      DynamicBuffer_v2, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
+  static auto get(
       const detail::read_until_delim_op_v2<AsyncReadStream,
         DynamicBuffer_v2, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s, DynamicBuffer_v2 buffers,
-    char delim, BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_delim_v2<AsyncReadStream>(s),
-      handler, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers), delim);
-}
 
 namespace detail
 {
   template <typename AsyncReadStream,
       typename DynamicBuffer_v2, typename ReadHandler>
   class read_until_delim_string_op_v2
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
     template <typename BufferSequence>
     read_until_delim_string_op_v2(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
+        BufferSequence&& buffers,
         const std::string& delim, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         delim_(delim),
         start_(0),
         search_position_(0),
         bytes_to_read_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_delim_string_op_v2(const read_until_delim_string_op_v2& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         delim_(other.delim_),
         start_(other.start_),
@@ -2291,18 +1983,19 @@ namespace detail
     }
 
     read_until_delim_string_op_v2(read_until_delim_string_op_v2&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(other.buffers_)),
-        delim_(BOOST_ASIO_MOVE_CAST(std::string)(other.delim_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v2&&>(other.buffers_)),
+        delim_(static_cast<std::string&&>(other.delim_)),
         start_(other.start_),
         search_position_(other.search_position_),
         bytes_to_read_(other.bytes_to_read_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -2368,15 +2061,24 @@ namespace detail
           if (!start && bytes_to_read_ == 0)
             break;
 
-          // Start a new asynchronous read op_v2eration to obtain more data.
+          // Start a new asynchronous read operation to obtain more data.
           pos = buffers_.size();
           buffers_.grow(bytes_to_read_);
-          stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
-              BOOST_ASIO_MOVE_CAST(read_until_delim_string_op_v2)(*this));
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
+                static_cast<read_until_delim_string_op_v2&&>(*this));
+          }
           return; default:
           buffers_.shrink(bytes_to_read_ - bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -2387,7 +2089,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -2403,26 +2105,6 @@ namespace detail
 
   template <typename AsyncReadStream,
       typename DynamicBuffer_v2, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_delim_string_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_delim_string_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_delim_string_op_v2<AsyncReadStream,
         DynamicBuffer_v2, ReadHandler>* this_handler)
@@ -2430,26 +2112,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_delim_string_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_delim_string_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -2463,14 +2125,14 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler, typename DynamicBuffer_v2>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v2) buffers,
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v2&& buffers,
         const std::string& delim) const
     {
       // If you get an error on the following line it means that your handler
@@ -2479,9 +2141,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_delim_string_op_v2<AsyncReadStream,
-        typename decay<DynamicBuffer_v2>::type,
-          typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+        decay_t<DynamicBuffer_v2>,
+          decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v2&&>(buffers),
             delim, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -2492,63 +2154,33 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v2,
+    typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_delim_string_op_v2<AsyncReadStream,
       DynamicBuffer_v2, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
-      const detail::read_until_delim_string_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
+      const detail::read_until_delim_string_op_v2<
+        AsyncReadStream, DynamicBuffer_v2, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_delim_string_op_v2<AsyncReadStream,
-      DynamicBuffer_v2, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
-      const detail::read_until_delim_string_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+  static auto get(
+      const detail::read_until_delim_string_op_v2<
+        AsyncReadStream, DynamicBuffer_v2, ReadHandler>& h,
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream,
-    typename DynamicBuffer_v2,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s,
-    DynamicBuffer_v2 buffers, BOOST_ASIO_STRING_VIEW_PARAM delim,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_delim_string_v2<AsyncReadStream>(s),
-      handler, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
-      static_cast<std::string>(delim));
-}
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
 #if defined(BOOST_ASIO_HAS_BOOST_REGEX)
@@ -2558,25 +2190,27 @@ namespace detail
   template <typename AsyncReadStream, typename DynamicBuffer_v2,
       typename RegEx, typename ReadHandler>
   class read_until_expr_op_v2
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
-    template <typename BufferSequence>
-    read_until_expr_op_v2(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
-        const boost::regex& expr, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+    template <typename BufferSequence, typename Traits>
+    read_until_expr_op_v2(AsyncReadStream& stream, BufferSequence&& buffers,
+        const boost::basic_regex<char, Traits>& expr, ReadHandler& handler)
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         expr_(expr),
         start_(0),
         search_position_(0),
         bytes_to_read_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_expr_op_v2(const read_until_expr_op_v2& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         expr_(other.expr_),
         start_(other.start_),
@@ -2587,18 +2221,19 @@ namespace detail
     }
 
     read_until_expr_op_v2(read_until_expr_op_v2&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(other.buffers_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v2&&>(other.buffers_)),
         expr_(other.expr_),
         start_(other.start_),
         search_position_(other.search_position_),
         bytes_to_read_(other.bytes_to_read_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -2622,10 +2257,10 @@ namespace detail
 
             // Look for a match.
             boost::match_results<iterator,
-              typename std::vector<boost::sub_match<iterator> >::allocator_type>
+              typename std::vector<boost::sub_match<iterator>>::allocator_type>
                 match_results;
-            bool match = regex_search(start_pos, end, match_results, expr_,
-                boost::match_default | boost::match_partial);
+            bool match = regex_search(start_pos, end,
+                match_results, expr_, regex_match_flags());
             if (match && match_results[0].matched)
             {
               // Full match. We're done.
@@ -2667,15 +2302,24 @@ namespace detail
           if (!start && bytes_to_read_ == 0)
             break;
 
-          // Start a new asynchronous read op_v2eration to obtain more data.
+          // Start a new asynchronous read operation to obtain more data.
           pos = buffers_.size();
           buffers_.grow(bytes_to_read_);
-          stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
-              BOOST_ASIO_MOVE_CAST(read_until_expr_op_v2)(*this));
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
+                static_cast<read_until_expr_op_v2&&>(*this));
+          }
           return; default:
           buffers_.shrink(bytes_to_read_ - bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -2686,7 +2330,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -2702,26 +2346,6 @@ namespace detail
 
   template <typename AsyncReadStream, typename DynamicBuffer_v2,
       typename RegEx, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_expr_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, RegEx, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v2,
-      typename RegEx, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_expr_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, RegEx, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v2,
-      typename RegEx, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_expr_op_v2<AsyncReadStream,
         DynamicBuffer_v2, RegEx, ReadHandler>* this_handler)
@@ -2729,26 +2353,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename RegEx, typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_expr_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, RegEx, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename RegEx, typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_expr_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, RegEx, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -2762,14 +2366,14 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler, typename DynamicBuffer_v2, typename RegEx>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v2) buffers,
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v2&& buffers,
         const RegEx& expr) const
     {
       // If you get an error on the following line it means that your handler
@@ -2778,9 +2382,9 @@ namespace detail
 
       non_const_lvalue<ReadHandler> handler2(handler);
       read_until_expr_op_v2<AsyncReadStream,
-        typename decay<DynamicBuffer_v2>::type,
-          RegEx, typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+        decay_t<DynamicBuffer_v2>,
+          RegEx, decay_t<ReadHandler>>(
+            stream_, static_cast<DynamicBuffer_v2&&>(buffers),
             expr, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
@@ -2791,60 +2395,33 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename RegEx, typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v2,
+    typename RegEx, typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_expr_op_v2<AsyncReadStream,
       DynamicBuffer_v2, RegEx, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
       const detail::read_until_expr_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, RegEx, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+        DynamicBuffer_v2, RegEx, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename RegEx, typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_expr_op_v2<AsyncReadStream,
-      DynamicBuffer_v2, RegEx, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
+  static auto get(
       const detail::read_until_expr_op_v2<AsyncReadStream,
         DynamicBuffer_v2, RegEx, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s, DynamicBuffer_v2 buffers,
-    const boost::regex& expr, BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_expr_v2<AsyncReadStream>(s),
-      handler, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers), expr);
-}
 
 #endif // defined(BOOST_ASIO_HAS_BOOST_REGEX)
 
@@ -2853,25 +2430,28 @@ namespace detail
   template <typename AsyncReadStream, typename DynamicBuffer_v2,
       typename MatchCondition, typename ReadHandler>
   class read_until_match_op_v2
+    : public base_from_cancellation_state<ReadHandler>
   {
   public:
     template <typename BufferSequence>
     read_until_match_op_v2(AsyncReadStream& stream,
-        BOOST_ASIO_MOVE_ARG(BufferSequence) buffers,
+        BufferSequence&& buffers,
         MatchCondition match_condition, ReadHandler& handler)
-      : stream_(stream),
-        buffers_(BOOST_ASIO_MOVE_CAST(BufferSequence)(buffers)),
+      : base_from_cancellation_state<ReadHandler>(
+          handler, enable_partial_cancellation()),
+        stream_(stream),
+        buffers_(static_cast<BufferSequence&&>(buffers)),
         match_condition_(match_condition),
         start_(0),
         search_position_(0),
         bytes_to_read_(0),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     read_until_match_op_v2(const read_until_match_op_v2& other)
-      : stream_(other.stream_),
+      : base_from_cancellation_state<ReadHandler>(other),
+        stream_(other.stream_),
         buffers_(other.buffers_),
         match_condition_(other.match_condition_),
         start_(other.start_),
@@ -2882,18 +2462,19 @@ namespace detail
     }
 
     read_until_match_op_v2(read_until_match_op_v2&& other)
-      : stream_(other.stream_),
-        buffers_(BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(other.buffers_)),
+      : base_from_cancellation_state<ReadHandler>(
+          static_cast<base_from_cancellation_state<ReadHandler>&&>(other)),
+        stream_(other.stream_),
+        buffers_(static_cast<DynamicBuffer_v2&&>(other.buffers_)),
         match_condition_(other.match_condition_),
         start_(other.start_),
         search_position_(other.search_position_),
         bytes_to_read_(other.bytes_to_read_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       const std::size_t not_found = (std::numeric_limits<std::size_t>::max)();
@@ -2958,15 +2539,24 @@ namespace detail
           if (!start && bytes_to_read_ == 0)
             break;
 
-          // Start a new asynchronous read op_v2eration to obtain more data.
+          // Start a new asynchronous read operation to obtain more data.
           pos = buffers_.size();
           buffers_.grow(bytes_to_read_);
-          stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
-              BOOST_ASIO_MOVE_CAST(read_until_match_op_v2)(*this));
+          {
+            BOOST_ASIO_HANDLER_LOCATION((
+                  __FILE__, __LINE__, "async_read_until"));
+            stream_.async_read_some(buffers_.data(pos, bytes_to_read_),
+                static_cast<read_until_match_op_v2&&>(*this));
+          }
           return; default:
           buffers_.shrink(bytes_to_read_ - bytes_transferred);
           if (ec || bytes_transferred == 0)
             break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = error::operation_aborted;
+            break;
+          }
         }
 
         const boost::system::error_code result_ec =
@@ -2977,7 +2567,7 @@ namespace detail
           (ec || search_position_ == not_found)
           ? 0 : search_position_;
 
-        handler_(result_ec, result_n);
+        static_cast<ReadHandler&&>(handler_)(result_ec, result_n);
       }
     }
 
@@ -2993,26 +2583,6 @@ namespace detail
 
   template <typename AsyncReadStream, typename DynamicBuffer_v2,
       typename MatchCondition, typename ReadHandler>
-  inline void* asio_handler_allocate(std::size_t size,
-      read_until_match_op_v2<AsyncReadStream, DynamicBuffer_v2,
-        MatchCondition, ReadHandler>* this_handler)
-  {
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v2,
-      typename MatchCondition, typename ReadHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
-      read_until_match_op_v2<AsyncReadStream, DynamicBuffer_v2,
-        MatchCondition, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-  }
-
-  template <typename AsyncReadStream, typename DynamicBuffer_v2,
-      typename MatchCondition, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       read_until_match_op_v2<AsyncReadStream, DynamicBuffer_v2,
         MatchCondition, ReadHandler>* this_handler)
@@ -3020,28 +2590,6 @@ namespace detail
     return this_handler->start_ == 0 ? true
       : boost_asio_handler_cont_helpers::is_continuation(
           this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename MatchCondition,
-      typename ReadHandler>
-  inline void asio_handler_invoke(Function& function,
-      read_until_match_op_v2<AsyncReadStream, DynamicBuffer_v2,
-        MatchCondition, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-  }
-
-  template <typename Function, typename AsyncReadStream,
-      typename DynamicBuffer_v2, typename MatchCondition,
-      typename ReadHandler>
-  inline void asio_handler_invoke(const Function& function,
-      read_until_match_op_v2<AsyncReadStream, DynamicBuffer_v2,
-      MatchCondition, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
   }
 
   template <typename AsyncReadStream>
@@ -3055,15 +2603,15 @@ namespace detail
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return stream_.get_executor();
     }
 
     template <typename ReadHandler,
         typename DynamicBuffer_v2, typename MatchCondition>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-        BOOST_ASIO_MOVE_ARG(DynamicBuffer_v2) buffers,
+    void operator()(ReadHandler&& handler,
+        DynamicBuffer_v2&& buffers,
         MatchCondition match_condition) const
     {
       // If you get an error on the following line it means that your handler
@@ -3071,11 +2619,10 @@ namespace detail
       BOOST_ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
 
       non_const_lvalue<ReadHandler> handler2(handler);
-      read_until_match_op_v2<AsyncReadStream,
-        typename decay<DynamicBuffer_v2>::type,
-          MatchCondition, typename decay<ReadHandler>::type>(
-            stream_, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
-            match_condition, handler2.value)(boost::system::error_code(), 0, 1);
+      read_until_match_op_v2<AsyncReadStream, decay_t<DynamicBuffer_v2>,
+        MatchCondition, decay_t<ReadHandler>>(
+          stream_, static_cast<DynamicBuffer_v2&&>(buffers),
+          match_condition, handler2.value)(boost::system::error_code(), 0, 1);
     }
 
   private:
@@ -3085,62 +2632,33 @@ namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename MatchCondition, typename ReadHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncReadStream, typename DynamicBuffer_v2,
+    typename MatchCondition, typename ReadHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::read_until_match_op_v2<AsyncReadStream,
       DynamicBuffer_v2, MatchCondition, ReadHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<ReadHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<ReadHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
       const detail::read_until_match_op_v2<AsyncReadStream,
-        DynamicBuffer_v2, MatchCondition, ReadHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+        DynamicBuffer_v2, MatchCondition, ReadHandler>& h) noexcept
   {
-    return associated_allocator<ReadHandler, Allocator>::get(h.handler_, a);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
-};
 
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    typename MatchCondition, typename ReadHandler, typename Executor>
-struct associated_executor<
-    detail::read_until_match_op_v2<AsyncReadStream,
-      DynamicBuffer_v2, MatchCondition, ReadHandler>,
-    Executor>
-{
-  typedef typename associated_executor<ReadHandler, Executor>::type type;
-
-  static type get(
+  static auto get(
       const detail::read_until_match_op_v2<AsyncReadStream,
         DynamicBuffer_v2, MatchCondition, ReadHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
-    return associated_executor<ReadHandler, Executor>::get(h.handler_, ex);
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream,
-    typename DynamicBuffer_v2, typename MatchCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-async_read_until(AsyncReadStream& s, DynamicBuffer_v2 buffers,
-    MatchCondition match_condition, BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
-      is_match_condition<MatchCondition>::value
-        && is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
-{
-  return async_initiate<ReadHandler,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_until_match_v2<AsyncReadStream>(s), handler,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers), match_condition);
-}
 
 #endif // !defined(BOOST_ASIO_NO_EXTENSIONS)
 

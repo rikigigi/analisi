@@ -112,10 +112,6 @@ public:
 #else
     using const_buffers_type = subrange<false>;
 
-#ifdef BOOST_BEAST_ALLOW_DEPRECATED
-    using mutable_data_type = subrange<true>;
-#endif
-
     using mutable_buffers_type = subrange<true>;
 #endif
 
@@ -226,7 +222,9 @@ private:
     subrange<false>
     make_subrange(std::size_t pos, std::size_t n) const;
 
+#ifndef BOOST_BEAST_DOXYGEN
     friend struct buffers_adaptor_test_hook;
+#endif
 
 };
 

@@ -26,6 +26,8 @@
 #include <boost/type_traits/is_polymorphic.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
+#include <boost/detail/workaround.hpp>
+
 #include <boost/serialization/static_warning.hpp>
 #include <boost/serialization/singleton.hpp>
 #include <boost/serialization/extended_type_info.hpp>
@@ -57,12 +59,12 @@ class BOOST_SYMBOL_VISIBLE extended_type_info_no_rtti_0 :
 {
 protected:
     BOOST_SERIALIZATION_DECL extended_type_info_no_rtti_0(const char * key);
-    BOOST_SERIALIZATION_DECL ~extended_type_info_no_rtti_0();
+    BOOST_SERIALIZATION_DECL ~extended_type_info_no_rtti_0() BOOST_OVERRIDE;
 public:
-    virtual BOOST_SERIALIZATION_DECL bool
-    is_less_than(const boost::serialization::extended_type_info &rhs) const ;
-    virtual BOOST_SERIALIZATION_DECL bool
-    is_equal(const boost::serialization::extended_type_info &rhs) const ;
+    BOOST_SERIALIZATION_DECL bool
+    is_less_than(const boost::serialization::extended_type_info &rhs) const BOOST_OVERRIDE;
+    BOOST_SERIALIZATION_DECL bool
+    is_equal(const boost::serialization::extended_type_info &rhs) const BOOST_OVERRIDE;
 };
 
 } // no_rtti_system
@@ -99,11 +101,12 @@ class extended_type_info_no_rtti :
     };
 public:
     extended_type_info_no_rtti() :
-        no_rtti_system::extended_type_info_no_rtti_0(get_key())
+        no_rtti_system::extended_type_info_no_rtti_0(
+            action<guid_defined< T >::value >::invoke())
     {
         key_register();
     }
-    ~extended_type_info_no_rtti(){
+    ~extended_type_info_no_rtti() BOOST_OVERRIDE {
         key_unregister();
     }
     const extended_type_info *
@@ -111,8 +114,8 @@ public:
         // find the type that corresponds to the most derived type.
         // this implementation doesn't depend on typeid() but assumes
         // that the specified type has a function of the following signature.
-        // A common implemention of such a function is to define as a virtual
-        // function. So if the is not a polymporphic type it's likely an error
+        // A common implementation of such a function is to define as a virtual
+        // function. So if the type is not a polymorphic type it's likely an error
         BOOST_STATIC_WARNING(boost::is_polymorphic< T >::value);
         const char * derived_key = t.get_key();
         BOOST_ASSERT(NULL != derived_key);
@@ -121,10 +124,10 @@ public:
     const char * get_key() const{
         return action<guid_defined< T >::value >::invoke();
     }
-    virtual const char * get_debug_info() const{
+    const char * get_debug_info() const BOOST_OVERRIDE {
         return action<guid_defined< T >::value >::invoke();
     }
-    virtual void * construct(unsigned int count, ...) const{
+    void * construct(unsigned int count, ...) const BOOST_OVERRIDE {
         // count up the arguments
         std::va_list ap;
         va_start(ap, count);
@@ -145,7 +148,7 @@ public:
             return NULL;
         }
     }
-    virtual void destroy(void const * const p) const{
+    void destroy(void const * const p) const BOOST_OVERRIDE {
         boost::serialization::access::destroy(
             static_cast<T const *>(p)
         );

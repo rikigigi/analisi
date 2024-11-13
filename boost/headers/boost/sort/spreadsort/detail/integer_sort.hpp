@@ -19,7 +19,6 @@ Phil Endecott and Frank Gennari
 #include <limits>
 #include <functional>
 #include <boost/static_assert.hpp>
-#include <boost/serialization/static_warning.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/sort/spreadsort/detail/constants.hpp>
 #include <boost/sort/spreadsort/detail/spreadsort_common.hpp>
@@ -391,8 +390,6 @@ namespace spreadsort {
     //defaulting to boost::sort::pdqsort when integer_sort won't work
     integer_sort(RandomAccessIter first, RandomAccessIter last, Div_type)
     {
-      //Warning that we're using boost::sort::pdqsort, even though integer_sort was called
-      BOOST_STATIC_WARNING( sizeof(Div_type) <= sizeof(size_t) );
       boost::sort::pdqsort(first, last);
     }
 
@@ -438,8 +435,6 @@ namespace spreadsort {
     integer_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
                 Right_shift shift, Compare comp)
     {
-      //Warning that we're using boost::sort::pdqsort, even though integer_sort was called
-      BOOST_STATIC_WARNING( sizeof(Div_type) <= sizeof(size_t) );
       boost::sort::pdqsort(first, last, comp);
     }
 
@@ -482,8 +477,6 @@ namespace spreadsort {
     integer_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
                 Right_shift shift)
     {
-      //Warning that we're using boost::sort::pdqsort, even though integer_sort was called
-      BOOST_STATIC_WARNING( sizeof(Div_type) <= sizeof(size_t) );
       boost::sort::pdqsort(first, last);
     }
   }

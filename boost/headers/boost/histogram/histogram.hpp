@@ -7,18 +7,20 @@
 #ifndef BOOST_HISTOGRAM_HISTOGRAM_HPP
 #define BOOST_HISTOGRAM_HISTOGRAM_HPP
 
+#include <boost/core/make_span.hpp>
 #include <boost/histogram/detail/accumulator_traits.hpp>
 #include <boost/histogram/detail/argument_traits.hpp>
-#include <boost/histogram/detail/at.hpp>
 #include <boost/histogram/detail/axes.hpp>
 #include <boost/histogram/detail/common_type.hpp>
 #include <boost/histogram/detail/fill.hpp>
 #include <boost/histogram/detail/fill_n.hpp>
+#include <boost/histogram/detail/index_translator.hpp>
 #include <boost/histogram/detail/mutex_base.hpp>
-#include <boost/histogram/detail/non_member_container_access.hpp>
-#include <boost/histogram/detail/span.hpp>
+#include <boost/histogram/detail/nonmember_container_access.hpp>
 #include <boost/histogram/detail/static_if.hpp>
 #include <boost/histogram/fwd.hpp>
+#include <boost/histogram/indexed.hpp>
+#include <boost/histogram/multi_index.hpp>
 #include <boost/histogram/sample.hpp>
 #include <boost/histogram/storage_adaptor.hpp>
 #include <boost/histogram/unsafe_access.hpp>
@@ -68,6 +70,7 @@ public:
   // typedefs for boost::range_iterator
   using iterator = typename storage_type::iterator;
   using const_iterator = typename storage_type::const_iterator;
+  using multi_index_type = multi_index<detail::relaxed_tuple_size_t<axes_type>::value>;
 
 private:
   using mutex_base = typename detail::mutex_base<axes_type, storage_type>;
@@ -137,14 +140,14 @@ public:
   /// This version is more efficient than the one accepting a run-time number.
   template <unsigned N = 0>
   decltype(auto) axis(std::integral_constant<unsigned, N> = {}) const {
-    detail::axis_index_is_valid(axes_, N);
+    assert(N < rank());
     return detail::axis_get<N>(axes_);
   }
 
   /// Get N-th axis with run-time number.
   /// Prefer the version that accepts a compile-time number, if you can use it.
   decltype(auto) axis(unsigned i) const {
-    detail::axis_index_is_valid(axes_, i);
+    assert(i < rank());
     return detail::axis_get(axes_, i);
   }
 
@@ -211,8 +214,13 @@ public:
 
     The argument must be an iterable with a size that matches the
     rank of the histogram. The element of an iterable may be 1) a value or 2) an iterable
-    with contiguous storage over values or 3) a variant of 1) and 2). Sub-iterables must
+    over a contiguous sequence of values or 3) a variant of 1) and 2). Sub-iterables must
     have the same length.
+
+    Warning: `std::vector<bool>` is not a contiguous sequence over boolean values because
+    of the infamous vector specialization for booleans. It cannot be used as an
+    argument, but any truely contiguous sequence of boolean values can (`std::array<bool,
+    N>` or `std::valarray<bool>`, for example).
 
     Values are passed to the corresponding histogram axis in order. If a single value is
     passed together with an iterable of values, the single value is treated like an
@@ -231,7 +239,7 @@ public:
                   "sample argument is missing but required by accumulator");
     std::lock_guard<typename mutex_base::type> guard{mutex_base::get()};
     detail::fill_n(mp11::mp_bool<(n_sample_args_expected == 0)>{}, offset_, storage_,
-                   axes_, detail::make_span(args));
+                   axes_, make_span(args));
   }
 
   /** Fill histogram with several values and weights at once.
@@ -249,8 +257,7 @@ public:
         std::is_convertible<std::tuple<>, typename acc_traits::args>::value;
     std::lock_guard<typename mutex_base::type> guard{mutex_base::get()};
     detail::fill_n(mp11::mp_bool<(weight_valid && sample_valid)>{}, offset_, storage_,
-                   axes_, detail::make_span(args),
-                   weight(detail::to_ptr_size(weights.value)));
+                   axes_, make_span(args), weight(detail::to_ptr_size(weights.value)));
   }
 
   /** Fill histogram with several values and weights at once.
@@ -276,12 +283,12 @@ public:
     detail::sample_args_passed_vs_expected<sample_args_passed,
                                            typename acc_traits::args>();
     std::lock_guard<typename mutex_base::type> guard{mutex_base::get()};
-    mp11::tuple_apply(
+    mp11::tuple_apply( // LCOV_EXCL_LINE: gcc-11 is missing this line for no reason
         [&](const auto&... sargs) {
           constexpr bool sample_valid =
               std::is_convertible<sample_args_passed, typename acc_traits::args>::value;
           detail::fill_n(mp11::mp_bool<(sample_valid)>{}, offset_, storage_, axes_,
-                         detail::make_span(args), detail::to_ptr_size(sargs)...);
+                         make_span(args), detail::to_ptr_size(sargs)...);
         },
         samples.value);
   }
@@ -306,14 +313,14 @@ public:
     detail::sample_args_passed_vs_expected<sample_args_passed,
                                            typename acc_traits::args>();
     std::lock_guard<typename mutex_base::type> guard{mutex_base::get()};
-    mp11::tuple_apply(
+    mp11::tuple_apply( // LCOV_EXCL_LINE: gcc-11 is missing this line for no reason
         [&](const auto&... sargs) {
           constexpr bool weight_valid = acc_traits::weight_support;
           static_assert(weight_valid, "error: accumulator does not support weights");
           constexpr bool sample_valid =
               std::is_convertible<sample_args_passed, typename acc_traits::args>::value;
           detail::fill_n(mp11::mp_bool<(weight_valid && sample_valid)>{}, offset_,
-                         storage_, axes_, detail::make_span(args),
+                         storage_, axes_, make_span(args),
                          weight(detail::to_ptr_size(weights.value)),
                          detail::to_ptr_size(sargs)...);
         },
@@ -349,79 +356,63 @@ public:
     @param is indices of second, third, ... axes.
     @returns reference to cell value.
   */
-  template <class... Indices>
-  decltype(auto) at(axis::index_type i, Indices... is) {
-    return at(std::forward_as_tuple(i, is...));
+  template <class... Is>
+  decltype(auto) at(axis::index_type i, Is... is) {
+    return at(multi_index_type{i, static_cast<axis::index_type>(is)...});
   }
 
   /// Access cell value at integral indices (read-only).
-  template <class... Indices>
-  decltype(auto) at(axis::index_type i, Indices... is) const {
-    return at(std::forward_as_tuple(i, is...));
-  }
-
-  /// Access cell value at integral indices stored in `std::tuple`.
-  template <class... Indices>
-  decltype(auto) at(const std::tuple<Indices...>& is) {
-    if (rank() != sizeof...(Indices))
-      BOOST_THROW_EXCEPTION(
-          std::invalid_argument("number of arguments != histogram rank"));
-    const auto idx = detail::at(axes_, is);
-    if (!is_valid(idx))
-      BOOST_THROW_EXCEPTION(std::out_of_range("at least one index out of bounds"));
-    BOOST_ASSERT(idx < storage_.size());
-    return storage_[idx];
-  }
-
-  /// Access cell value at integral indices stored in `std::tuple` (read-only).
-  template <class... Indices>
-  decltype(auto) at(const std::tuple<Indices...>& is) const {
-    if (rank() != sizeof...(Indices))
-      BOOST_THROW_EXCEPTION(
-          std::invalid_argument("number of arguments != histogram rank"));
-    const auto idx = detail::at(axes_, is);
-    if (!is_valid(idx))
-      BOOST_THROW_EXCEPTION(std::out_of_range("at least one index out of bounds"));
-    BOOST_ASSERT(idx < storage_.size());
-    return storage_[idx];
+  template <class... Is>
+  decltype(auto) at(axis::index_type i, Is... is) const {
+    return at(multi_index_type{i, static_cast<axis::index_type>(is)...});
   }
 
   /// Access cell value at integral indices stored in iterable.
-  template <class Iterable, class = detail::requires_iterable<Iterable>>
-  decltype(auto) at(const Iterable& is) {
-    if (rank() != detail::axes_rank(is))
+  decltype(auto) at(const multi_index_type& is) {
+    if (rank() != is.size())
       BOOST_THROW_EXCEPTION(
           std::invalid_argument("number of arguments != histogram rank"));
-    const auto idx = detail::at(axes_, is);
+    const auto idx = detail::linearize_indices(axes_, is);
     if (!is_valid(idx))
       BOOST_THROW_EXCEPTION(std::out_of_range("at least one index out of bounds"));
-    BOOST_ASSERT(idx < storage_.size());
+    assert(idx < storage_.size());
     return storage_[idx];
   }
 
   /// Access cell value at integral indices stored in iterable (read-only).
-  template <class Iterable, class = detail::requires_iterable<Iterable>>
-  decltype(auto) at(const Iterable& is) const {
-    if (rank() != detail::axes_rank(is))
+  decltype(auto) at(const multi_index_type& is) const {
+    if (rank() != is.size())
       BOOST_THROW_EXCEPTION(
           std::invalid_argument("number of arguments != histogram rank"));
-    const auto idx = detail::at(axes_, is);
+    const auto idx = detail::linearize_indices(axes_, is);
     if (!is_valid(idx))
       BOOST_THROW_EXCEPTION(std::out_of_range("at least one index out of bounds"));
-    BOOST_ASSERT(idx < storage_.size());
+    assert(idx < storage_.size());
     return storage_[idx];
   }
 
-  /// Access value at index (number for rank = 1, else `std::tuple` or iterable).
-  template <class Indices>
-  decltype(auto) operator[](const Indices& is) {
-    return at(is);
+  /// Access value at index (for rank = 1).
+  decltype(auto) operator[](axis::index_type i) {
+    const axis::index_type shift =
+        axis::traits::options(axis()) & axis::option::underflow ? 1 : 0;
+    return storage_[static_cast<std::size_t>(i + shift)];
   }
 
-  /// Access value at index (read-only).
-  template <class Indices>
-  decltype(auto) operator[](const Indices& is) const {
-    return at(is);
+  /// Access value at index (for rank = 1, read-only).
+  decltype(auto) operator[](axis::index_type i) const {
+    const axis::index_type shift =
+        axis::traits::options(axis()) & axis::option::underflow ? 1 : 0;
+    return storage_[static_cast<std::size_t>(i + shift)];
+  }
+
+  /// Access value at index tuple.
+  decltype(auto) operator[](const multi_index_type& is) {
+    return storage_[detail::linearize_indices(axes_, is)];
+  }
+
+  /// Access value at index tuple (read-only).
+  decltype(auto) operator[](const multi_index_type& is) const {
+    return storage_[detail::linearize_indices(axes_, is)];
   }
 
   /// Equality operator, tests equality for all axes and the storage.
@@ -442,6 +433,11 @@ public:
   /** Add values of another histogram.
 
     This operator is only available if the value_type supports operator+=.
+
+    Both histograms must be compatible to be addable. The histograms are compatible, if
+    the axes are either all identical. If the axes only differ in the states of their
+    discrete growing axis types, then they are also compatible. The discrete growing
+    axes are merged in this case.
   */
   template <class A, class S>
 #ifdef BOOST_HISTOGRAM_DOXYGEN_INVOKED
@@ -456,6 +452,37 @@ public:
       BOOST_THROW_EXCEPTION(std::invalid_argument("axes of histograms differ"));
     auto rit = unsafe_access::storage(rhs).begin();
     for (auto&& x : storage_) x += *rit++;
+    return *this;
+  }
+
+  // specialization that allows axes merging
+  template <class S>
+#ifdef BOOST_HISTOGRAM_DOXYGEN_INVOKED
+  histogram&
+#else
+  std::enable_if_t<detail::has_operator_radd<
+                       value_type, typename histogram<axes_type, S>::value_type>::value,
+                   histogram&>
+#endif
+  operator+=(const histogram<axes_type, S>& rhs) {
+    const auto& raxes = unsafe_access::axes(rhs);
+    if (detail::axes_equal(axes_, unsafe_access::axes(rhs))) {
+      auto rit = unsafe_access::storage(rhs).begin();
+      for (auto&& x : storage_) x += *rit++;
+      return *this;
+    }
+
+    if (rank() != detail::axes_rank(raxes))
+      BOOST_THROW_EXCEPTION(std::invalid_argument("axes have different length"));
+    auto h = histogram<axes_type, storage_type>(
+        detail::axes_transform(axes_, raxes, detail::axis_merger{}),
+        detail::make_default(storage_));
+    const auto& axes = unsafe_access::axes(h);
+    const auto tr1 = detail::make_index_translator(axes, axes_);
+    for (auto&& x : indexed(*this, coverage::all)) h[tr1(x.indices())] += *x;
+    const auto tr2 = detail::make_index_translator(axes, raxes);
+    for (auto&& x : indexed(rhs, coverage::all)) h[tr2(x.indices())] += *x;
+    *this = std::move(h);
     return *this;
   }
 
@@ -665,24 +692,23 @@ auto operator/(const histogram<A, S>& h, double x) {
 #if __cpp_deduction_guides >= 201606
 
 template <class... Axes, class = detail::requires_axes<std::tuple<std::decay_t<Axes>...>>>
-histogram(Axes...)->histogram<std::tuple<std::decay_t<Axes>...>>;
+histogram(Axes...) -> histogram<std::tuple<std::decay_t<Axes>...>>;
 
 template <class... Axes, class S, class = detail::requires_storage_or_adaptible<S>>
 histogram(std::tuple<Axes...>, S)
-    ->histogram<std::tuple<Axes...>, std::conditional_t<detail::is_adaptible<S>::value,
-                                                        storage_adaptor<S>, S>>;
+    -> histogram<std::tuple<Axes...>, std::conditional_t<detail::is_adaptible<S>::value,
+                                                         storage_adaptor<S>, S>>;
 
 template <class Iterable, class = detail::requires_iterable<Iterable>,
           class = detail::requires_any_axis<typename Iterable::value_type>>
-histogram(Iterable)->histogram<std::vector<typename Iterable::value_type>>;
+histogram(Iterable) -> histogram<std::vector<typename Iterable::value_type>>;
 
 template <class Iterable, class S, class = detail::requires_iterable<Iterable>,
           class = detail::requires_any_axis<typename Iterable::value_type>,
           class = detail::requires_storage_or_adaptible<S>>
-histogram(Iterable, S)
-    ->histogram<
-        std::vector<typename Iterable::value_type>,
-        std::conditional_t<detail::is_adaptible<S>::value, storage_adaptor<S>, S>>;
+histogram(Iterable, S) -> histogram<
+    std::vector<typename Iterable::value_type>,
+    std::conditional_t<detail::is_adaptible<S>::value, storage_adaptor<S>, S>>;
 
 #endif
 

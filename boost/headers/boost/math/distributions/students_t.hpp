@@ -21,7 +21,7 @@
 
 #include <utility>
 
-#ifdef BOOST_MSVC
+#ifdef _MSC_VER
 # pragma warning(push)
 # pragma warning(disable: 4702) // unreachable code (return after domain_error throw).
 #endif
@@ -61,6 +61,11 @@ private:
 };
 
 typedef students_t_distribution<double> students_t; // Convenience typedef for double version.
+
+#ifdef __cpp_deduction_guides
+template <class RealType>
+students_t_distribution(RealType)->students_t_distribution<typename boost::math::tools::promote_args<RealType>::type>;
+#endif
 
 template <class RealType, class Policy>
 inline const std::pair<RealType, RealType> range(const students_t_distribution<RealType, Policy>& /*dist*/)
@@ -325,14 +330,13 @@ RealType students_t_distribution<RealType, Policy>::find_degrees_of_freedom(
 
    detail::sample_size_func<RealType, Policy> f(alpha, beta, sd, difference_from_mean);
    tools::eps_tolerance<RealType> tol(policies::digits<RealType, Policy>());
-   boost::uintmax_t max_iter = policies::get_max_root_iterations<Policy>();
+   std::uintmax_t max_iter = policies::get_max_root_iterations<Policy>();
    std::pair<RealType, RealType> r = tools::bracket_and_solve_root(f, hint, RealType(2), false, tol, max_iter, Policy());
    RealType result = r.first + (r.second - r.first) / 2;
    if(max_iter >= policies::get_max_root_iterations<Policy>())
    {
-      return policies::raise_evaluation_error<RealType>(function, "Unable to locate solution in a reasonable time:"
-         " either there is no answer to how many degrees of freedom are required"
-         " or the answer is infinite.  Current best guess is %1%", result, Policy());
+      return policies::raise_evaluation_error<RealType>(function, "Unable to locate solution in a reasonable time: either there is no answer to how many degrees of freedom are required" // LCOV_EXCL_LINE
+         " or the answer is infinite.  Current best guess is %1%", result, Policy()); // LCOV_EXCL_LINE
    }
    return result;
 }
@@ -494,7 +498,7 @@ inline RealType entropy(const students_t_distribution<RealType, Policy>& dist)
 } // namespace math
 } // namespace boost
 
-#ifdef BOOST_MSVC
+#ifdef _MSC_VER
 # pragma warning(pop)
 #endif
 

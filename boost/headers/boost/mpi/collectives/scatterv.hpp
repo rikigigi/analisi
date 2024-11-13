@@ -29,7 +29,7 @@ scatterv_impl(const communicator& comm, const T* in_values, T* out_values, int o
               const int* sizes, const int* displs, int root, mpl::true_)
 {
   assert(!sizes || out_size == sizes[comm.rank()]);
-  assert(bool(sizes) == bool(in_values));
+  assert(!bool(in_values) || bool(sizes));
   
   scoped_array<int> new_offsets_mem(make_offsets(comm, sizes, displs, root));
   if (new_offsets_mem) displs = new_offsets_mem.get();
@@ -142,7 +142,7 @@ void
 scatterv(const communicator& comm, const std::vector<T>& in_values,
          const std::vector<int>& sizes, T* out_values, int root)
 {
-  ::boost::mpi::scatterv(comm, &in_values[0], sizes, out_values, root);
+  ::boost::mpi::scatterv(comm, detail::c_data(in_values), sizes, out_values, root);
 }
 
 template<typename T>
@@ -159,7 +159,7 @@ void
 scatterv(const communicator& comm, const std::vector<T>& in_values,
          T* out_values, int out_size, int root)
 {
-  ::boost::mpi::scatterv(comm, &in_values[0], out_values, out_size, root);
+  ::boost::mpi::scatterv(comm, detail::c_data(in_values), out_values, out_size, root);
 }
 
 } } // end namespace boost::mpi

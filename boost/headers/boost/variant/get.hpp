@@ -4,7 +4,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (c) 2003 Eric Friedman, Itay Maman
-// Copyright (c) 2014-2020 Antony Polukhin
+// Copyright (c) 2014-2024 Antony Polukhin
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -16,10 +16,10 @@
 #include <exception>
 
 #include <boost/config.hpp>
+#include <boost/core/addressof.hpp>
 #include <boost/detail/workaround.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/throw_exception.hpp>
-#include <boost/utility/addressof.hpp>
 #include <boost/variant/variant_fwd.hpp>
 #include <boost/variant/detail/element_index.hpp>
 #include <boost/variant/detail/move.hpp>
@@ -44,7 +44,7 @@ class BOOST_SYMBOL_VISIBLE bad_get
 {
 public: // std::exception implementation
 
-    virtual const char * what() const BOOST_NOEXCEPT_OR_NOTHROW
+    const char * what() const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE
     {
         return "boost::bad_get: "
                "failed value get using boost::get";
@@ -99,10 +99,10 @@ public: // visitor interfaces
 }} // namespace detail::variant
 
 #ifndef BOOST_VARIANT_AUX_GET_EXPLICIT_TEMPLATE_TYPE
-#   if !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x0551))
+#   if !BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x0551))
 #       define BOOST_VARIANT_AUX_GET_EXPLICIT_TEMPLATE_TYPE(t)
 #   else
-#       if defined(BOOST_NO_NULLPTR)
+#       if defined(BOOST_NO_CXX11_NULLPTR)
 #           define BOOST_VARIANT_AUX_GET_EXPLICIT_TEMPLATE_TYPE(t)  \
             , t* = 0
 #       else

@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2020 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2020-2024 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Jan 2020
 
 
@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef BOOST_OUTCOME_SYSTEM_ERROR2_GETADDRINFO_CODE_HPP
 #define BOOST_OUTCOME_SYSTEM_ERROR2_GETADDRINFO_CODE_HPP
 
-#include "generic_code.hpp"
+#include "quick_status_code_from_enum.hpp"
 
 #ifdef _WIN32
 #error Not available for Microsoft Windows
@@ -54,7 +54,6 @@ using getaddrinfo_error = status_error<_getaddrinfo_code_domain>;
 class _getaddrinfo_code_domain : public status_code_domain
 {
   template <class DomainType> friend class status_code;
-  template <class StatusCode> friend class detail::indirecting_domain;
   using _base = status_code_domain;
 
 public:
@@ -77,6 +76,13 @@ public:
   static inline constexpr const _getaddrinfo_code_domain &get();
 
   virtual string_ref name() const noexcept override { return string_ref("getaddrinfo() domain"); }  // NOLINT
+
+  virtual payload_info_t payload_info() const noexcept override
+  {
+    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+  }
+
 protected:
   virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
   {

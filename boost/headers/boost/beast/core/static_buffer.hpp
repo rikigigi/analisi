@@ -99,10 +99,6 @@ public:
 #else
     using const_buffers_type   = detail::buffers_pair<false>;
 
-#ifdef BOOST_BEAST_ALLOW_DEPRECATED
-    using mutable_data_type    = detail::buffers_pair<true>;
-#endif
-
     using mutable_buffers_type = detail::buffers_pair<true>;
 #endif
 
@@ -147,11 +143,10 @@ public:
     /** Returns a mutable buffer sequence representing writable bytes.
 
         Returns a mutable buffer sequence representing the writable
-        bytes containing exactly `n` bytes of storage. Memory may be
-        reallocated as needed.
+        bytes containing exactly `n` bytes of storage.
 
         All buffers sequences previously obtained using
-        @ref data or @ref prepare are invalidated.
+        @ref data or @ref prepare may be invalidated.
 
         @param n The desired number of bytes in the returned buffer
         sequence.

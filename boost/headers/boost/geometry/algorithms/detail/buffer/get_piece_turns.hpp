@@ -3,8 +3,8 @@
 // Copyright (c) 2012-2014 Barend Gehrels, Amsterdam, the Netherlands.
 // Copyright (c) 2017 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2017, 2018.
-// Modifications copyright (c) 2017-2018 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2017-2020.
+// Modifications copyright (c) 2017-2020 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Use, modification and distribution is subject to the Boost Software License,
@@ -15,7 +15,9 @@
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_BUFFER_GET_PIECE_TURNS_HPP
 
 #include <boost/core/ignore_unused.hpp>
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/value_type.hpp>
 
 #include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
@@ -115,7 +117,7 @@ template
     typename Pieces,
     typename Rings,
     typename Turns,
-    typename IntersectionStrategy,
+    typename Strategy,
     typename RobustPolicy
 >
 class piece_turn_visitor
@@ -123,7 +125,7 @@ class piece_turn_visitor
     Pieces const& m_pieces;
     Rings const& m_rings;
     Turns& m_turns;
-    IntersectionStrategy const& m_intersection_strategy;
+    Strategy const& m_strategy;
     RobustPolicy const& m_robust_policy;
 
     template <typename Piece>
@@ -148,7 +150,6 @@ class piece_turn_visitor
 
         return ! m_rings[piece1.first_seg_id.multi_index].has_concave;
     }
-
 
     template <std::size_t Dimension, typename Iterator, typename Box>
     inline void move_begin_iterator(Iterator& it_begin, Iterator it_beyond,
@@ -193,7 +194,6 @@ class piece_turn_visitor
     {
         typedef typename boost::range_value<Rings const>::type ring_type;
         typedef typename boost::range_value<Turns const>::type turn_type;
-        typedef typename boost::range_iterator<ring_type const>::type iterator;
 
         signed_size_type const piece1_first_index = piece1.first_seg_id.segment_index;
         signed_size_type const piece2_first_index = piece2.first_seg_id.segment_index;
@@ -212,12 +212,12 @@ class piece_turn_visitor
 
         // get geometry and iterators over these sections
         ring_type const& ring1 = m_rings[piece1.first_seg_id.multi_index];
-        iterator it1_first = boost::begin(ring1) + sec1_first_index;
-        iterator it1_beyond = boost::begin(ring1) + sec1_last_index + 1;
+        auto it1_first = boost::begin(ring1) + sec1_first_index;
+        auto it1_beyond = boost::begin(ring1) + sec1_last_index + 1;
 
         ring_type const& ring2 = m_rings[piece2.first_seg_id.multi_index];
-        iterator it2_first = boost::begin(ring2) + sec2_first_index;
-        iterator it2_beyond = boost::begin(ring2) + sec2_last_index + 1;
+        auto it2_first = boost::begin(ring2) + sec2_first_index;
+        auto it2_beyond = boost::begin(ring2) + sec2_last_index + 1;
 
         // Set begin/end of monotonic ranges, in both x/y directions
         signed_size_type index1 = sec1_first_index;
@@ -245,41 +245,32 @@ class piece_turn_visitor
         the_model.operations[0].seg_id = piece1.first_seg_id;
         the_model.operations[0].seg_id.segment_index = index1; // override
 
-        iterator it1 = it1_first;
-        for (iterator prev1 = it1++;
+        auto it1 = it1_first;
+        for (auto prev1 = it1++;
                 it1 != it1_beyond;
                 prev1 = it1++, the_model.operations[0].seg_id.segment_index++)
         {
             the_model.operations[1].piece_index = piece2.index;
             the_model.operations[1].seg_id = piece2.first_seg_id;
             the_model.operations[1].seg_id.segment_index = index2; // override
-            geometry::recalculate(the_model.rob_pi, *prev1, m_robust_policy);
-            geometry::recalculate(the_model.rob_pj, *it1, m_robust_policy);
 
             unique_sub_range_from_piece<ring_type> unique_sub_range1(ring1, prev1, it1);
 
-            iterator it2 = it2_first;
-            for (iterator prev2 = it2++;
+            auto it2 = it2_first;
+            for (auto prev2 = it2++;
                     it2 != it2_beyond;
                     prev2 = it2++, the_model.operations[1].seg_id.segment_index++)
             {
                 unique_sub_range_from_piece<ring_type> unique_sub_range2(ring2, prev2, it2);
-                geometry::recalculate(the_model.rob_qi, *prev2, m_robust_policy);
-                geometry::recalculate(the_model.rob_qj, *it2, m_robust_policy);
 
-                // TODO: internally get_turn_info calculates robust points.
-                // But they are already calculated.
-                // We should be able to use them.
-                // this means passing them to this visitor,
-                // and iterating in sync with them...
                 typedef detail::overlay::get_turn_info
                     <
-                        detail::overlay::assign_null_policy
+                        detail::overlay::assign_policy_only_start_turns
                     > turn_policy;
 
                 turn_policy::apply(unique_sub_range1, unique_sub_range2,
                                    the_model,
-                                   m_intersection_strategy,
+                                   m_strategy,
                                    m_robust_policy,
                                    std::back_inserter(m_turns));
             }
@@ -291,12 +282,12 @@ public:
     piece_turn_visitor(Pieces const& pieces,
             Rings const& ring_collection,
             Turns& turns,
-            IntersectionStrategy const& intersection_strategy,
+            Strategy const& strategy,
             RobustPolicy const& robust_policy)
         : m_pieces(pieces)
         , m_rings(ring_collection)
         , m_turns(turns)
-        , m_intersection_strategy(intersection_strategy)
+        , m_strategy(strategy)
         , m_robust_policy(robust_policy)
     {}
 
@@ -315,7 +306,7 @@ public:
           || is_on_same_convex_ring(piece1, piece2)
           || detail::disjoint::disjoint_box_box(section1.bounding_box,
                                                 section2.bounding_box,
-                                                m_intersection_strategy.get_disjoint_box_box_strategy()) )
+                                                m_strategy) )
         {
             return true;
         }

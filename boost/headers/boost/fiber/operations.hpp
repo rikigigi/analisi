@@ -16,6 +16,7 @@
 #include <boost/fiber/detail/convert.hpp>
 #include <boost/fiber/fiber.hpp>
 #include <boost/fiber/scheduler.hpp>
+#include <boost/fiber/stack_allocator_wrapper.hpp>
 
 #ifdef BOOST_HAS_ABI_HEADERS
 #  include BOOST_ABI_PREFIX
@@ -38,14 +39,12 @@ template< typename Clock, typename Duration >
 void sleep_until( std::chrono::time_point< Clock, Duration > const& sleep_time_) {
     std::chrono::steady_clock::time_point sleep_time = boost::fibers::detail::convert( sleep_time_);
     fibers::context * active_ctx = fibers::context::active();
-    active_ctx->twstatus.store( static_cast< std::intptr_t >( 0), std::memory_order_release);
     active_ctx->wait_until( sleep_time);
 }
 
 template< typename Rep, typename Period >
 void sleep_for( std::chrono::duration< Rep, Period > const& timeout_duration) {
     fibers::context * active_ctx = fibers::context::active();
-    active_ctx->twstatus.store( static_cast< std::intptr_t >( 0), std::memory_order_release);
     active_ctx->wait_until( std::chrono::steady_clock::now() + timeout_duration);
 }
 
@@ -77,10 +76,14 @@ bool has_ready_fibers() noexcept {
     return boost::fibers::context::active()->get_scheduler()->has_ready_fibers();
 }
 
+// Returns true if the thread could be initialize, false otherwise (it was already initialized previously).
+inline bool initialize_thread(algo::algorithm::ptr_t algo, stack_allocator_wrapper&& salloc) noexcept {
+    return boost::fibers::context::initialize_thread(algo, std::move(salloc));
+}
+
 template< typename SchedAlgo, typename ... Args >
 void use_scheduling_algorithm( Args && ... args) noexcept {
-    boost::fibers::context::active()->get_scheduler()
-        ->set_algo( new SchedAlgo( std::forward< Args >( args) ... ) );
+    initialize_thread(new SchedAlgo(std::forward< Args >( args) ... ), make_stack_allocator_wrapper<boost::fibers::default_stack>());
 }
 
 }}

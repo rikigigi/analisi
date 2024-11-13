@@ -21,7 +21,6 @@ Scott McMurray
 #include <limits>
 #include <functional>
 #include <boost/static_assert.hpp>
-#include <boost/serialization/static_warning.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/sort/spreadsort/detail/constants.hpp>
 #include <boost/sort/spreadsort/detail/integer_sort.hpp>
@@ -411,7 +410,7 @@ namespace spreadsort {
                                                                 max, min))
         return;
       unsigned log_divisor = get_log_divisor<float_log_mean_bin_size>(
-          last - first, rough_log_2_size(Size_type(max - min)));
+          last - first, rough_log_2_size(Size_type(max/2 - min/2)) + 1);
       Div_type div_min = min >> log_divisor;
       Div_type div_max = max >> log_divisor;
       unsigned bin_count = unsigned(div_max - div_min) + 1;
@@ -508,7 +507,7 @@ namespace spreadsort {
       if (is_sorted_or_find_extremes(first, last, max, min, rshift))
         return;
       unsigned log_divisor = get_log_divisor<float_log_mean_bin_size>(
-          last - first, rough_log_2_size(Size_type(max - min)));
+          last - first, rough_log_2_size(Size_type(max/2 - min/2)) + 1);
       Div_type div_min = min >> log_divisor;
       Div_type div_max = max >> log_divisor;
       unsigned bin_count = unsigned(div_max - div_min) + 1;
@@ -606,7 +605,7 @@ namespace spreadsort {
       if (is_sorted_or_find_extremes(first, last, max, min, rshift, comp))
         return;
       unsigned log_divisor = get_log_divisor<float_log_mean_bin_size>(
-          last - first, rough_log_2_size(Size_type(max - min)));
+          last - first, rough_log_2_size(Size_type(max/2 - min/2)) + 1);
       Div_type div_min = min >> log_divisor;
       Div_type div_max = max >> log_divisor;
       unsigned bin_count = unsigned(div_max - div_min) + 1;
@@ -735,7 +734,7 @@ namespace spreadsort {
       void >::type
     float_sort(RandomAccessIter first, RandomAccessIter last)
     {
-      BOOST_STATIC_WARNING(!(sizeof(boost::uint64_t) ==
+      BOOST_STATIC_ASSERT(!(sizeof(boost::uint64_t) ==
       sizeof(typename std::iterator_traits<RandomAccessIter>::value_type)
       || sizeof(boost::uint32_t) ==
       sizeof(typename std::iterator_traits<RandomAccessIter>::value_type))
@@ -778,7 +777,6 @@ namespace spreadsort {
     float_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
                Right_shift rshift)
     {
-      BOOST_STATIC_WARNING(sizeof(boost::uintmax_t) >= sizeof(Div_type));
       boost::sort::pdqsort(first, last);
     }
 
@@ -820,7 +818,6 @@ namespace spreadsort {
     float_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
                Right_shift rshift, Compare comp)
     {
-      BOOST_STATIC_WARNING(sizeof(boost::uintmax_t) >= sizeof(Div_type));
       boost::sort::pdqsort(first, last, comp);
     }
   }

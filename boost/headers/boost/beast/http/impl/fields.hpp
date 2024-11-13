@@ -14,15 +14,15 @@
 #include <boost/beast/core/string.hpp>
 #include <boost/beast/core/detail/buffers_ref.hpp>
 #include <boost/beast/core/detail/clamp.hpp>
+#include <boost/beast/core/detail/static_string.hpp>
 #include <boost/beast/core/detail/temporary_buffer.hpp>
+#include <boost/beast/core/static_string.hpp>
 #include <boost/beast/http/verb.hpp>
 #include <boost/beast/http/rfc7230.hpp>
 #include <boost/beast/http/status.hpp>
 #include <boost/beast/http/chunk_encode.hpp>
 #include <boost/core/exchange.hpp>
 #include <boost/throw_exception.hpp>
-#include <stdexcept>
-#include <string>
 
 namespace boost {
 namespace beast {
@@ -432,15 +432,12 @@ template<class Allocator>
 auto
 basic_fields<Allocator>::
 operator=(basic_fields&& other) noexcept(
-    alloc_traits::propagate_on_container_move_assignment::value)
-      -> basic_fields&
+    pocma::value && std::is_nothrow_move_assignable<Allocator>::value)
+    -> basic_fields&
 {
-    static_assert(is_nothrow_move_assignable<Allocator>::value,
-        "Allocator must be noexcept assignable.");
     if(this == &other)
         return *this;
-    move_assign(other, std::integral_constant<bool,
-        alloc_traits:: propagate_on_container_move_assignment::value>{});
+    move_assign(other, pocma{});
     return *this;
 }
 
@@ -450,8 +447,7 @@ basic_fields<Allocator>::
 operator=(basic_fields const& other) ->
     basic_fields&
 {
-    copy_assign(other, std::integral_constant<bool,
-        alloc_traits::propagate_on_container_copy_assignment::value>{});
+    copy_assign(other, pocca{});
     return *this;
 }
 
@@ -541,7 +537,7 @@ template<class Allocator>
 inline
 void
 basic_fields<Allocator>::
-insert(field name, string_param const& value)
+insert(field name, string_view const& value)
 {
     BOOST_ASSERT(name != field::unknown);
     insert(name, to_string(name), value);
@@ -550,7 +546,7 @@ insert(field name, string_param const& value)
 template<class Allocator>
 void
 basic_fields<Allocator>::
-insert(string_view sname, string_param const& value)
+insert(string_view sname, string_view const& value)
 {
     auto const name =
         string_to_field(sname);
@@ -561,7 +557,7 @@ template<class Allocator>
 void
 basic_fields<Allocator>::
 insert(field name,
-    string_view sname, string_param const& value)
+    string_view sname, string_view const& value)
 {
     auto& e = new_element(name, sname,
         static_cast<string_view>(value));
@@ -591,7 +587,7 @@ insert(field name,
 template<class Allocator>
 void
 basic_fields<Allocator>::
-set(field name, string_param const& value)
+set(field name, string_view const& value)
 {
     BOOST_ASSERT(name != field::unknown);
     set_element(new_element(name, to_string(name),
@@ -601,11 +597,10 @@ set(field name, string_param const& value)
 template<class Allocator>
 void
 basic_fields<Allocator>::
-set(string_view sname, string_param const& value)
+set(string_view sname, string_view const& value)
 {
     set_element(new_element(
-        string_to_field(sname), sname,
-            static_cast<string_view>(value)));
+        string_to_field(sname), sname, value));
 }
 
 template<class Allocator>
@@ -652,8 +647,7 @@ void
 basic_fields<Allocator>::
 swap(basic_fields<Allocator>& other)
 {
-    swap(other, std::integral_constant<bool,
-        alloc_traits::propagate_on_container_swap::value>{});
+    swap(other, pocs{});
 }
 
 template<class Allocator>
@@ -931,7 +925,11 @@ set_content_length_impl(
     if(! value)
         erase(field::content_length);
     else
-        set(field::content_length, *value);
+    {
+        auto s = to_static_string(*value);
+        set(field::content_length,
+            to_string_view(s));
+    }
 }
 
 template<class Allocator>
@@ -1119,13 +1117,13 @@ basic_fields<Allocator>::
 move_assign(basic_fields& other, std::true_type)
 {
     clear_all();
+    this->get() = std::move(other.get());
     set_ = std::move(other.set_);
     list_ = std::move(other.list_);
     method_ = other.method_;
     target_or_reason_ = other.target_or_reason_;
     other.method_ = {};
     other.target_or_reason_ = {};
-    this->get() = other.get();
 }
 
 template<class Allocator>

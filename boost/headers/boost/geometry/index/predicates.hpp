@@ -2,10 +2,10 @@
 //
 // Spatial query predicates
 //
-// Copyright (c) 2011-2018 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2022 Adam Wulkiewicz, Lodz, Poland.
 //
-// This file was modified by Oracle on 2019.
-// Modifications copyright (c) 2019 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2019-2021.
+// Modifications copyright (c) 2019-2021 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 //
 // Use, modification and distribution is subject to the Boost Software License,
@@ -14,6 +14,12 @@
 
 #ifndef BOOST_GEOMETRY_INDEX_PREDICATES_HPP
 #define BOOST_GEOMETRY_INDEX_PREDICATES_HPP
+
+#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+#ifndef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_PREDICATES
+#define BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_PREDICATES
+#endif
+#endif
 
 #include <boost/geometry/index/detail/predicates.hpp>
 #include <boost/geometry/util/tuples.hpp>
@@ -212,7 +218,7 @@ overlaps(Geometry const& g)
                 >(g);
 }
 
-#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_PREDICATES
 
 /*!
 \brief Generate \c touches() predicate.
@@ -240,7 +246,7 @@ touches(Geometry const& g)
                 >(g);
 }
 
-#endif // BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+#endif // BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_PREDICATES
 
 /*!
 \brief Generate \c within() predicate.
@@ -294,10 +300,8 @@ std::back_inserter(result));
 rt.query(index::intersects(box) && index::satisfies(is_red_o()),
 std::back_inserter(result));
 
-#ifndef BOOST_NO_CXX11_LAMBDAS
 rt.query(index::intersects(box) && index::satisfies([](Value const& v) { return v.is_red(); }),
 std::back_inserter(result));
-#endif
 \endverbatim
 
 \ingroup predicates
@@ -338,12 +342,12 @@ Only one \c nearest() predicate may be used in a query.
 */
 template <typename Geometry> inline
 detail::predicates::nearest<Geometry>
-nearest(Geometry const& geometry, unsigned k)
+nearest(Geometry const& geometry, std::size_t k)
 {
     return detail::predicates::nearest<Geometry>(geometry, k);
 }
 
-#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+#ifdef BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_PREDICATES
 
 /*!
 \brief Generate path() predicate.
@@ -368,12 +372,12 @@ Only one distance predicate (\c nearest() or \c path()) may be used in a query.
 */
 template <typename SegmentOrLinestring> inline
 detail::predicates::path<SegmentOrLinestring>
-path(SegmentOrLinestring const& linestring, unsigned k)
+path(SegmentOrLinestring const& linestring, std::size_t k)
 {
     return detail::predicates::path<SegmentOrLinestring>(linestring, k);
 }
 
-#endif // BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL
+#endif // BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL_PREDICATES
 
 namespace detail { namespace predicates {
 
@@ -396,36 +400,28 @@ operator!(spatial_predicate<Geometry, Tag, Negated> const& p)
 // operator&& generators
 
 template <typename Pred1, typename Pred2> inline
-boost::tuples::cons<
-    Pred1,
-    boost::tuples::cons<Pred2, boost::tuples::null_type>
->
+std::tuple<Pred1, Pred2>
 operator&&(Pred1 const& p1, Pred2 const& p2)
 {
-    /*typedef typename boost::mpl::if_c<is_predicate<Pred1>::value, Pred1, Pred1 const&>::type stored1;
-    typedef typename boost::mpl::if_c<is_predicate<Pred2>::value, Pred2, Pred2 const&>::type stored2;*/
-    namespace bt = boost::tuples;
-
-    return
-    bt::cons< Pred1, bt::cons<Pred2, bt::null_type> >
-        ( p1, bt::cons<Pred2, bt::null_type>(p2, bt::null_type()) );
+    /*typedef std::conditional_t<is_predicate<Pred1>::value, Pred1, Pred1 const&> stored1;
+    typedef std::conditional_t<is_predicate<Pred2>::value, Pred2, Pred2 const&> stored2;*/
+    return std::tuple<Pred1, Pred2>(p1, p2);
 }
 
-template <typename Head, typename Tail, typename Pred> inline
-typename geometry::tuples::push_back<
-    boost::tuples::cons<Head, Tail>, Pred
->::type
-operator&&(boost::tuples::cons<Head, Tail> const& t, Pred const& p)
+template <typename ...Preds, typename Pred> inline
+typename geometry::tuples::push_back
+    <
+        std::tuple<Preds...>, Pred
+    >::type
+operator&&(std::tuple<Preds...> const& t, Pred const& p)
 {
-    //typedef typename boost::mpl::if_c<is_predicate<Pred>::value, Pred, Pred const&>::type stored;
-    namespace bt = boost::tuples;
-
-    return
-    geometry::tuples::push_back<
-        bt::cons<Head, Tail>, Pred
-    >::apply(t, p);
+    //typedef std::conditional_t<is_predicate<Pred>::value, Pred, Pred const&> stored;
+    return geometry::tuples::push_back
+            <
+                std::tuple<Preds...>, Pred
+            >::apply(t, p);
 }
-    
+
 }} // namespace detail::predicates
 
 }}} // namespace boost::geometry::index

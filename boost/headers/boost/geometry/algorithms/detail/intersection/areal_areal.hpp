@@ -1,6 +1,6 @@
 // Boost.Geometry
 
-// Copyright (c) 2020, Oracle and/or its affiliates.
+// Copyright (c) 2020-2021, Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Licensed under the Boost Software License version 1.0.
@@ -26,7 +26,7 @@ namespace detail { namespace intersection
 template
 <
     typename GeometryOut,
-    typename OutTag = typename detail::intersection::tag
+    typename OutTag = typename geometry::detail::setop_insert_output_tag
                         <
                             typename geometry::detail::output_geometry_value
                                 <
@@ -85,9 +85,10 @@ struct intersection_areal_areal_<TupledOut, tupled_output_tag>
 
         boost::ignore_unused
             <
-                detail::intersection::expect_output_pla
+                geometry::detail::expect_output
                     <
-                        Areal1, Areal2, single_out
+                        Areal1, Areal2, single_out,
+                        point_tag, linestring_tag, polygon_tag
                     >
             >();
 
@@ -108,10 +109,6 @@ struct intersection_areal_areal_<TupledOut, tupled_output_tag>
             <
                 areal::index, TupledOut
             >::type areal_out_type;
-        typedef typename geometry::tuples::element
-            <
-                pointlike::index, TupledOut
-            >::type pointlike_out_type;
 
         // NOTE: The same robust_policy is used in each call of
         //   intersection_insert. Is that correct?
@@ -156,13 +153,9 @@ struct intersection_areal_areal_<TupledOut, tupled_output_tag>
                             areal_out_boundary,
                             robust_policy,
                             pointlike::get(geometry_out),
-                            strategy.template get_point_in_geometry_strategy
-                                <
-                                    pointlike_out_type,
-                                    areal_out_boundary_type
-                                >());
+                            strategy);
         }
-        
+
         return;
     }
 

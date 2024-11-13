@@ -21,6 +21,7 @@
 #include <boost/range/irange.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <memory>
+#include <iterator>
 #include <algorithm>
 #include <boost/limits.hpp>
 
@@ -2068,14 +2069,19 @@ namespace detail
     inline void reindex_edge_list(
         EdgeList& el, vertex_descriptor u, boost::disallow_parallel_edge_tag)
     {
-        for (typename EdgeList::iterator ei = el.begin(); ei != el.end(); ++ei)
+        typename EdgeList::iterator ei = el.begin(), e_end = el.end();
+        while (ei != e_end)
         {
             if (ei->get_target() > u)
             {
                 typename EdgeList::value_type ce = *ei;
+                ++ei;
                 el.erase(ce);
                 --ce.get_target();
                 el.insert(ce);
+            }
+            else {
+                ++ei;
             }
         }
     }
@@ -2183,8 +2189,12 @@ public:
         }
         // Copy the edges by adding each edge and copying its
         // property object.
+#ifdef BOOST_NO_CXX17_STRUCTURED_BINDINGS
         edge_iterator ei, ei_end;
         for (boost::tie(ei, ei_end) = edges(x); ei != ei_end; ++ei)
+#else // Silences -Wmaybe-uninitialized in adj_list_edge_iterator::operator++().
+        for (auto [ei, ei_end] = edges(x); ei != ei_end; ++ei)
+#endif
         {
             edge_descriptor e;
             bool inserted;
@@ -2370,7 +2380,7 @@ namespace detail
             typedef typename OutEdgeList::size_type degree_size_type;
             typedef typename OutEdgeList::iterator OutEdgeIter;
 
-            typedef boost::detail::iterator_traits< OutEdgeIter >
+            typedef std::iterator_traits< OutEdgeIter >
                 OutEdgeIterTraits;
             typedef
                 typename OutEdgeIterTraits::iterator_category OutEdgeIterCat;
@@ -2398,7 +2408,7 @@ namespace detail
 
             // Edge Iterator
 
-            typedef boost::detail::iterator_traits< EdgeIter > EdgeIterTraits;
+            typedef std::iterator_traits< EdgeIter > EdgeIterTraits;
             typedef typename EdgeIterTraits::iterator_category EdgeIterCat;
             typedef typename EdgeIterTraits::difference_type EdgeIterDiff;
 

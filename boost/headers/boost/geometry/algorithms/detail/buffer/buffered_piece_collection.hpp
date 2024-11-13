@@ -1,10 +1,10 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
 // Copyright (c) 2012-2014 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2017 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2017-2023 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2016-2019.
-// Modifications copyright (c) 2016-2019 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2016-2022.
+// Modifications copyright (c) 2016-2022 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Use, modification and distribution is subject to the Boost Software License,
@@ -19,16 +19,18 @@
 #include <set>
 
 #include <boost/core/ignore_unused.hpp>
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/empty.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/size.hpp>
+#include <boost/range/value_type.hpp>
 
 #include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/coordinate_type.hpp>
 #include <boost/geometry/core/point_type.hpp>
 
-#include <boost/geometry/algorithms/comparable_distance.hpp>
 #include <boost/geometry/algorithms/covered_by.hpp>
 #include <boost/geometry/algorithms/envelope.hpp>
-#include <boost/geometry/algorithms/is_convex.hpp>
 
 #include <boost/geometry/strategies/buffer.hpp>
 
@@ -37,8 +39,8 @@
 #include <boost/geometry/algorithms/detail/buffer/buffered_ring.hpp>
 #include <boost/geometry/algorithms/detail/buffer/buffer_policies.hpp>
 #include <boost/geometry/algorithms/detail/overlay/cluster_info.hpp>
-#include <boost/geometry/algorithms/detail/buffer/buffer_box.hpp>
 #include <boost/geometry/algorithms/detail/buffer/get_piece_turns.hpp>
+#include <boost/geometry/algorithms/detail/buffer/piece_border.hpp>
 #include <boost/geometry/algorithms/detail/buffer/turn_in_piece_visitor.hpp>
 #include <boost/geometry/algorithms/detail/buffer/turn_in_original_visitor.hpp>
 
@@ -56,8 +58,10 @@
 #include <boost/geometry/algorithms/detail/sections/sectionalize.hpp>
 #include <boost/geometry/algorithms/detail/sections/section_box_policies.hpp>
 
-#include <boost/geometry/views/detail/normalized_view.hpp>
+#include <boost/geometry/views/detail/closed_clockwise_view.hpp>
+#include <boost/geometry/util/for_each_with_index.hpp>
 #include <boost/geometry/util/range.hpp>
+
 
 namespace boost { namespace geometry
 {
@@ -111,11 +115,10 @@ namespace detail { namespace buffer
  *
  */
 
-
 template
 <
     typename Ring,
-    typename IntersectionStrategy,
+    typename Strategy,
     typename DistanceStrategy,
     typename RobustPolicy
 >
@@ -123,90 +126,30 @@ struct buffered_piece_collection
 {
     typedef typename geometry::point_type<Ring>::type point_type;
     typedef typename geometry::coordinate_type<Ring>::type coordinate_type;
-    typedef typename geometry::robust_point_type
-    <
-        point_type,
-        RobustPolicy
-    >::type robust_point_type;
 
-    // Robust ring/polygon type, always clockwise
-    typedef geometry::model::ring<robust_point_type> robust_ring_type;
-    typedef geometry::model::box<robust_point_type> robust_box_type;
+    // Ring/polygon type, always clockwise
+    typedef geometry::model::ring<point_type> clockwise_ring_type;
 
-    typedef typename default_comparable_distance_result
-        <
-            robust_point_type
-        >::type robust_comparable_radius_type;
-
-    typedef typename IntersectionStrategy::side_strategy_type side_strategy_type;
-    typedef typename IntersectionStrategy::envelope_strategy_type envelope_strategy_type;
-    typedef typename IntersectionStrategy::expand_strategy_type expand_strategy_type;
-
-    typedef typename IntersectionStrategy::template area_strategy
-        <
-            point_type
-        >::type area_strategy_type;
-
-    typedef typename IntersectionStrategy::template area_strategy
-        <
-            robust_point_type
-        >::type robust_area_strategy_type;
-
-    typedef typename area_strategy_type::template result_type
-        <
-            point_type
-        >::type area_result_type;
-    typedef typename robust_area_strategy_type::template result_type
-        <
-            robust_point_type
-        >::type robust_area_result_type;
-
-    typedef typename IntersectionStrategy::template point_in_geometry_strategy
-        <
-            robust_point_type,
-            robust_ring_type
-        >::type point_in_geometry_strategy_type;
-
-    typedef typename geometry::rescale_policy_type
-        <
-            typename geometry::point_type<Ring>::type,
-            typename IntersectionStrategy::cs_tag
-        >::type rescale_policy_type;
-
-    typedef geometry::segment_ratio
-    <
-        typename geometry::coordinate_type<robust_point_type>::type
-    > ratio_type;
+    typedef geometry::model::box<point_type> box_type;
 
     typedef buffer_turn_info
     <
         point_type,
-        robust_point_type,
-        ratio_type
+        typename segment_ratio_type<point_type, RobustPolicy>::type
     > buffer_turn_info_type;
 
     typedef buffer_turn_operation
     <
         point_type,
-        ratio_type
+        typename segment_ratio_type<point_type, RobustPolicy>::type
     > buffer_turn_operation_type;
 
     typedef std::vector<buffer_turn_info_type> turn_vector_type;
 
-    struct robust_turn
-    {
-        std::size_t turn_index;
-        int operation_index;
-        robust_point_type point;
-        segment_identifier seg_id;
-        ratio_type fraction;
-    };
+    typedef piece_border<Ring, point_type> piece_border_type;
 
     struct piece
     {
-        typedef robust_ring_type piece_robust_ring_type;
-        typedef geometry::section<robust_box_type, 1> section_type;
-
         strategy::buffer::piece_type type;
         signed_size_type index;
 
@@ -218,60 +161,49 @@ struct buffered_piece_collection
         // The complete clockwise ring is also included as a robust ring (3)
 
         // 1: half, part of offsetted_rings
-        segment_identifier first_seg_id;
-        signed_size_type last_segment_index; // no segment-identifier - it is the same as first_seg_id
-        signed_size_type offsetted_count; // part in robust_ring which is part of offsetted ring
 
-#if defined(BOOST_GEOMETRY_BUFFER_USE_HELPER_POINTS)
-        // 2: half, not part of offsetted rings - part of robust ring
-        std::vector<point_type> helper_points; // 4 points for side, 3 points for join - 0 points for flat-end
-#endif
+        // Segment identifier of this piece, including its start index
+        segment_identifier first_seg_id;
+
+        // One-beyond index of this piece, to iterate over a ring
+        // from:                ring.begin() + pc.first_seg_id.segment_index;
+        // to (not including):  ring.begin() + pc.beyond_last_segment_index;
+        // Its ring_id etc are shared with first_seg_id
+        signed_size_type beyond_last_segment_index;
+
+        // part in offsetted ring which is part of offsetted ring
+        signed_size_type offsetted_count;
+
         bool is_flat_start;
         bool is_flat_end;
 
         bool is_deflated;
-        bool is_convex;
-        bool is_monotonic_increasing[2]; // 0=x, 1=y
-        bool is_monotonic_decreasing[2]; // 0=x, 1=y
 
-        // Monotonic sections of pieces around points
-        std::vector<section_type> sections;
+        // Ring (parts) of this piece, always clockwise
+        piece_border_type m_piece_border;
 
-        // Robust representations
-        // 3: complete ring
-        robust_ring_type robust_ring;
+        point_type m_label_point;
 
-        robust_box_type robust_envelope;
-        robust_box_type robust_offsetted_envelope;
-
-        robust_point_type robust_center;
-        robust_comparable_radius_type robust_min_comparable_radius;
-        robust_comparable_radius_type robust_max_comparable_radius;
+        // For a point buffer
+        point_type m_center;
 
         piece()
             : type(strategy::buffer::piece_type_unknown)
             , index(-1)
             , left_index(-1)
             , right_index(-1)
-            , last_segment_index(-1)
+            , beyond_last_segment_index(-1)
             , offsetted_count(-1)
             , is_flat_start(false)
             , is_flat_end(false)
             , is_deflated(false)
-            , is_convex(false)
-            , robust_min_comparable_radius(0)
-            , robust_max_comparable_radius(0)
         {
-            is_monotonic_increasing[0] = false;
-            is_monotonic_increasing[1] = false;
-            is_monotonic_decreasing[0] = false;
-            is_monotonic_decreasing[1] = false;
         }
     };
 
     struct original_ring
     {
-        typedef geometry::sections<robust_box_type, 1> sections_type;
+        typedef geometry::sections<box_type, 1> sections_type;
 
         // Creates an empty instance
         inline original_ring()
@@ -279,28 +211,28 @@ struct buffered_piece_collection
             , m_has_interiors(false)
         {}
 
-        inline original_ring(robust_ring_type const& ring,
-                bool is_interior, bool has_interiors,
-                envelope_strategy_type const& envelope_strategy,
-                expand_strategy_type const& expand_strategy)
+        inline original_ring(clockwise_ring_type const& ring,
+                             bool is_interior, bool has_interiors,
+                             Strategy const& strategy)
             : m_ring(ring)
             , m_is_interior(is_interior)
             , m_has_interiors(has_interiors)
         {
-            geometry::envelope(m_ring, m_box, envelope_strategy);
+            geometry::envelope(m_ring, m_box, strategy);
 
             // create monotonic sections in x-dimension
             // The dimension is critical because the direction is later used
             // in the optimization for within checks using winding strategy
             // and this strategy is scanning in x direction.
-            typedef boost::mpl::vector_c<std::size_t, 0> dimensions;
-            geometry::sectionalize<false, dimensions>(m_ring,
-                    detail::no_rescale_policy(), m_sections,
-                    envelope_strategy, expand_strategy);
+            typedef std::integer_sequence<std::size_t, 0> dimensions;
+            geometry::sectionalize
+                <
+                    false, dimensions
+                >(m_ring, detail::no_rescale_policy(), m_sections, strategy);
         }
 
-        robust_ring_type m_ring;
-        robust_box_type m_box;
+        clockwise_ring_type m_ring;
+        box_type m_box;
         sections_type m_sections;
 
         bool m_is_interior;
@@ -317,16 +249,23 @@ struct buffered_piece_collection
 
     // Offsetted rings, and representations of original ring(s)
     // both indexed by multi_index
-    buffered_ring_collection<buffered_ring<Ring> > offsetted_rings;
+    using ring_collection_t = buffered_ring_collection<buffered_ring<Ring>>;
+    ring_collection_t offsetted_rings;
     std::vector<original_ring> original_rings;
+    std::vector<point_type> m_linear_end_points;
 
     buffered_ring_collection<Ring> traversed_rings;
     segment_identifier current_segment_id;
 
-    // Specificly for offsetted rings around points
-    // but also for large joins with many points
-    typedef geometry::sections<robust_box_type, 2> sections_type;
-    sections_type monotonic_sections;
+    // Monotonic sections (used for offsetted rings around points)
+    // are still using a robust type, to be comparable with turn calculations,
+    // which is using rescaling.
+    typedef geometry::model::box
+    <
+        typename geometry::robust_point_type<point_type, RobustPolicy>::type
+    > robust_box_type;
+    typedef geometry::sections <robust_box_type, 2> robust_sections_type;
+    robust_sections_type monotonic_sections;
 
     // Define the clusters, mapping cluster_id -> turns
     typedef std::map
@@ -337,333 +276,155 @@ struct buffered_piece_collection
 
     cluster_type m_clusters;
 
-    IntersectionStrategy m_intersection_strategy;
+    Strategy m_strategy;
     DistanceStrategy m_distance_strategy;
-    side_strategy_type m_side_strategy;
-    area_strategy_type m_area_strategy;
-    envelope_strategy_type m_envelope_strategy;
-    expand_strategy_type m_expand_strategy;
-    point_in_geometry_strategy_type m_point_in_geometry_strategy;
-
-    robust_area_strategy_type m_robust_area_strategy;
     RobustPolicy const& m_robust_policy;
 
-    buffered_piece_collection(IntersectionStrategy const& intersection_strategy,
+    buffered_piece_collection(Strategy const& strategy,
                               DistanceStrategy const& distance_strategy,
                               RobustPolicy const& robust_policy)
         : m_first_piece_index(-1)
         , m_deflate(false)
         , m_has_deflated(false)
-        , m_intersection_strategy(intersection_strategy)
+        , m_strategy(strategy)
         , m_distance_strategy(distance_strategy)
-        , m_side_strategy(intersection_strategy.get_side_strategy())
-        , m_area_strategy(intersection_strategy
-            .template get_area_strategy<point_type>())
-        , m_envelope_strategy(intersection_strategy.get_envelope_strategy())
-        , m_expand_strategy(intersection_strategy.get_expand_strategy())
-        , m_point_in_geometry_strategy(intersection_strategy
-            .template get_point_in_geometry_strategy<robust_point_type,
-                        robust_ring_type>())
-        , m_robust_area_strategy(intersection_strategy
-            .template get_area_strategy<robust_point_type>())
         , m_robust_policy(robust_policy)
     {}
 
-
-    inline void classify_turns()
+    inline void check_linear_endpoints(buffer_turn_info_type& turn) const
     {
-        for (typename boost::range_iterator<turn_vector_type>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it)
+        // TODO this is quadratic. But the #endpoints, expected, is low,
+        // and only applicable for linear features
+        // (in a multi linestring with many short lines, the #endpoints can be
+        // much higher)
+        for (auto const& p : m_linear_end_points)
         {
-            if (it->count_within > 0)
+            if (detail::equals::equals_point_point(turn.point, p, m_strategy))
             {
-                it->location = inside_buffer;
-            }
-            if (it->count_within_near_offsetted > 0)
-            {
-                // Within can have in rare cases a rounding issue. We don't discard this
-                // point, so it can be used to continue started rings in traversal. But
-                // will never start a new ring from this type of points.
-                it->operations[0].enriched.startable = false;
-                it->operations[1].enriched.startable = false;
+                turn.is_linear_end_point = true;
             }
         }
     }
 
-    struct deflate_properties
+    inline void deflate_check_turns()
     {
-        bool has_inflated;
-        std::size_t count;
-
-        inline deflate_properties()
-            : has_inflated(false)
-            , count(0u)
-        {}
-    };
-
-    inline void discard_turns_for_deflate()
-    {
-        // Deflate cases should have at least 3 points PER deflated original
-        // to form a correct triangle
-
-        // But if there are intersections between a deflated ring and another
-        // ring, it is all accepted
-
-        // In deflate most turns are i/u by nature, but u/u is also possible
-
-        std::map<signed_size_type, deflate_properties> properties;
-
-        for (typename boost::range_iterator<turn_vector_type const>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it)
+        if (! m_has_deflated)
         {
-            const buffer_turn_info_type& turn = *it;
-            if (turn.location == location_ok)
-            {
-                const buffer_turn_operation_type& op0 = turn.operations[0];
-                const buffer_turn_operation_type& op1 = turn.operations[1];
-
-                if (! m_pieces[op0.seg_id.piece_index].is_deflated
-                 || ! m_pieces[op1.seg_id.piece_index].is_deflated)
-                {
-                    properties[op0.seg_id.multi_index].has_inflated = true;
-                    properties[op1.seg_id.multi_index].has_inflated = true;
-                    continue;
-                }
-
-                // It is deflated, update counts
-                for (int i = 0; i < 2; i++)
-                {
-                    const buffer_turn_operation_type& op = turn.operations[i];
-                    if (op.operation == detail::overlay::operation_union
-                        || op.operation == detail::overlay::operation_continue)
-                    {
-                        properties[op.seg_id.multi_index].count++;
-                    }
-                }
-            }
+            return;
         }
 
-        for (typename boost::range_iterator<turn_vector_type>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it)
+        // Deflated rings may not travel to themselves, there should at least
+        // be three turns (which cannot be checked here - TODO: add to traverse)
+        for (auto& turn : m_turns)
         {
-            buffer_turn_info_type& turn = *it;
-
-            if (turn.location == location_ok)
+            if (! turn.is_turn_traversable)
             {
-                const buffer_turn_operation_type& op0 = turn.operations[0];
-                const buffer_turn_operation_type& op1 = turn.operations[1];
-                signed_size_type const multi0 = op0.seg_id.multi_index;
-                signed_size_type const multi1 = op1.seg_id.multi_index;
-
-                if (multi0 == multi1)
+                continue;
+            }
+            for (auto& op : turn.operations)
+            {
+                if (op.enriched.get_next_turn_index() == static_cast<signed_size_type>(turn.turn_index)
+                    && m_pieces[op.seg_id.piece_index].is_deflated)
                 {
-                    const deflate_properties& prop =  properties[multi0];
-
-                    // NOTE: Keep brackets around prop.count
-                    // avoid gcc-bug "parse error in template argument list"
-                    // GCC versions 5.4 and 5.5 (and probably more)
-                    if (! prop.has_inflated && (prop.count) < 3)
-                    {
-                        // Property is not inflated
-                        // Not enough points, this might be caused by <float> where
-                        // detection turn-in-original failed because of numeric errors
-                        turn.location = location_discard;
-                    }
-                }
-                else
-                {
-                    // Two different (possibly deflated) rings
+                    // Keep traversable, but don't start here
+                    op.enriched.startable = false;
                 }
             }
         }
     }
 
-    inline void check_remaining_points()
+    // Check if a turn is inside any of the originals
+    inline void check_turn_in_original()
     {
-        // Check if a turn is inside any of the originals
-
-        typedef turn_in_original_ovelaps_box
-            <
-                typename IntersectionStrategy::disjoint_point_box_strategy_type
-            > turn_in_original_ovelaps_box_type;
-        typedef original_ovelaps_box
-            <
-                typename IntersectionStrategy::disjoint_box_box_strategy_type
-            > original_ovelaps_box_type;
-
         turn_in_original_visitor
             <
                 turn_vector_type,
-                point_in_geometry_strategy_type
-            > visitor(m_turns, m_point_in_geometry_strategy);
+                Strategy
+            > visitor(m_turns, m_strategy);
 
         geometry::partition
             <
-                robust_box_type,
+                box_type,
                 include_turn_policy,
                 detail::partition::include_all_policy
             >::apply(m_turns, original_rings, visitor,
-                     turn_get_box(), turn_in_original_ovelaps_box_type(),
-                     original_get_box(), original_ovelaps_box_type());
+                     turn_get_box<Strategy>(m_strategy),
+                     turn_in_original_overlaps_box<Strategy>(m_strategy),
+                     original_get_box<Strategy>(m_strategy),
+                     original_overlaps_box<Strategy>(m_strategy));
 
         bool const deflate = m_distance_strategy.negative();
 
-        for (typename boost::range_iterator<turn_vector_type>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it)
+        for (auto& turn : m_turns)
         {
-            buffer_turn_info_type& turn = *it;
-            if (turn.location == location_ok)
+            if (turn.is_turn_traversable)
             {
                 if (deflate && turn.count_in_original <= 0)
                 {
-                    // For deflate/negative buffers: it is not in original, discard
-                    turn.location = location_discard;
+                    // For deflate/negative buffers:
+                    // it is not in the original, so don't use it
+                    turn.is_turn_traversable = false;
                 }
                 else if (! deflate && turn.count_in_original > 0)
                 {
-                    // For inflate: it is in original, discard
-                    turn.location = location_discard;
+                    // For inflate: it is in original, so don't use it
+                    turn.is_turn_traversable = false;
                 }
             }
-        }
-
-        if (m_has_deflated)
-        {
-            // Either strategy was negative, or there were interior rings
-            discard_turns_for_deflate();
         }
     }
 
     inline void update_turn_administration()
     {
-        // Add rescaled turn points to corresponding pieces
-        std::size_t index = 0;
-        for (typename boost::range_iterator<turn_vector_type>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it, ++index)
+        for_each_with_index(m_turns, [this](std::size_t index, auto& turn)
         {
-            geometry::recalculate(it->robust_point, it->point, m_robust_policy);
-            it->turn_index = index;
-        }
-    }
+            turn.turn_index = index;
 
-    template <std::size_t Dimension>
-    static inline void determine_monotonicity(piece& pc,
-            robust_point_type const& current,
-            robust_point_type const& next)
-    {
-        if (geometry::get<Dimension>(current) >= geometry::get<Dimension>(next))
-        {
-            pc.is_monotonic_increasing[Dimension] = false;
-        }
-        if (geometry::get<Dimension>(current) <= geometry::get<Dimension>(next))
-        {
-            pc.is_monotonic_decreasing[Dimension] = false;
-        }
-    }
-
-    inline void determine_properties(piece& pc) const
-    {
-        pc.is_monotonic_increasing[0] = true;
-        pc.is_monotonic_increasing[1] = true;
-        pc.is_monotonic_decreasing[0] = true;
-        pc.is_monotonic_decreasing[1] = true;
-
-        pc.is_convex = geometry::is_convex(pc.robust_ring, m_side_strategy);
-
-        if (pc.offsetted_count < 2)
-        {
-            return;
-        }
-
-        typename robust_ring_type::const_iterator current = pc.robust_ring.begin();
-        typename robust_ring_type::const_iterator next = current + 1;
-
-        for (signed_size_type i = 1; i < pc.offsetted_count; i++)
-        {
-            determine_monotonicity<0>(pc, *current, *next);
-            determine_monotonicity<1>(pc, *current, *next);
-            current = next;
-            ++next;
-        }
-    }
-
-    void determine_properties()
-    {
-        for (typename piece_vector_type::iterator it = boost::begin(m_pieces);
-            it != boost::end(m_pieces);
-            ++it)
-        {
-            determine_properties(*it);
-        }
-    }
-
-    inline void reverse_negative_robust_rings()
-    {
-        for (typename piece_vector_type::iterator it = boost::begin(m_pieces);
-            it != boost::end(m_pieces);
-            ++it)
-        {
-            piece& pc = *it;
-            if (geometry::area(pc.robust_ring, m_robust_area_strategy) < 0)
+            // Verify if a turn is a linear endpoint
+            if (! turn.is_linear_end_point)
             {
-                // Rings can be ccw:
-                // - in a concave piece
-                // - in a line-buffer with a negative buffer-distance
-                std::reverse(pc.robust_ring.begin(), pc.robust_ring.end());
+                this->check_linear_endpoints(turn);
             }
-        }
+        });
     }
 
-    inline void prepare_buffered_point_piece(piece& pc)
+    // Calculate properties of piece borders which are not influenced
+    // by turns themselves:
+    // - envelopes (essential for partitioning during calc turns)
+    // - convexity
+    // - monotonicity
+    // - min/max radius of point buffers
+    // - (if pieces are reversed)
+    inline void update_piece_administration()
     {
-        // create monotonic sections in y-dimension
-        typedef boost::mpl::vector_c<std::size_t, 1> dimensions;
-        geometry::sectionalize<false, dimensions>(pc.robust_ring,
-                detail::no_rescale_policy(), pc.sections,
-                m_envelope_strategy, m_expand_strategy);
-
-        // Determine min/max radius
-        typedef geometry::model::referring_segment<robust_point_type const>
-            robust_segment_type;
-
-        typename robust_ring_type::const_iterator current = pc.robust_ring.begin();
-        typename robust_ring_type::const_iterator next = current + 1;
-
-        for (signed_size_type i = 1; i < pc.offsetted_count; i++)
+        for (auto& pc : m_pieces)
         {
-            robust_segment_type s(*current, *next);
-            robust_comparable_radius_type const d
-                = geometry::comparable_distance(pc.robust_center, s);
+            piece_border_type& border = pc.m_piece_border;
+            buffered_ring<Ring> const& ring = offsetted_rings[pc.first_seg_id.multi_index];
 
-            if (i == 1 || d < pc.robust_min_comparable_radius)
+            if (pc.offsetted_count > 0)
             {
-                pc.robust_min_comparable_radius = d;
-            }
-            if (i == 1 || d > pc.robust_max_comparable_radius)
-            {
-                pc.robust_max_comparable_radius = d;
-            }
+                if (pc.type != strategy::buffer::buffered_concave)
+                {
+                    border.set_offsetted(ring, pc.first_seg_id.segment_index,
+                                       pc.beyond_last_segment_index);
+                }
 
-            current = next;
-            ++next;
-        }
-    }
-
-    inline void prepare_buffered_point_pieces()
-    {
-        for (typename piece_vector_type::iterator it = boost::begin(m_pieces);
-            it != boost::end(m_pieces);
-            ++it)
-        {
-            if (it->type == geometry::strategy::buffer::buffered_point)
-            {
-                prepare_buffered_point_piece(*it);
+                // Calculate envelopes for piece borders
+                border.get_properties_of_border(pc.type == geometry::strategy::buffer::buffered_point,
+                                                pc.m_center, m_strategy);
+                if (! pc.is_flat_end && ! pc.is_flat_start)
+                {
+                    border.get_properties_of_offsetted_ring_part(m_strategy);
+                }
             }
         }
     }
 
     inline void get_turns()
     {
+        update_piece_administration();
+
         {
             // Calculate the turns
             piece_turn_visitor
@@ -671,69 +432,41 @@ struct buffered_piece_collection
                     piece_vector_type,
                     buffered_ring_collection<buffered_ring<Ring> >,
                     turn_vector_type,
-                    IntersectionStrategy,
+                    Strategy,
                     RobustPolicy
                 > visitor(m_pieces, offsetted_rings, m_turns,
-                          m_intersection_strategy, m_robust_policy);
+                          m_strategy, m_robust_policy);
 
-            typedef detail::section::get_section_box
-                <
-                    typename IntersectionStrategy::expand_box_strategy_type
-                > get_section_box_type;
-            typedef detail::section::overlaps_section_box
-                <
-                    typename IntersectionStrategy::disjoint_box_box_strategy_type
-                > overlaps_section_box_type;
+            detail::sectionalize::enlarge_sections(monotonic_sections, m_strategy);
 
-            detail::sectionalize::enlarge_sections(monotonic_sections,
-                                                   m_envelope_strategy);
             geometry::partition
                 <
                     robust_box_type
                 >::apply(monotonic_sections, visitor,
-                         get_section_box_type(),
-                         overlaps_section_box_type());
+                         detail::section::get_section_box<Strategy>(m_strategy),
+                         detail::section::overlaps_section_box<Strategy>(m_strategy));
         }
 
         update_turn_administration();
+    }
 
-        reverse_negative_robust_rings();
+    inline void check_turn_in_pieces()
+    {
+        // Check if turns are inside pieces
+        turn_in_piece_visitor
+            <
+                typename geometry::cs_tag<point_type>::type,
+                turn_vector_type, piece_vector_type, DistanceStrategy, Strategy
+            > visitor(m_turns, m_pieces, m_distance_strategy, m_strategy);
 
-        determine_properties();
-
-        prepare_buffered_point_pieces();
-
-        {
-            // Check if it is inside any of the pieces
-            turn_in_piece_visitor
-                <
-                    typename geometry::cs_tag<point_type>::type,
-                    turn_vector_type, piece_vector_type,
-                    DistanceStrategy,
-                    point_in_geometry_strategy_type,
-                    side_strategy_type
-                > visitor(m_turns, m_pieces,
-                          m_distance_strategy,
-                          m_point_in_geometry_strategy,
-                          m_side_strategy);
-
-            typedef turn_ovelaps_box
-                <
-                    typename IntersectionStrategy::disjoint_point_box_strategy_type
-                > turn_ovelaps_box_type;
-            typedef piece_ovelaps_box
-                <
-                    typename IntersectionStrategy::disjoint_box_box_strategy_type
-                > piece_ovelaps_box_type;
-
-            geometry::partition
-                <
-                    robust_box_type
-                >::apply(m_turns, m_pieces, visitor,
-                         turn_get_box(), turn_ovelaps_box_type(),
-                         piece_get_box(), piece_ovelaps_box_type());
-
-        }
+        geometry::partition
+            <
+                box_type
+            >::apply(m_turns, m_pieces, visitor,
+                        turn_get_box<Strategy>(m_strategy),
+                        turn_overlaps_box<Strategy>(m_strategy),
+                        piece_get_box<Strategy>(m_strategy),
+                        piece_overlaps_box<Strategy>(m_strategy));
     }
 
     inline void start_new_ring(bool deflate)
@@ -797,8 +530,7 @@ struct buffered_piece_collection
     inline void set_piece_center(point_type const& center)
     {
         BOOST_GEOMETRY_ASSERT(! m_pieces.empty());
-        geometry::recalculate(m_pieces.back().robust_center, center,
-                m_robust_policy);
+        m_pieces.back().m_center = center;
     }
 
     inline bool finish_ring(strategy::buffer::result_code code)
@@ -856,29 +588,26 @@ struct buffered_piece_collection
             return;
         }
 
-        if (! input_ring.empty())
+        if (! boost::empty(input_ring))
         {
             // Assign the ring to the original_ring collection
             // For rescaling, it is recalculated. Without rescaling, it
             // is just assigning (note that this Ring type is the
             // GeometryOut type, which might differ from the input ring type)
-            geometry::model::ring<robust_point_type> adapted_ring;
+            clockwise_ring_type clockwise_ring;
 
-            typedef detail::normalized_view<InputRing const> view_type;
+            using view_type = detail::closed_clockwise_view<InputRing const>;
             view_type const view(input_ring);
 
-            for (typename boost::range_iterator<view_type const>::type it =
-                boost::begin(view); it != boost::end(view); ++it)
+            for (auto it = boost::begin(view); it != boost::end(view); ++it)
             {
-                robust_point_type adapted_point;
-                geometry::recalculate(adapted_point, *it, m_robust_policy);
-                adapted_ring.push_back(adapted_point);
+                clockwise_ring.push_back(*it);
             }
 
             original_rings.back()
-                = original_ring(adapted_ring,
+                = original_ring(clockwise_ring,
                     is_interior, has_interiors,
-                    m_envelope_strategy, m_expand_strategy);
+                    m_strategy);
         }
     }
 
@@ -925,13 +654,13 @@ struct buffered_piece_collection
 
         std::size_t const n = boost::size(offsetted_rings.back());
         pc.first_seg_id.segment_index = decrease_segment_index_by_one ? n - 1 : n;
-        pc.last_segment_index = pc.first_seg_id.segment_index;
+        pc.beyond_last_segment_index = pc.first_seg_id.segment_index;
 
         m_pieces.push_back(pc);
         return m_pieces.back();
     }
 
-    inline void init_rescale_piece(piece& pc, std::size_t helper_points_size)
+    inline void init_rescale_piece(piece& pc)
     {
         if (pc.first_seg_id.segment_index < 0)
         {
@@ -942,79 +671,30 @@ struct buffered_piece_collection
         }
 
         BOOST_GEOMETRY_ASSERT(pc.first_seg_id.multi_index >= 0);
-        BOOST_GEOMETRY_ASSERT(pc.last_segment_index >= 0);
+        BOOST_GEOMETRY_ASSERT(pc.beyond_last_segment_index >= 0);
 
-        pc.offsetted_count = pc.last_segment_index - pc.first_seg_id.segment_index;
+        pc.offsetted_count = pc.beyond_last_segment_index - pc.first_seg_id.segment_index;
         BOOST_GEOMETRY_ASSERT(pc.offsetted_count >= 0);
-
-        pc.robust_ring.reserve(pc.offsetted_count + helper_points_size);
-
-        // Add rescaled offsetted segments
-        {
-            buffered_ring<Ring> const& ring = offsetted_rings[pc.first_seg_id.multi_index];
-
-            typedef typename boost::range_iterator<const buffered_ring<Ring> >::type it_type;
-            for (it_type it = boost::begin(ring) + pc.first_seg_id.segment_index;
-                it != boost::begin(ring) + pc.last_segment_index;
-                ++it)
-            {
-                robust_point_type point;
-                geometry::recalculate(point, *it, m_robust_policy);
-                pc.robust_ring.push_back(point);
-            }
-        }
     }
 
-    inline void add_helper_point(piece& pc, const point_type& point)
+    inline void add_piece_point(piece& pc, point_type const& point, bool add_to_original)
     {
-#if defined(BOOST_GEOMETRY_BUFFER_USE_HELPER_POINTS)
-        pc.helper_points.push_back(point);
-#endif
-
-        robust_point_type rob_point;
-        geometry::recalculate(rob_point, point, m_robust_policy);
-        pc.robust_ring.push_back(rob_point);
-    }
-
-    template <typename Box>
-    static inline void enlarge_box(Box& box)
-    {
-#if defined(BOOST_GEOMETRY_USE_RESCALING)
-        // Enlarge the box by 1 pixel, or 1 unit
-        detail::buffer::buffer_box(box, 1, box);
-#else
-        // Enlarge the box just a bit
-        detail::buffer::buffer_box(box, 0.001, box);
-#endif
-    }
-
-    inline void calculate_robust_envelope(piece& pc)
-    {
-        if (pc.offsetted_count == 0)
+        if (add_to_original && pc.type != strategy::buffer::buffered_concave)
         {
-            return;
+            pc.m_piece_border.add_original_point(point);
         }
-
-        geometry::envelope(pc.robust_ring, pc.robust_envelope, m_envelope_strategy);
-
-        geometry::assign_inverse(pc.robust_offsetted_envelope);
-        for (signed_size_type i = 0; i < pc.offsetted_count; i++)
+        else
         {
-            geometry::expand(pc.robust_offsetted_envelope, pc.robust_ring[i]);
+            pc.m_label_point = point;
         }
-
-        // Take roundings into account, enlarge boxes
-        enlarge_box(pc.robust_envelope);
-        enlarge_box(pc.robust_offsetted_envelope);
     }
 
     inline void sectionalize(piece const& pc, buffered_ring<Ring> const& ring)
     {
-        typedef geometry::detail::sectionalize::sectionalize_part
+        using sectionalizer = geometry::detail::sectionalize::sectionalize_part
         <
-            point_type,
-            boost::mpl::vector_c<std::size_t, 0, 1> // x,y dimension
-        > sectionalizer;
+            std::integer_sequence<std::size_t, 0, 1> // x,y dimension
+        >;
 
         // Create a ring-identifier. The source-index is the piece index
         // The multi_index is as in this collection (the ring), but not used here
@@ -1023,46 +703,48 @@ struct buffered_piece_collection
 
         sectionalizer::apply(monotonic_sections,
             boost::begin(ring) + pc.first_seg_id.segment_index,
-            boost::begin(ring) + pc.last_segment_index,
+            boost::begin(ring) + pc.beyond_last_segment_index,
             m_robust_policy,
+            m_strategy,
             ring_id, 10);
     }
 
     inline void finish_piece(piece& pc)
     {
-        init_rescale_piece(pc, 0u);
-        calculate_robust_envelope(pc);
+        init_rescale_piece(pc);
     }
 
     inline void finish_piece(piece& pc,
-                    const point_type& point1,
-                    const point_type& point2,
-                    const point_type& point3)
+                    point_type const& point1,
+                    point_type const& point2,
+                    point_type const& point3)
     {
-        init_rescale_piece(pc, 3u);
+        init_rescale_piece(pc);
         if (pc.offsetted_count == 0)
         {
             return;
         }
 
-        add_helper_point(pc, point1);
-        add_helper_point(pc, point2);
-        add_helper_point(pc, point3);
-        calculate_robust_envelope(pc);
+        add_piece_point(pc, point1, false);
+        add_piece_point(pc, point2, true);
+        add_piece_point(pc, point3, false);
     }
 
     inline void finish_piece(piece& pc,
-                    const point_type& point1,
-                    const point_type& point2,
-                    const point_type& point3,
-                    const point_type& point4)
+                    point_type const& point1,
+                    point_type const& point2,
+                    point_type const& point3,
+                    point_type const& point4)
     {
-        init_rescale_piece(pc, 4u);
-        add_helper_point(pc, point1);
-        add_helper_point(pc, point2);
-        add_helper_point(pc, point3);
-        add_helper_point(pc, point4);
-        calculate_robust_envelope(pc);
+        init_rescale_piece(pc);
+
+        // Add the four points. Note that points 2 and 3 are the originals,
+        // and that they are already passed in reverse order
+        // (because the offsetted ring is in clockwise order)
+        add_piece_point(pc, point1, false);
+        add_piece_point(pc, point2, true);
+        add_piece_point(pc, point3, true);
+        add_piece_point(pc, point4, false);
     }
 
     template <typename Range>
@@ -1070,7 +752,7 @@ struct buffered_piece_collection
     {
         BOOST_GEOMETRY_ASSERT(boost::size(range) != 0u);
 
-        typename Range::const_iterator it = boost::begin(range);
+        auto it = boost::begin(range);
 
         // If it follows a non-join (so basically the same piece-type) point b1 should be added.
         // There should be two intersections later and it should be discarded.
@@ -1082,7 +764,7 @@ struct buffered_piece_collection
 
         for (++it; it != boost::end(range); ++it)
         {
-            pc.last_segment_index = add_point(*it);
+            pc.beyond_last_segment_index = add_point(*it);
         }
     }
 
@@ -1091,7 +773,7 @@ struct buffered_piece_collection
     {
         piece& pc = create_piece(type, false);
         add_point(b1);
-        pc.last_segment_index = add_point(b2);
+        pc.beyond_last_segment_index = add_point(b2);
         finish_piece(pc, b2, p, b1);
     }
 
@@ -1126,14 +808,22 @@ struct buffered_piece_collection
     }
 
     template <typename Range>
-    inline void add_side_piece(point_type const& p1, point_type const& p2,
-            Range const& range, bool first)
+    inline void add_side_piece(point_type const& original_point1,
+            point_type const& original_point2,
+            Range const& range, bool is_first, bool is_empty)
     {
         BOOST_GEOMETRY_ASSERT(boost::size(range) >= 2u);
 
-        piece& pc = create_piece(strategy::buffer::buffered_segment, ! first);
-        add_range_to_piece(pc, range, first);
-        finish_piece(pc, range.back(), p2, p1, range.front());
+        auto const piece_type = is_empty
+            ? strategy::buffer::buffered_empty_side
+            : strategy::buffer::buffered_segment;
+
+        piece& pc = create_piece(piece_type, ! is_first);
+        add_range_to_piece(pc, range, is_first);
+
+        // Add the four points of the side, starting with the last point of the
+        // range, and reversing the order of the originals to keep it clockwise
+        finish_piece(pc, range.back(), original_point2, original_point1, range.front());
     }
 
     template <typename EndcapStrategy, typename Range>
@@ -1159,87 +849,137 @@ struct buffered_piece_collection
         }
     }
 
-    inline void mark_flat_start()
+    inline void mark_flat_start(point_type const& point)
     {
         if (! m_pieces.empty())
         {
             piece& back = m_pieces.back();
             back.is_flat_start = true;
+
+            // This happens to linear buffers, and it will be the very
+            // first or last point. If that coincides with a turn,
+            // and the turn was marked as ON_BORDER
+            // the turn should NOT be within (even though it can be marked
+            // as such)
+            m_linear_end_points.push_back(point);
         }
     }
 
-    inline void mark_flat_end()
+    inline void mark_flat_end(point_type const& point)
     {
         if (! m_pieces.empty())
         {
             piece& back = m_pieces.back();
             back.is_flat_end = true;
+            m_linear_end_points.push_back(point);
         }
     }
 
     //-------------------------------------------------------------------------
+
+    inline void handle_colocations()
+    {
+        if (! detail::overlay::handle_colocations
+                <
+                    false, false, overlay_buffer,
+                    ring_collection_t, ring_collection_t
+                >(m_turns, m_clusters, m_robust_policy))
+        {
+            return;
+        }
+
+        detail::overlay::gather_cluster_properties
+            <
+                false, false, overlay_buffer
+            >(m_clusters, m_turns, detail::overlay::operation_union,
+            offsetted_rings, offsetted_rings, m_strategy);
+
+        for (auto const& cluster : m_clusters)
+        {
+            if (cluster.second.open_count == 0 && cluster.second.spike_count == 0)
+            {
+                // If the cluster is completely closed, mark it as not traversable.
+                for (auto const& index : cluster.second.turn_indices)
+                {
+                    m_turns[index].is_turn_traversable = false;
+                }
+            }
+        }
+    }
+
+    inline void make_traversable_consistent_per_cluster()
+    {
+        for (auto const& cluster : m_clusters)
+        {
+            bool is_traversable = false;
+            for (auto const& index : cluster.second.turn_indices)
+            {
+                if (m_turns[index].is_turn_traversable)
+                {
+                    // If there is one turn traversable in the cluster,
+                    // then all turns should be traversable.
+                    is_traversable = true;
+                    break;
+                }
+            }
+            if (is_traversable)
+            {
+                for (auto const& index : cluster.second.turn_indices)
+                {
+                    m_turns[index].is_turn_traversable = true;
+                }
+            }
+        }
+    }
 
     inline void enrich()
     {
         enrich_intersection_points<false, false, overlay_buffer>(m_turns,
             m_clusters, offsetted_rings, offsetted_rings,
             m_robust_policy,
-            m_intersection_strategy);
+            m_strategy);
     }
 
     // Discards all rings which do have not-OK intersection points only.
     // Those can never be traversed and should not be part of the output.
     inline void discard_rings()
     {
-        for (typename boost::range_iterator<turn_vector_type const>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it)
+        for (auto const& turn : m_turns)
         {
-            if (it->location != location_ok)
+            if (turn.is_turn_traversable)
             {
-                offsetted_rings[it->operations[0].seg_id.multi_index].has_discarded_intersections = true;
-                offsetted_rings[it->operations[1].seg_id.multi_index].has_discarded_intersections = true;
+                offsetted_rings[turn.operations[0].seg_id.multi_index].has_accepted_intersections = true;
+                offsetted_rings[turn.operations[1].seg_id.multi_index].has_accepted_intersections = true;
             }
             else
             {
-                offsetted_rings[it->operations[0].seg_id.multi_index].has_accepted_intersections = true;
-                offsetted_rings[it->operations[1].seg_id.multi_index].has_accepted_intersections = true;
+                offsetted_rings[turn.operations[0].seg_id.multi_index].has_discarded_intersections = true;
+                offsetted_rings[turn.operations[1].seg_id.multi_index].has_discarded_intersections = true;
             }
         }
     }
 
     inline bool point_coveredby_original(point_type const& point)
     {
-        typedef typename IntersectionStrategy::disjoint_point_box_strategy_type d_pb_strategy_type;
-
-        robust_point_type any_point;
-        geometry::recalculate(any_point, point, m_robust_policy);
-
         signed_size_type count_in_original = 0;
 
         // Check of the robust point of this outputted ring is in
         // any of the robust original rings
         // This can go quadratic if the input has many rings, and there
         // are many untouched deflated rings around
-        for (typename std::vector<original_ring>::const_iterator it
-            = original_rings.begin();
-            it != original_rings.end();
-            ++it)
+        for (auto const& original : original_rings)
         {
-            original_ring const& original = *it;
             if (original.m_ring.empty())
             {
                 continue;
             }
-            if (detail::disjoint::disjoint_point_box(any_point,
-                                                     original.m_box,
-                                                     d_pb_strategy_type()))
+            if (detail::disjoint::disjoint_point_box(point, original.m_box,m_strategy))
             {
                 continue;
             }
 
             int const geometry_code
-                = detail::within::point_in_geometry(any_point,
-                    original.m_ring, m_point_in_geometry_strategy);
+                = detail::within::point_in_geometry(point, original.m_ring, m_strategy);
 
             if (geometry_code == -1)
             {
@@ -1270,15 +1010,11 @@ struct buffered_piece_collection
     // be discarded
     inline void discard_nonintersecting_deflated_rings()
     {
-        for(typename buffered_ring_collection<buffered_ring<Ring> >::iterator it
-            = boost::begin(offsetted_rings);
-            it != boost::end(offsetted_rings);
-            ++it)
+        for (auto& ring : offsetted_rings)
         {
-            buffered_ring<Ring>& ring = *it;
             if (! ring.has_intersections()
                 && boost::size(ring) > 0u
-                && geometry::area(ring, m_area_strategy) < 0)
+                && geometry::area(ring, m_strategy) < 0)
             {
                 if (! point_coveredby_original(geometry::range::front(ring)))
                 {
@@ -1290,11 +1026,9 @@ struct buffered_piece_collection
 
     inline void block_turns()
     {
-        for (typename boost::range_iterator<turn_vector_type>::type it =
-            boost::begin(m_turns); it != boost::end(m_turns); ++it)
+        for (auto& turn : m_turns)
         {
-            buffer_turn_info_type& turn = *it;
-            if (turn.location != location_ok)
+            if (! turn.is_turn_traversable)
             {
                 // Discard this turn (don't set it to blocked to avoid colocated
                 // clusters being discarded afterwards
@@ -1318,7 +1052,7 @@ struct buffered_piece_collection
         traversed_rings.clear();
         buffer_overlay_visitor visitor;
         traverser::apply(offsetted_rings, offsetted_rings,
-                        m_intersection_strategy, m_robust_policy,
+                        m_strategy, m_robust_policy,
                         m_turns, traversed_rings,
                         turn_info_per_ring,
                         m_clusters, visitor);
@@ -1326,29 +1060,30 @@ struct buffered_piece_collection
 
     inline void reverse()
     {
-        for(typename buffered_ring_collection<buffered_ring<Ring> >::iterator it = boost::begin(offsetted_rings);
-            it != boost::end(offsetted_rings);
-            ++it)
+        for (auto& ring : offsetted_rings)
         {
-            if (! it->has_intersections())
+            if (! ring.has_intersections())
             {
-                std::reverse(it->begin(), it->end());
+                std::reverse(ring.begin(), ring.end());
             }
         }
-        for (typename boost::range_iterator<buffered_ring_collection<Ring> >::type
-                it = boost::begin(traversed_rings);
-                it != boost::end(traversed_rings);
-                ++it)
+        for (auto& ring : traversed_rings)
         {
-            std::reverse(it->begin(), it->end());
+            std::reverse(ring.begin(), ring.end());
         }
-
     }
 
     template <typename GeometryOutput, typename OutputIterator>
     inline OutputIterator assign(OutputIterator out) const
     {
-        typedef detail::overlay::ring_properties<point_type, area_result_type> properties;
+        typedef typename geometry::area_result
+            <
+                buffered_ring<Ring>, Strategy
+            >::type area_result_type;
+        typedef detail::overlay::ring_properties
+            <
+                point_type, area_result_type
+            > properties;
 
         std::map<ring_identifier, properties> selected;
 
@@ -1356,42 +1091,35 @@ struct buffered_piece_collection
         // Inner rings, for deflate, which do not have intersections, and
         // which are outside originals, are skipped
         // (other ones should be traversed)
-        signed_size_type index = 0;
-        for(typename buffered_ring_collection<buffered_ring<Ring> >::const_iterator it = boost::begin(offsetted_rings);
-            it != boost::end(offsetted_rings);
-            ++it, ++index)
-        {
-            if (! it->has_intersections()
-                && ! it->is_untouched_outside_original)
+        for_each_with_index(offsetted_rings, [&](std::size_t index, auto const& ring)
             {
-                properties p = properties(*it, m_area_strategy);
-                if (p.valid)
+                if (! ring.has_intersections()
+                    && ! ring.is_untouched_outside_original)
                 {
-                    ring_identifier id(0, index, -1);
-                    selected[id] = p;
+                    properties p = properties(ring, m_strategy);
+                    if (p.valid)
+                    {
+                        ring_identifier id(0, index, -1);
+                        selected[id] = p;
+                    }
                 }
-            }
-        }
+            });
 
         // Select all created rings
-        index = 0;
-        for (typename boost::range_iterator<buffered_ring_collection<Ring> const>::type
-                it = boost::begin(traversed_rings);
-                it != boost::end(traversed_rings);
-                ++it, ++index)
-        {
-            properties p = properties(*it, m_area_strategy);
-            if (p.valid)
+        for_each_with_index(traversed_rings, [&](std::size_t index, auto const& ring)
             {
-                ring_identifier id(2, index, -1);
-                selected[id] = p;
-            }
-        }
+                properties p = properties(ring, m_strategy);
+                if (p.valid)
+                {
+                    ring_identifier id(2, index, -1);
+                    selected[id] = p;
+                }
+            });
 
         detail::overlay::assign_parents<overlay_buffer>(offsetted_rings, traversed_rings,
-                selected, m_intersection_strategy);
+                selected, m_strategy);
         return detail::overlay::add_rings<GeometryOutput>(selected, offsetted_rings, traversed_rings, out,
-                                                          m_area_strategy);
+                                                          m_strategy);
     }
 
 };

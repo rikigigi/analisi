@@ -11,12 +11,12 @@
 #define BOOST_BEAST_WEBSOCKET_IMPL_PING_HPP
 
 #include <boost/beast/core/async_base.hpp>
-#include <boost/beast/core/bind_handler.hpp>
 #include <boost/beast/core/stream_traits.hpp>
 #include <boost/beast/core/detail/bind_continuation.hpp>
 #include <boost/beast/websocket/detail/frame.hpp>
 #include <boost/beast/websocket/impl/stream_impl.hpp>
 #include <boost/asio/coroutine.hpp>
+#include <boost/asio/dispatch.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/throw_exception.hpp>
 #include <memory>
@@ -72,7 +72,7 @@ public:
         auto sp = wp_.lock();
         if(! sp)
         {
-            ec = net::error::operation_aborted;
+            BOOST_BEAST_ASSIGN_EC(ec, net::error::operation_aborted);
             return this->complete(cont, ec);
         }
         auto& impl = *sp;
@@ -82,10 +82,26 @@ public:
             if(! impl.wr_block.try_lock(this))
             {
                 BOOST_ASIO_CORO_YIELD
-                impl.op_ping.emplace(std::move(*this));
+                {
+                    BOOST_ASIO_HANDLER_LOCATION((
+                        __FILE__, __LINE__,
+                        "websocket::async_ping"));
+                    this->set_allowed_cancellation(net::cancellation_type::all);
+                    impl.op_ping.emplace(std::move(*this), net::cancellation_type::all);
+                }
+                if (ec)
+                    return this->complete(cont, ec);
+                this->set_allowed_cancellation(net::cancellation_type::terminal);
                 impl.wr_block.lock(this);
                 BOOST_ASIO_CORO_YIELD
-                net::post(std::move(*this));
+                {
+                    BOOST_ASIO_HANDLER_LOCATION((
+                        __FILE__, __LINE__,
+                        "websocket::async_ping"));
+
+                    const auto ex = this->get_immediate_executor();
+                    net::dispatch(ex, std::move(*this));
+                }
                 BOOST_ASSERT(impl.wr_block.is_locked(this));
             }
             if(impl.check_stop_now(ec))
@@ -93,8 +109,14 @@ public:
 
             // Send ping frame
             BOOST_ASIO_CORO_YIELD
-            net::async_write(impl.stream(), fb_.data(),
-                beast::detail::bind_continuation(std::move(*this)));
+            {
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "websocket::async_ping"));
+
+                net::async_write(impl.stream(), fb_.data(),
+                    beast::detail::bind_continuation(std::move(*this)));
+            }
             if(impl.check_stop_now(ec))
                 goto upcall;
 
@@ -173,11 +195,22 @@ public:
             if(! impl.wr_block.try_lock(this))
             {
                 BOOST_ASIO_CORO_YIELD
-                impl.op_idle_ping.emplace(std::move(*this));
+                {
+                    BOOST_ASIO_HANDLER_LOCATION((
+                                                __FILE__, __LINE__,
+                                                "websocket::async_ping"));
+
+                    impl.op_idle_ping.emplace(std::move(*this));
+                }
                 impl.wr_block.lock(this);
                 BOOST_ASIO_CORO_YIELD
-                net::post(
-                    this->get_executor(), std::move(*this));
+                {
+                    BOOST_ASIO_HANDLER_LOCATION((
+                        __FILE__, __LINE__,
+                        "websocket::async_ping"));
+
+                    net::post(sp->stream().get_executor(), std::move(*this));
+                }
                 BOOST_ASSERT(impl.wr_block.is_locked(this));
             }
             if(impl.check_stop_now(ec))
@@ -185,9 +218,14 @@ public:
 
             // Send ping frame
             BOOST_ASIO_CORO_YIELD
-            net::async_write(impl.stream(), fb_->data(),
-                //beast::detail::bind_continuation(std::move(*this)));
-                std::move(*this));
+            {
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "websocket::async_ping"));
+
+                net::async_write(impl.stream(), fb_->data(),
+                    std::move(*this));
+            }
             if(impl.check_stop_now(ec))
                 goto upcall;
 
@@ -207,11 +245,20 @@ template<class NextLayer, bool deflateSupported>
 struct stream<NextLayer, deflateSupported>::
     run_ping_op
 {
+    boost::shared_ptr<impl_type> const& self;
+
+    using executor_type = typename stream::executor_type;
+
+    executor_type
+    get_executor() const noexcept
+    {
+        return self->stream().get_executor();
+    }
+
     template<class WriteHandler>
     void
     operator()(
         WriteHandler&& h,
-        boost::shared_ptr<impl_type> const& sp,
         detail::opcode op,
         ping_data const& p)
     {
@@ -227,7 +274,7 @@ struct stream<NextLayer, deflateSupported>::
         ping_op<
             typename std::decay<WriteHandler>::type>(
                 std::forward<WriteHandler>(h),
-                sp,
+                self,
                 op,
                 p);
     }
@@ -288,37 +335,35 @@ pong(ping_data const& payload, error_code& ec)
 }
 
 template<class NextLayer, bool deflateSupported>
-template<class WriteHandler>
-BOOST_BEAST_ASYNC_RESULT1(WriteHandler)
+template<BOOST_BEAST_ASYNC_TPARAM1 PingHandler>
+BOOST_BEAST_ASYNC_RESULT1(PingHandler)
 stream<NextLayer, deflateSupported>::
-async_ping(ping_data const& payload, WriteHandler&& handler)
+async_ping(ping_data const& payload, PingHandler&& handler)
 {
     static_assert(is_async_stream<next_layer_type>::value,
         "AsyncStream type requirements not met");
     return net::async_initiate<
-        WriteHandler,
+        PingHandler,
         void(error_code)>(
-            run_ping_op{},
+            run_ping_op{impl_},
             handler,
-            impl_,
             detail::opcode::ping,
             payload);
 }
 
 template<class NextLayer, bool deflateSupported>
-template<class WriteHandler>
-BOOST_BEAST_ASYNC_RESULT1(WriteHandler)
+template<BOOST_BEAST_ASYNC_TPARAM1 PongHandler>
+BOOST_BEAST_ASYNC_RESULT1(PongHandler)
 stream<NextLayer, deflateSupported>::
-async_pong(ping_data const& payload, WriteHandler&& handler)
+async_pong(ping_data const& payload, PongHandler&& handler)
 {
     static_assert(is_async_stream<next_layer_type>::value,
         "AsyncStream type requirements not met");
     return net::async_initiate<
-        WriteHandler,
+        PongHandler,
         void(error_code)>(
-            run_ping_op{},
+            run_ping_op{impl_},
             handler,
-            impl_,
             detail::opcode::pong,
             payload);
 }

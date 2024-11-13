@@ -40,7 +40,7 @@ public:
 
     void const * address() const
     {
-      return &buffer_.front();
+      return detail::c_data(buffer_);
     }
 
     const std::size_t& size() const
@@ -89,7 +89,7 @@ public:
     {
       unsigned int l = static_cast<unsigned int>(s.size());
       save(l);
-      save_impl(s.data(),s.size());
+      save_impl(s.data(),s.size()*sizeof(CharType));
     }
 
 private:

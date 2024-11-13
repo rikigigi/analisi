@@ -98,13 +98,6 @@ struct tree_node
         impl::cp_swap(value, x.value);
         impl::cp_swap(children, x.children);
     }
-
-// Intel V5.0.1 has a problem without this explicit operator=
-    tree_node &operator= (tree_node const &rhs)
-    {
-        tree_node(rhs).swap(*this);
-        return *this;
-    }
 };
 
 #if defined(BOOST_SPIRIT_DEBUG) && \
@@ -526,7 +519,6 @@ namespace impl {
     {
         using std::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
-        using boost::swap;
         swap(t1, t2);
     }
 }
@@ -1051,7 +1043,6 @@ struct infix_node_op
         typedef typename MatchT::container_t::value_type value_t;
 
         using std::swap;
-        using boost::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
 
         // copying the tree nodes is expensive, since it may copy a whole
@@ -1103,7 +1094,6 @@ struct discard_first_node_op
         typedef typename MatchT::container_t::value_type value_t;
 
         using std::swap;
-        using boost::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
 
         // copying the tree nodes is expensive, since it may copy a whole
@@ -1167,7 +1157,6 @@ struct discard_last_node_op
         typedef typename MatchT::container_t::value_type value_t;
 
         using std::swap;
-        using boost::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
 
         // copying the tree nodes is expensive, since it may copy a whole
@@ -1227,7 +1216,6 @@ struct inner_node_op
         typedef typename MatchT::container_t::value_type value_t;
 
         using std::swap;
-        using boost::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
 
         // copying the tree nodes is expensive, since it may copy a whole
@@ -1550,7 +1538,6 @@ struct tree_parse_info
         , trees()
     {
         using std::swap;
-        using boost::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
 
         // use auto_ptr like ownership for the trees data member
@@ -1570,7 +1557,6 @@ struct tree_parse_info
         , trees()
     {
         using std::swap;
-        using boost::swap;
         using BOOST_SPIRIT_CLASSIC_NS::swap;
 
         // use auto_ptr like ownership for the trees data member

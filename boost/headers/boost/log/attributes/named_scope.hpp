@@ -20,9 +20,9 @@
 #include <memory>
 #include <iterator>
 #include <cstddef>
-#include <boost/log/detail/config.hpp>
 #include <boost/current_function.hpp>
 #include <boost/type_traits/conditional.hpp>
+#include <boost/log/detail/config.hpp>
 #include <boost/log/utility/string_literal.hpp>
 #include <boost/log/utility/unique_identifier_name.hpp>
 #include <boost/log/utility/unused_variable.hpp>
@@ -370,6 +370,7 @@ public:
          * \param sn Scope name.
          * \param fn File name, in which the scope is located.
          * \param ln Line number in the file.
+         * \param t Scope name type.
          */
         sentry(string_literal const& sn, string_literal const& fn, unsigned int ln, scope_entry::scope_name_type t = scope_entry::general) BOOST_NOEXCEPT :
             m_Entry(sn, fn, ln, t)

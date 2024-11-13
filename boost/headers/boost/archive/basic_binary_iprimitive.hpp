@@ -14,7 +14,7 @@
 // basic_binary_iprimitive.hpp
 //
 // archives stored as native binary - this should be the fastest way
-// to archive the state of a group of obects.  It makes no attempt to
+// to archive the state of a group of objects.  It makes no attempt to
 // convert to any canonical form.
 
 // IN GENERAL, ARCHIVES CREATED WITH THIS CLASS WILL NOT BE READABLE
@@ -48,7 +48,6 @@ namespace std{
 #include <boost/integer.hpp>
 #include <boost/integer_traits.hpp>
 
-//#include <boost/mpl/placeholders.hpp>
 #include <boost/serialization/is_bitwise_serializable.hpp>
 #include <boost/serialization/array_wrapper.hpp>
 
@@ -90,7 +89,7 @@ public:
     std::locale archive_locale;
     #endif
 
-    // main template for serilization of primitive types
+    // main template for serialization of primitive types
     template<class T>
     void load(T & t){
         load_binary(& t, sizeof(T));

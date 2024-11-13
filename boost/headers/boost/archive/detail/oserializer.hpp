@@ -4,12 +4,14 @@
 // MS compatible compilers support #pragma once
 #if defined(_MSC_VER)
 # pragma once
-#pragma inline_depth(511)
+#if !defined(__clang__)
+#pragma inline_depth(255)
 #pragma inline_recursion(on)
+#endif
 #endif
 
 #if defined(__MWERKS__)
-#pragma inline_depth(511)
+#pragma inline_depth(255)
 #endif
 
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
@@ -116,26 +118,26 @@ public:
             >::get_const_instance()
         )
     {}
-    virtual BOOST_DLLEXPORT void save_object_data(
+    BOOST_DLLEXPORT void save_object_data(
         basic_oarchive & ar,
         const void *x
-    ) const BOOST_USED;
-    virtual bool class_info() const {
+    ) const BOOST_OVERRIDE BOOST_USED;
+    bool class_info() const BOOST_OVERRIDE {
         return boost::serialization::implementation_level< T >::value
             >= boost::serialization::object_class_info;
     }
-    virtual bool tracking(const unsigned int /* flags */) const {
+    bool tracking(const unsigned int /* flags */) const BOOST_OVERRIDE {
         return boost::serialization::tracking_level< T >::value == boost::serialization::track_always
             || (boost::serialization::tracking_level< T >::value == boost::serialization::track_selectively
                 && serialized_as_pointer());
     }
-    virtual version_type version() const {
+    version_type version() const BOOST_OVERRIDE {
         return version_type(::boost::serialization::version< T >::value);
     }
-    virtual bool is_polymorphic() const {
+    bool is_polymorphic() const BOOST_OVERRIDE {
         return boost::is_polymorphic< T >::value;
     }
-    virtual ~oserializer(){}
+    ~oserializer() BOOST_OVERRIDE {}
 };
 
 #ifdef BOOST_MSVC
@@ -168,18 +170,18 @@ class pointer_oserializer :
 {
 private:
     const basic_oserializer &
-    get_basic_serializer() const {
+    get_basic_serializer() const BOOST_OVERRIDE {
         return boost::serialization::singleton<
             oserializer<Archive, T>
         >::get_const_instance();
     }
-    virtual BOOST_DLLEXPORT void save_object_ptr(
+    BOOST_DLLEXPORT void save_object_ptr(
         basic_oarchive & ar,
         const void * x
-    ) const BOOST_USED;
+    ) const BOOST_OVERRIDE BOOST_USED;
 public:
     pointer_oserializer();
-    ~pointer_oserializer();
+    ~pointer_oserializer() BOOST_OVERRIDE;
 };
 
 #ifdef BOOST_MSVC
@@ -507,7 +509,7 @@ struct save_array_type
         );
         boost::serialization::collection_size_type count(c);
         ar << BOOST_SERIALIZATION_NVP(count);
-        // explict template arguments to pass intel C++ compiler
+        // explicit template arguments to pass intel C++ compiler
         ar << serialization::make_array<
             const value_type,
             boost::serialization::collection_size_type

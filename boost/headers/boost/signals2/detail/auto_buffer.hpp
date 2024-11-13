@@ -19,11 +19,12 @@
 
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
+#include <boost/core/allocator_access.hpp>
+#include <boost/core/invoke_swap.hpp>
 #include <boost/iterator/reverse_iterator.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/signals2/detail/scope_guard.hpp>
-#include <boost/swap.hpp>
 #include <boost/type_traits/aligned_storage.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/type_traits/has_nothrow_copy.hpp>
@@ -140,14 +141,10 @@ namespace detail
     public:
         typedef Allocator                                allocator_type;
         typedef T                                        value_type;
-        typedef typename Allocator::size_type            size_type;
-        typedef typename Allocator::difference_type      difference_type;
+        typedef typename boost::allocator_size_type<Allocator>::type size_type;
+        typedef typename boost::allocator_difference_type<Allocator>::type difference_type;
         typedef T*                                       pointer;
-#ifdef BOOST_NO_CXX11_ALLOCATOR
-        typedef typename Allocator::pointer              allocator_pointer;
-#else
-        typedef typename std::allocator_traits<Allocator>::pointer allocator_pointer;
-#endif
+        typedef typename boost::allocator_pointer<Allocator>::type allocator_pointer;
         typedef const T*                                 const_pointer;
         typedef T&                                       reference;
         typedef const T&                                 const_reference;
@@ -335,8 +332,8 @@ namespace detail
             auto_buffer temp( l.begin(), l.end() );
             assign_impl( r.begin(), r.end(), l.begin() );
             assign_impl( temp.begin(), temp.end(), r.begin() );
-            boost::swap( l.size_, r.size_ );
-            boost::swap( l.members_.capacity_, r.members_.capacity_ );
+            boost::core::invoke_swap( l.size_, r.size_ );
+            boost::core::invoke_swap( l.members_.capacity_, r.members_.capacity_ );
         }
 
         static void swap_helper( auto_buffer& l, auto_buffer& r,
@@ -355,13 +352,13 @@ namespace detail
 
             size_type i = 0u;
             for(  ; i < min_size; ++i )
-                boost::swap( (*smallest)[i], (*largest)[i] );
+                boost::core::invoke_swap( (*smallest)[i], (*largest)[i] );
 
             for( ; i < max_size; ++i )
                 smallest->unchecked_push_back( (*largest)[i] );
 
             largest->pop_back_n( diff );
-            boost::swap( l.members_.capacity_, r.members_.capacity_ );
+            boost::core::invoke_swap( l.members_.capacity_, r.members_.capacity_ );
         }
 
         void one_sided_swap( auto_buffer& temp ) // nothrow
@@ -1017,10 +1014,10 @@ namespace detail
             bool both_on_heap  = !on_stack && !r_on_stack;
             if( both_on_heap )
             {
-                boost::swap( get_allocator(), r.get_allocator() );
-                boost::swap( members_.capacity_, r.members_.capacity_ );
-                boost::swap( buffer_, r.buffer_ );
-                boost::swap( size_, r.size_ );
+                boost::core::invoke_swap( get_allocator(), r.get_allocator() );
+                boost::core::invoke_swap( members_.capacity_, r.members_.capacity_ );
+                boost::core::invoke_swap( buffer_, r.buffer_ );
+                boost::core::invoke_swap( size_, r.size_ );
                 BOOST_ASSERT( is_valid() );
                 BOOST_ASSERT( r.is_valid() );
                 return;
@@ -1042,9 +1039,9 @@ namespace detail
                 copy_impl( one_on_stack->begin(), one_on_stack->end(),
                            new_buffer );                            // strong
                 one_on_stack->auto_buffer_destroy();                       // nothrow
-                boost::swap( get_allocator(), r.get_allocator() );  // assume nothrow
-                boost::swap( members_.capacity_, r.members_.capacity_ );
-                boost::swap( size_, r.size_ );
+                boost::core::invoke_swap( get_allocator(), r.get_allocator() );  // assume nothrow
+                boost::core::invoke_swap( members_.capacity_, r.members_.capacity_ );
+                boost::core::invoke_swap( size_, r.size_ );
                 one_on_stack->buffer_ = other->buffer_;
                 other->buffer_        = new_buffer;
                 BOOST_ASSERT( other->is_on_stack() );

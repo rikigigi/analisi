@@ -194,10 +194,12 @@
 #define BOOST_NO_CXX11_UNIFIED_INITIALIZATION_SYNTAX
 #define BOOST_NO_CXX11_USER_DEFINED_LITERALS
 #define BOOST_NO_CXX11_ALIGNAS
+#define BOOST_NO_CXX11_ALIGNOF
 #define BOOST_NO_CXX11_TRAILING_RESULT_TYPES
 #define BOOST_NO_CXX11_INLINE_NAMESPACES
 #define BOOST_NO_CXX11_REF_QUALIFIERS
 #define BOOST_NO_CXX11_FINAL
+#define BOOST_NO_CXX11_OVERRIDE
 #define BOOST_NO_CXX11_THREAD_LOCAL
 #define BOOST_NO_CXX11_UNRESTRICTED_UNION
 
@@ -242,6 +244,9 @@
 #endif
 #if !defined(__cpp_if_constexpr) || (__cpp_if_constexpr < 201606)
 #  define BOOST_NO_CXX17_IF_CONSTEXPR
+#endif
+#if !defined(__cpp_nontype_template_parameter_auto) || (__cpp_nontype_template_parameter_auto < 201606)
+#  define BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS
 #endif
 
 #if __BORLANDC__ >= 0x590
@@ -333,4 +338,5 @@
 // (Niels Dekker, LKEB, April 2010)
 #define BOOST_NO_COMPLETE_VALUE_INITIALIZATION
 
-#define BOOST_COMPILER "Borland C++ version " BOOST_STRINGIZE(__BORLANDC__)
+#define BOOST_BORLANDC __BORLANDC__
+#define BOOST_COMPILER "Classic Borland C++ version " BOOST_STRINGIZE(__BORLANDC__)
